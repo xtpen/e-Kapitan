@@ -62,8 +62,8 @@ A calm, trustworthy civic service. Deep navy authority, a green that means "go /
   - **Sorting:** give a column `sortValue: row => …` (text sorts A to Z, numbers low to high) and its header becomes clickable (click again to reverse, arrow shows the order); phones get a "Sort by" menu above the cards. `defaultSort={{ header, direction }}` sets the starting order. `sortLabels` names the directions in plain words: dates use `['oldest first', 'newest first']`; status columns sort by **workflow stage** (`sortValue: r => STATUS_ORDER.indexOf(r.status)`, labels `['by stage', 'by stage, reversed']`), never alphabetically. Make the main columns of every admin list sortable (done for Residents, Document Requests, Complaints, Printing Requests).
   - **Long lists (hundreds of rows):** set `pageSize={25}` and `itemLabel="residents"` for pages ("Showing 1–25 of 282 residents", Previous / page menu / Next; resets to page 1 when filters or sort change), and `dense` for tighter rows. Clickable rows support **arrow keys** (up/down moves and opens the next row). Pair it with a match count above the table, counts on filter chips, and a detail panel that stays in view (`lg:sticky`). Reference: Admin · Residents.
 
-  Reference implementations: the Documents list (`citizen/ServicesDirectory.tsx`) and the request form (`citizen/DocumentRequestWizard.tsx`) show fields, validation, stepper, review and confirmation done the house way.
-- App shell: `frontend/src/components/layout/AppShell.tsx`. It takes `groups` (sidebar sections), `bottomNav`, `notificationsTab` and `unreadCount`. Every role uses this same component with its own nav config. Don't fork it per screen. The resident config is in `components/citizen/residentNav.tsx`; the admin config is in `components/admin/adminNav.tsx` (already wired up for the demo `admin` role). Admin teammates: build your screen in `components/admin/`, then in `App.tsx` replace the component for your `admin_…` tab id. Until then each tab shows the old screen or a "Not built yet" placeholder.
+  Reference implementations: the Documents list (`resident/ServicesDirectory.tsx`) and the request form (`resident/DocumentRequestWizard.tsx`) show fields, validation, stepper, review and confirmation done the house way.
+- App shell: `frontend/src/components/layout/AppShell.tsx`. It takes `groups` (sidebar sections), `bottomNav`, `notificationsTab` and `unreadCount`. Every role uses this same component with its own nav config. Don't fork it per screen. The resident config is in `components/resident/residentNav.tsx`; the admin config is in `components/admin/adminNav.tsx` (already wired up for the demo `admin` role). Admin teammates: build your screen in `components/admin/`, then in `App.tsx` replace the component for your `admin_…` tab id. Until then each tab shows the old screen or a "Not built yet" placeholder.
 
 ---
 
@@ -321,17 +321,17 @@ Use the shared `BarChart` component (`components/ui/BarChart.tsx`). One series i
 
 ### 5.17 Toast pop-ups
 
-Shared by every role (`common/ToastContainer.tsx`); call `addToast(title, description, type)` from the context.
+Shared by every role (`layout/ToastContainer.tsx`); call `addToast(title, description, type)` from the context.
 - White card (`bg-surface border-line rounded-card shadow-float`) with a 4px left edge and a round icon tile in the tone color (success / info / warning / error), plus a 44px dismiss button.
 - Bottom-right on desktop (380px wide); full width above the bottom nav on phones.
 - Errors are announced immediately (`role="alert"`), others politely (`role="status"`).
 - Copy follows section 7: a short sentence-case title ("Request submitted"), then the next step ("Reference REQ-2026-1234. You can follow it in My Requests."). No Title Case, no "Successfully".
 
-The between-pages loading placeholder (`common/PageSkeleton.tsx`) uses `surface-muted` blocks with `line` borders.
+The between-pages loading placeholder (`layout/PageSkeleton.tsx`) uses `surface-muted` blocks with `line` borders.
 
 ### 5.18 Certificate viewer and printed certificate
 
-`common/OfficialDocumentTemplate.tsx`, opened with `setSelectedDocumentForPrint(request)` from anywhere (resident or admin).
+`shared/OfficialDocumentTemplate.tsx`, opened with `setSelectedDocumentForPrint(request)` from anywhere (resident or admin).
 - **Screen:** white toolbar (document name, reference + resident, status pill, Primary "Print or save as PDF", 44px close) over a navy/60 backdrop; the certificate is an A4-proportioned white sheet. Escape or clicking outside closes it.
 - **Print:** only the certificate prints (the app is hidden), on A4 with 16mm margins.
 - **The certificate itself** is a formal document, so it stays mostly ink-on-white (navy only for the letterhead and title) and prints well in black and white: letterhead (Republic of the Philippines → Barangay Sto. Angel → Office of the Punong Barangay) over a double rule; a council column filled from the **Officials data**; title, reference, "To whom it may concern:", justified body per document type, "Issued this 9th day of …"; a blank signature line over the Punong Barangay's name; and a footer row (fee, O.R. no., validity, verification code) with "Not valid without the official barangay seal".
@@ -386,6 +386,10 @@ All grids collapse to a single column below 1024px, in source order.
 - Every icon-only button has an `aria-label`. Decorative icons get `aria-hidden`.
 - Large text mode must keep working. Use rem sizes and don't fix heights on text containers.
 - Respect `prefers-reduced-motion`. Motion stays subtle (≤ 200ms fades/slides) and is never required to understand the UI.
+- **Motion tokens** (in `index.css`): `ease-out-strong` (cubic-bezier(0.23, 1, 0.32, 1)) for anything entering or responding to a press, `ease-drawer` for sheets. Never `ease-in`. Exits are faster than entrances.
+- **Press feedback**: every `Button` scales to 0.97 while pressed (150ms). Custom pressable elements should do the same (`active:scale-[0.97]`).
+- **Dialogs**: centered on ≥ 640px (fade + scale from 0.96, 240ms in, 150ms out); a bottom sheet on phones (slide up, 420ms drawer curve). Lock page scroll, close on Escape and backdrop tap, make the page behind `inert`, and focus the panel, not the first field (that would pop the phone keyboard). Reference: `auth/AuthDialog.tsx`.
+- **Mobile**: no tap highlight, `touch-action: manipulation` on controls, and no text selection on long-press of buttons (all in `index.css` base). Inputs stay at 16px so iOS never zooms.
 
 ---
 
@@ -446,7 +450,7 @@ All grids collapse to a single column below 1024px, in source order.
 | Resident · Court Reservation | Done (ppen). Data: `courtSlots`, `courtReservations`, `courtClosures`, `createCourtReservation`, `updateCourtReservationStatus`, `closeCourtDate` in `BarangayContext` (Admin · Court Reservations can use these: Approve/Decline and "Close a date"). Residents only ever see other people's bookings as "Booked", never names. |
 | Resident · My Profile | Done (ppen), no mockup. Personal details are read-only (changed at the hall); mobile/email editable; change password; Large text and SMS preferences. |
 | Resident · Notifications | Done (ppen), no mockup. Filter chips, unread dots, mark read on open, "Mark all as read". Read state: `readNotificationIds` / `markNotificationsRead` in `BarangayContext`. |
-| Login and registration | Done (ppen). Demo login: any email or 09 mobile opens the resident view; an email containing "admin" opens the **demo Administrator** (new shell, Admin nav); "staff" or "captain"/"official" open those old roles. |
+| Landing page + Sign in / Sign up | Done. No mockup screen for the landing page; follows these patterns. Header with only the product name (no barangay named) and Guest mode / Sign in / Sign up, hero with an example request, services, how it works, closing call to action, footer. Sign in / Sign up is a dialog (`auth/AuthDialog.tsx`): bottom sheet on phones. Demo login: any email or 09 mobile opens the resident view; an email containing "admin" opens the Administrator; "staff" or "captain"/"official" open the old roles. |
 | Admin shell (demo `admin` role) | Done (ppen): Admin nav, top bar, mobile bottom nav (Overview · Requests · Calendar · More), phone header "e-Kapitan Admin / Administrator portal". |
 | Admin · Overview | Done (ppen): 4 stat cards, Transactions by service chart, Needs attention (oldest first, click to open), Recent activity from the audit log, Export report (CSV). Phone: "Today at the barangay". |
 | Admin · Document Requests | Done (ppen): filter bar (search, status, document) or search + chips on phones, list + detail with requirements, Assigned to, and actions by stage (Approve / Return for correction / Reject → Mark ready for pickup → Mark as claimed), Export list (CSV). Reference for every admin list + detail screen. |
@@ -455,8 +459,13 @@ All grids collapse to a single column below 1024px, in source order.
 | Admin · Residents | Done (ppen), no mockup. Masterlist with search, purok, group chips (Senior, PWD, Indigent, Voters, Household heads), inactive toggle; detail with household and requests; Add resident, Edit details (name/birthdate/sex locked), status changes; duplicate review (system suggests, a person decides, with a note). Opening a record is written to the audit log. Built for hundreds of residents: 25 per page, compact rows, multi-word search ("santos purok 2"), counts on every group chip, arrow-key browsing, and a details panel that stays in view. |
 | Admin · Personnel | Done (ppen), no mockup. Staff accounts with role presets (Administrator, Records staff, Front desk, Peace and order, Health worker, View only) plus per-area access, add / edit, on leave, deactivate (confirm). The last active administrator can't be demoted, put on leave or deactivated. "Assigned to" lists elsewhere come from here (`staffFor(area)`: active staff with that access). |
 | Admin · Court Reservations | Done (ppen): calendar with booking chips (Approved / Pending / Closed), Pending requests numbered first come, first served with the request time, Approve / Decline (reason), selected-day schedule per slot, Close this day (cancels that day's bookings with the reason) / Reopen. Phone: "Court approvals" first, calendar below without chips. |
-| Guest, Staff, Official/Admin screens | Old design and old layout |
+| Public site (guests): shell + Homepage | Done. Mockups "Public homepage" (desktop) and "Public · Homepage (mobile)". Shell in `layout/PublicShell.tsx`: navy-deep utility bar, top bar with Home · Services · Announcements · Officials · Contact · Ask Kap plus Log in / Register (full nav from 1280px; Menu drawer below), phone header + bottom nav Home · Services · My Requests · Account, contact footer on every page. |
+| Public · Announcements, Track your request, Report a concern, How it works | Done, no mockup (built from these patterns). Track looks up any REQ/INC/PRT/CRT reference and shows status only, never names. |
+| Officials directory (public + resident More group) | Done, styled like the homepage officials row. |
+| Ka-Barangay AI (Ask Kap) | Done, no mockup. Titled "Ask Kap" for guests and "Ka-Barangay AI" for residents. Chat card + "Try asking" suggestions (a swipe row above the input on phones), "Information only" callout. |
+| Verify a Document | Done, no mockup. Accepts the printed verification code (VER-…) only, not request reference numbers. Three results: valid, not issued yet, not found. |
+| Old Staff and Official roles (legacy, demo login with "staff" / "captain") | Old design and old layout |
 
 Update this table in the same PR as your screen.
 
-Open questions, placeholders to confirm, and known follow-ups are tracked in **`REDESIGN_NOTES.md`** (repo root). Add to it when you make a guess or leave something unfinished.
+Open questions, placeholders to confirm, and known follow-ups are tracked in **`REDESIGN_NOTES.md`** (in this `docs/` folder). Add to it when you make a guess or leave something unfinished.

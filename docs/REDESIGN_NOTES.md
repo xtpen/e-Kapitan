@@ -9,23 +9,44 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 ## Needs real barangay information (before the defense)
 
 - [ ] **Confirm: barangay name spelling.** The mockup says "Sto. Anghel"; `PRODUCT.md` and the app use **"Sto. Angel"**. Check the official spelling.
-  - Where: `BARANGAY` constant in `components/layout/AppShell.tsx` and `components/auth/LandingLogin.tsx`, plus `DESIGN.md` section 11.
+  - Where: `BARANGAY` in `frontend/src/config/barangay.ts` (the whole app reads it from there), plus `DESIGN.md` section 11.
 - [ ] **Confirm: claiming hours.** "Weekdays, 1:00 PM to 4:00 PM at the Barangay Hall" is copied from the mockup. Is that the real release schedule?
-  - Where: Dashboard (`citizen/CitizenHome.tsx`), Documents list and request form (`citizen/ServicesDirectory.tsx`, `citizen/DocumentRequestWizard.tsx`).
+  - Where: Dashboard (`resident/ResidentDashboard.tsx`), Documents list and request form (`resident/ServicesDirectory.tsx`, `resident/DocumentRequestWizard.tsx`).
 - [ ] **Confirm: court time slots.** 4–6 PM, 6–8 PM and 8–10 PM are from the mockup. Real slots and hours?
   - Where: `COURT_SLOTS` in `data/mockData.ts`.
 - [ ] **Confirm: how far ahead residents can book the court.** Set to 60 days as a placeholder.
-  - Where: `BOOKING_WINDOW_DAYS` at the top of `citizen/CourtReservationView.tsx`.
+  - Where: `BOOKING_WINDOW_DAYS` at the top of `resident/CourtReservationView.tsx`.
 - [ ] **Fix: "Barangay 4A" still appears in mock data and old screens.** Examples: document descriptions ("resident of Barangay 4A…"), the QR verification message, the old header's hotline modal, verification codes (`VER-B4A-…`).
   - Where: `data/mockData.ts`, `context/BarangayContext.tsx`, older components.
 - [ ] **Confirm: purok names.** The purok list ("Purok 1 - Centro", "Purok 2 - Riverside", …) dates from the Barangay 4A version. Replace with Sto. Angel's real puroks.
-  - Where: `PUROKS` in `citizen/DocumentRequestWizard.tsx` and `citizen/ComplaintsView.tsx` (consider moving it to `mockData.ts` so there's one list).
+  - Where: `PUROKS` in `frontend/src/data/reference.ts` (one list for resident, public and admin screens).
 
 ## Navigation
 
 - [ ] **Decide: where these resident features go.** They aren't in the new Resident nav, so they sit in a temporary **More** group at the bottom of the sidebar: My Requests, Ka-Barangay AI, Appointments, Verify a Document, Advisories, Officials. Options: fold some into existing pages (e.g. My Requests into the Dashboard's "View all"), make Ka-Barangay AI a floating chat button, or drop features.
-  - Where: `citizen/residentNav.tsx`.
-- [ ] **Decide: public homepage.** The mockup's login page has "Back to homepage", and the mockup includes a Public Homepage, but the app has none yet. For now the link became "Continue as guest". Who builds the homepage, and when?
+  - Where: `resident/residentNav.tsx`.
+- [x] ~~Public homepage~~. **Built** (`components/public/`). "Continue as guest" on the login page now opens it, and its Log in / Register buttons return to the login page (Register opens the registration card).
+
+## Landing page
+
+- [ ] **Confirm: wording is now "Sign in" / "Sign up"** (the old login page and public site said "Log in" / "Register"). Changed across the landing page, dialog and public site.
+- [ ] **Confirm: the landing page names no barangay** (as requested); the header uses the e-Kapitan logo (`public/favicon.jpg`) instead of the `SA` monogram. The signed-in shells and the public site still show the barangay name.
+- [ ] **Note: the example request on the landing page is illustrative** (marked "Example"). It shows an SMS "Your clearance is ready"; SMS isn't built yet (needs the backend).
+
+## Public site (guests)
+
+- [ ] **Confirm: official phone number and email.** The footer shows the mockup's placeholders "[Official phone number]" and "[Official email]".
+  - Where: footer in `layout/PublicShell.tsx`.
+- [ ] **Confirm: printing card copy.** The mockup says "see the estimated cost"; changed to "Free for residents" to match the printing decision.
+- [ ] **Decide: what guests can track.** "Track your request" finds any document, report, printing or court reference and shows its status and dates only (no names). OK to show document/printing/court status to anyone who has the number?
+- [ ] **Note: guest reports.** Name and mobile number are optional. Without a name the report is saved as "Anonymous Guest".
+- [ ] **Note: "Request a document", "Send a print job" and "Reserve the court" open the login page** for guests, with a line under the service cards saying these are for registered residents.
+- [x] ~~Ask Kap and Verify a document~~ restyled.
+- [ ] **Confirm: Verify a document only accepts VER- codes.** It used to accept request reference numbers (REQ-…) too, which let anyone see a resident's name by guessing numbers. It also used to call a document "authentic" while it was still being processed; it now says "not issued yet".
+- [ ] **Confirm: Ask Kap's offline answer.** If the AI service is down, Kap gives a fixed answer (clearance ₱50.00, indigency free, claiming 1:00 PM to 4:00 PM, office 8:00 AM to 5:00 PM). The old one listed a hotline, (02) 8642-1111, from the Barangay 4A version; it was removed until the real number is known.
+- [ ] **Fix: the AI service's own answers may still mention Barangay 4A.** Those come from the backend (`backend/server.ts`), not the screen.
+- [ ] **Note: "Try a sample code"** on Verify a document fills in a seeded demo code. Remove it when real data arrives.
+- [ ] **Note: "My Requests" in the phone bottom nav** opens Track your request for guests, and "Account" opens the login page (mockup labels kept).
 
 ## Documents
 
@@ -35,7 +56,7 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 ## Complaints & Reports
 
 - [ ] **Fix: reports filed with "Hide my name" can only be tracked until you leave the page.** The data stores them as "Anonymous Resident", so they can't be linked back to the resident later. Proper fix: keep the real reporter ID on the record but hide it from the people being reported.
-  - Where: `createIncidentReport` in `context/BarangayContext.tsx`, `citizen/ComplaintsView.tsx`.
+  - Where: `createIncidentReport` in `context/BarangayContext.tsx`, `resident/ComplaintsView.tsx`.
 - [ ] **Confirm: report titles are generated.** The mockup's form has no title field, so each report is titled "Type: location" (e.g. "Public Safety / Streetlight: Near the chapel on Rizal St.") for staff screens. OK, or add a title field?
 
 ## Printing
@@ -60,14 +81,14 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 - [ ] **Confirm: which details residents may edit themselves.** Right now only mobile number and email. Name, birthdate, sex, civil status, address and purok are read-only, with "To correct these, visit the barangay hall with a valid ID."
 - [ ] **Note: front-end only for now.** "Change password" validates and shows a success message but stores nothing. The SMS updates switch is remembered only until the page reloads. Both need the backend.
 - [ ] **Note: where notifications come from.** They're generated from the status of each request (documents, reports, printing, court), not stored. A new status shows as a new unread notification. Read/unread resets on reload. Proper notifications (with SMS) need the backend.
-  - Where: `citizen/useResidentActivity.ts`, `readNotificationIds` in `context/BarangayContext.tsx`.
+  - Where: `resident/useResidentActivity.ts`, `readNotificationIds` in `context/BarangayContext.tsx`.
 
 ## My Requests (built without a mockup)
 
 - [ ] **Review: team sign-off on the look.** One page lists every request type (documents, reports, printing, court, appointments) with filter chips, search by reference, and a detail panel.
 - [ ] **Decide: where My Requests lives in the nav.** It's in the temporary More group, but the mobile bottom nav and the Dashboard's "View all" already lead to it. Strong candidate to move into the Services group or Account.
 - [ ] **Note: privacy fix.** The old tracker listed every resident's document requests (and let anyone search them by name). The new page shows only the signed-in resident's requests.
-- [ ] **Note:** "View certificate" (approved, ready or claimed documents) still opens the old certificate preview (`common/OfficialDocumentTemplate.tsx`). It's a printable document, so it was left as is.
+- [ ] **Note:** "View certificate" (approved, ready or claimed documents) still opens the old certificate preview (`shared/OfficialDocumentTemplate.tsx`). It's a printable document, so it was left as is.
 
 ## Toasts and loading placeholder
 
@@ -76,9 +97,8 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 
 ## Code health
 
-- [ ] **Fix: 9 TypeScript errors that existed before the redesign** (was 12; the duplicate `UserRole` type and a dead role check were fixed with the admin role). Remaining: duplicate object keys (`BarangayContext.tsx`, `AICitizenAssistant.tsx`, `ResidentRecordsDirectory.tsx`), `isActive` in `ManageOfficials.tsx`, and `incidentReports` / `dateReported` in `GuestReportStatus.tsx`. The app runs, but **`npm run build` fails** until they're fixed.
-  - Check with: `npx tsc --noEmit` inside `frontend/`.
-- [ ] **Note: uncommitted edits from before the redesign** (in `App.tsx`, `Header.tsx`, `AICitizenAssistant.tsx`, `DocumentVerification.tsx`, `OfficialDocumentTemplate.tsx`) are mixed in with the redesign work. Review them before committing.
+- [x] ~~TypeScript errors~~. **Fixed** during the folder cleanup: `npm run typecheck` shows 0 errors and `npm run build` passes.
+- [ ] **Note: uncommitted edits from before the redesign** (in `App.tsx`, `Header.tsx`, `shared/KaBarangayAI.tsx`, `shared/DocumentVerification.tsx`, `shared/OfficialDocumentTemplate.tsx`) are mixed in with the redesign work. Review them before committing.
 
 ## Roles
 

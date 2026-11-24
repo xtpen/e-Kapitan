@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Info } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button, Card, Checkbox, Field, Input, PageHeader, PasswordInput, StatusPill } from '../ui';
+import { Button, Card, Checkbox, Field, Input, PageHeader, PasswordInput, StatusPill, initialsOf } from '../ui';
 
 const isMobile = (v: string) => /^09\d{9}$/.test(v.replace(/[\s-]/g, ''));
 const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 const longDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-const initials = (name: string) => {
-  const parts = name.split(' ').filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
-};
 
 const Saved: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div role="status" className="mt-4 flex gap-3 rounded-control bg-success-bg text-success-fg px-4 py-3">
@@ -197,7 +192,7 @@ export const ProfileView: React.FC = () => {
               aria-hidden="true"
               className="w-[84px] h-[84px] rounded-full mx-auto mb-3.5 grid place-items-center bg-primary-tint text-primary-strong font-display font-semibold text-[1.625rem]"
             >
-              {initials(fullName)}
+              {initialsOf(fullName)}
             </div>
             <h2 className="text-h3 font-semibold text-navy">{fullName}</h2>
             {resident && (

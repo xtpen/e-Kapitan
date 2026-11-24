@@ -110,7 +110,7 @@ export const PrintingView: React.FC = () => {
 
   return (
     <div className="max-w-[1200px]">
-      <PageHeader title="Printing" description="Upload your file and choose your options. Printing is free for residents." />
+      <PageHeader title="Printing Services" description="Upload your file and choose your options. Printing is free for residents." />
 
       <div className="grid lg:grid-cols-[1.5fr_1fr] gap-5 items-start">
         <Card padded="lg">

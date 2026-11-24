@@ -34,3 +34,25 @@ export const formatShortDateTime = (value: string) => {
 /** ₱50.00 style. Use for every fee and cost. */
 export const formatPeso = (amount: number) =>
   `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Today as YYYY-MM-DD in the user's own time zone (for date inputs and "not in the future" checks). */
+export const todayISO = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+};
+
+/**
+ * Two-letter initials for avatar discs: "Hon. Maria T. Santos" → "MS", "Eduardo Reyes Sr." → "ER",
+ * "Admin" → "AD". Skips honorifics and initials/suffixes that end in a period.
+ */
+export const initialsOf = (name: string) => {
+  const parts = name
+    .replace(/^(Hon|Engr|Atty|Dr)\.\s*/i, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  const words = parts.filter(p => !p.endsWith('.'));
+  const use = words.length > 0 ? words : parts;
+  if (use.length === 1) return use[0].slice(0, 2).toUpperCase();
+  return (use[0][0] + use[use.length - 1][0]).toUpperCase();
+};

@@ -5,7 +5,7 @@ import { Button, Card, CardHeader, IconTile, StatCard, StatusPill, TextLink, typ
 import { useResidentActivity } from './useResidentActivity';
 
 /** Resident Dashboard. Mockup: "Resident · Dashboard" (desktop + mobile). See DESIGN.md. */
-export const CitizenHome: React.FC = () => {
+export const ResidentDashboard: React.FC = () => {
   const { currentUser, setActiveTab } = useBarangay();
   const { rows, activeCount, readyCount, notifications, unreadCount } = useResidentActivity();
 

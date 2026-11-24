@@ -35,7 +35,9 @@ export const Button: React.FC<ButtonProps> = ({
 }) => (
   <button
     type={type}
-    className={`inline-flex items-center justify-center gap-2 rounded-control font-semibold transition-colors cursor-pointer
+    className={`inline-flex items-center justify-center gap-2 rounded-control font-semibold cursor-pointer
+      transition-[color,background-color,border-color,transform] duration-150 ease-out-strong
+      active:scale-[0.97] disabled:active:scale-100
       disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted disabled:border-surface-muted
       ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
     {...rest}

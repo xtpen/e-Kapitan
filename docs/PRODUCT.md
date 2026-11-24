@@ -42,7 +42,7 @@ One barangay-level platform that integrates what existing systems (LGUSS-BIMS, B
 - Resident-record access is written to a non-editable audit log. Aligned with the Data Privacy Act of 2012 (RA 10173).
 - Out of scope: Katarungang Pambarangay mediation or adjudication, PSA/PhilSys/DILG integrations, online payments, native apps, offline mode, biometrics.
 - Document verification is record matching, not anti-forgery. Forecasts are planning aids, not medical determinations.
-- Full detail: `e-Kapitan_Project_Context.md`.
+- Full detail: `project-context.md`.
 
 ## Brand Commitments
 
@@ -50,7 +50,7 @@ Keep the names as they are: product **e-Kapitan** and the AI assistant **Ka-Bara
 
 ## Evidence on Hand
 
-- Thesis proposal content distilled in `e-Kapitan_Project_Context.md`, and a demo script in `prototype_presentation_guide.md`.
+- Thesis proposal content distilled in `project-context.md`, and a demo script in `presentation-guide.md`.
 - Mock data only (`frontend/src/data/mockData.ts`). There are no real testimonials, resident counts, usage figures or official statistics; do not invent them. Population figures in the paper are still placeholders.
 
 ## Product Principles

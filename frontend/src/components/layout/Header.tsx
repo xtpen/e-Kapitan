@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useBarangay } from '../../context/BarangayContext';
 import { UserRole } from '../../types';
 import { 
@@ -17,9 +17,7 @@ import {
   X,
   FileCheck2,
   Users2,
-  LogOut,
-  Settings,
-  HelpCircle
+  LogOut
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -205,25 +203,16 @@ export const Header: React.FC = () => {
                     </div>
 
                     <div className="px-2 py-2 space-y-1">
-                      <button 
-                        onClick={() => {
-                          setActiveTab('guest_settings');
-                          setRoleDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      <button
+                        onClick={() => setLargeTextMode(v => !v)}
+                        aria-pressed={largeTextMode}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
-                        <Settings className="w-4 h-4 text-slate-400" />
-                        <span>Account Settings</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setActiveTab('guest_help');
-                          setRoleDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        <HelpCircle className="w-4 h-4 text-slate-400" />
-                        <span>Help & Support</span>
+                        <span className="flex items-center gap-3">
+                          <Type className="w-4 h-4 text-slate-400" />
+                          <span>Large text</span>
+                        </span>
+                        <span className="text-slate-500">{largeTextMode ? 'On' : 'Off'}</span>
                       </button>
                     </div>
 

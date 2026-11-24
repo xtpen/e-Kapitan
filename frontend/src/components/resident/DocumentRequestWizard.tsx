@@ -14,7 +14,9 @@ import {
   Select,
   Stepper,
   formatPeso,
+  todayISO,
 } from '../ui';
+import { PUROKS } from '../../data/reference';
 
 interface DocumentRequestWizardProps {
   initialServiceId?: string;
@@ -31,15 +33,6 @@ const PURPOSES = [
   'Other',
 ];
 
-const PUROKS = [
-  'Purok 1 - Centro',
-  'Purok 2 - Riverside',
-  'Purok 3 - Bukidnon',
-  'Purok 4 - Pag-asa',
-  'Purok 5 - San Roque',
-  'Purok 6 - Industrial Zone',
-];
-
 const WAIVERS = [
   'First-Time Jobseeker (RA 11261)',
   'Senior Citizen (RA 9994)',
@@ -49,12 +42,6 @@ const WAIVERS = [
 
 const MAX_ID_BYTES = 5 * 1024 * 1024;
 const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-
-const todayISO = () => {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
-};
 
 const formatClaimDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });

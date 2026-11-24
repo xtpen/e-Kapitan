@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import type { IncidentCategory, IncidentReport, IncidentStatus } from '../../types';
+import type { IncidentCategory, IncidentReport } from '../../types';
+import { INCIDENT_CATEGORIES, PUROKS } from '../../data/reference';
+import { buildReportStages } from '../shared/reportStages';
 import {
   Button,
   Card,
@@ -18,81 +20,13 @@ import {
   Textarea,
   formatShortDateTime,
   incidentStatus,
-  type TimelineStage,
+  todayISO,
 } from '../ui';
-
-const CATEGORIES: IncidentCategory[] = [
-  'Noise Disturbance',
-  'Neighbor Dispute',
-  'Sanitation & Garbage',
-  'Public Safety / Streetlight',
-  'Stray Animal Concern',
-  'Drainage / Flooding',
-  'Other Community Concern',
-];
-
-const PUROKS = [
-  'Purok 1 - Centro',
-  'Purok 2 - Riverside',
-  'Purok 3 - Bukidnon',
-  'Purok 4 - Pag-asa',
-  'Purok 5 - San Roque',
-  'Purok 6 - Industrial Zone',
-];
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
-const todayISO = () => {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
-};
-
 type Errors = Partial<Record<'date' | 'location' | 'description' | 'files' | 'consent', string>>;
-
-/** Report progress: Received → Under review → Action taken → Resolved (DESIGN.md 5.12). */
-export const buildReportStages = (r: IncidentReport): TimelineStage[] => {
-  const order: IncidentStatus[] = ['received', 'assigned', 'in_progress', 'resolved'];
-  const rank: Record<IncidentStatus, number> = {
-    received: 0,
-    assigned: 1,
-    in_progress: 2,
-    hearing_scheduled: 2,
-    resolved: 3,
-    dismissed: 3,
-  };
-  const current = rank[r.status];
-  const entryFor = (s: IncidentStatus) =>
-    [...r.statusHistory].reverse().find(h => h.status === s || (s === 'in_progress' && h.status === 'hearing_scheduled'));
-
-  const stages: TimelineStage[] = order.map((s, i) => {
-    const entry = entryFor(s);
-    const isHearing = s === 'in_progress' && r.status === 'hearing_scheduled';
-    const info = isHearing ? incidentStatus.hearing_scheduled : incidentStatus[s];
-    return {
-      label: info.label,
-      tone: s === 'received' ? 'success' : info.tone,
-      reached: i <= current && !(r.status === 'dismissed' && i === 3),
-      detail: entry ? formatShortDateTime(entry.updatedAt) : undefined,
-      note: entry && i === Math.min(current, 2) && r.status !== 'resolved' ? entry.note : undefined,
-    };
-  });
-
-  if (r.status === 'dismissed') {
-    const entry = entryFor('dismissed');
-    stages[3] = {
-      label: incidentStatus.dismissed.label,
-      tone: 'danger',
-      reached: true,
-      detail: entry ? formatShortDateTime(entry.updatedAt) : undefined,
-      note: entry?.note,
-    };
-  }
-  if (r.status === 'resolved' && r.resolutionSummary) stages[3].note = r.resolutionSummary;
-  if (r.assignedTo && current >= 1 && !stages[1].detail) stages[1].detail = 'Assigned to barangay staff';
-  return stages;
-};
 
 /**
  * Resident · Complaints & Reports. Mockup: "Resident · Complaints" (desktop + mobile). See DESIGN.md.
@@ -101,7 +35,7 @@ export const buildReportStages = (r: IncidentReport): TimelineStage[] => {
 export const ComplaintsView: React.FC = () => {
   const { incidents, createIncidentReport, currentUser } = useBarangay();
 
-  const [category, setCategory] = useState<IncidentCategory>(CATEGORIES[0]);
+  const [category, setCategory] = useState<IncidentCategory>(INCIDENT_CATEGORIES[0]);
   const [date, setDate] = useState(todayISO());
   const [purok, setPurok] = useState(PUROKS[1]);
   const [location, setLocation] = useState('');
@@ -201,7 +135,7 @@ export const ComplaintsView: React.FC = () => {
               <Field label="Type of concern">
                 {p => (
                   <Select {...p} value={category} onChange={e => setCategory(e.target.value as IncidentCategory)}>
-                    {CATEGORIES.map(c => (
+                    {INCIDENT_CATEGORIES.map(c => (
                       <option key={c}>{c}</option>
                     ))}
                   </Select>

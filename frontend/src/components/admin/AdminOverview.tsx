@@ -15,8 +15,8 @@ import {
   formatShortDateTime,
   type Tone,
 } from '../ui';
+import { BARANGAY } from '../../config/barangay';
 
-const BARANGAY = 'Sto. Angel';
 
 interface AttentionItem {
   id: string;

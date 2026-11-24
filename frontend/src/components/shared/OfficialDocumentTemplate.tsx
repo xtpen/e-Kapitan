@@ -4,6 +4,7 @@ import { Printer, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { DocumentRequest } from '../../types';
 import { Button, StatusPill, documentStatus, formatPeso } from '../ui';
+import { BARANGAY, CITY, PROVINCE } from '../../config/barangay';
 
 /*
  * Certificate viewer + printable certificate. See DESIGN.md section 5.18.
@@ -12,9 +13,6 @@ import { Button, StatusPill, documentStatus, formatPeso } from '../ui';
  * No seal, signature or QR is drawn: the barangay applies the real seal and signature.
  */
 
-const BARANGAY = 'Sto. Angel';
-const CITY = 'San Pablo City';
-const PROVINCE = 'Laguna';
 
 interface Props {
   document: DocumentRequest;

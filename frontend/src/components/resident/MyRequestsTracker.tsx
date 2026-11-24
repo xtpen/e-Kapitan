@@ -15,7 +15,7 @@ import {
   formatShortDateTime,
   type TimelineStage,
 } from '../ui';
-import { buildReportStages } from './ComplaintsView';
+import { buildReportStages } from '../shared/reportStages';
 import { useResidentActivity, type ActivityKind, type ActivityRow } from './useResidentActivity';
 
 type Filter = 'all' | 'active' | ActivityKind;
