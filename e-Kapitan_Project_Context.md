@@ -9,7 +9,7 @@
 **e-Kapitan** is a **web-based intelligent barangay information management and decision support system**. It centralizes resident and household data, digitizes frontline barangay services, automates routine tasks, and gives officials data-driven and predictive insights for planning.
 
 - **Delivery:** web app only (desktop and mobile browsers). No native Android/iOS apps, no offline mode, requires internet.
-- **Deployment site:** Barangay 4A, San Pablo City, Laguna (single-barangay implementation and evaluation). The barangay is near Sampaloc Lake, which draws non-resident visitors, which is why Guest Mode exists.
+- **Deployment site:** Barangay Sto. Angel, San Pablo City, Laguna (single-barangay implementation and evaluation). The barangay has non-residents (people who are in the barangay but not registered residents), which is why Guest Mode exists. (The original paper named Barangay 4A near Sampaloc Lake as the site; the site has since changed to Sto. Angel.)
 - **Research design:** descriptive-developmental (R&D), built with **Rapid Application Development (RAD)**: Requirements Planning → User Design → Construction → Cutover.
 - **Core design principle:** most algorithms are rule-based or use established, interpretable methods. Any AI output is **advisory** and reviewed by authorized personnel. Weights and thresholds are configured by the barangay.
 
@@ -257,7 +257,7 @@ The paper doesn't give a schema. These entities are named or clearly implied:
 
 ## 8. Constraints and delimitations (important for scoping)
 
-1. **Single barangay** (4A) deployment and evaluation.
+1. **Single barangay** (Sto. Angel) deployment and evaluation.
 2. **No external integrations** (PSA, PhilSys, DILG, civil registry), **no online payments**. API endpoints for future integration are provisioned but not connected.
 3. Document verification is record matching, not anti-forgery.
 4. **All automation is advisory.** Duplicate detection, queue prioritization, task assignment, and incident prioritization only flag, order, or recommend. They never auto-merge, overwrite, or delete, and humans keep final authority.
