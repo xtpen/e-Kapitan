@@ -1,279 +1,320 @@
-import React from 'react';
-import { DocumentRequest } from '../../types';
-import { Printer, Download, CheckCircle2, ShieldCheck, X, Building2 } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Printer, X } from 'lucide-react';
+import { useBarangay } from '../../context/BarangayContext';
+import type { DocumentRequest } from '../../types';
+import { Button, StatusPill, documentStatus, formatPeso } from '../ui';
 
-interface OfficialDocumentTemplateProps {
+/*
+ * Certificate viewer + printable certificate. See DESIGN.md section 5.18.
+ * Screen: a modal with a toolbar and an A4 "sheet". Print: only the sheet prints (A4).
+ * Officials come from the Officials data, so the list stays current.
+ * No seal, signature or QR is drawn: the barangay applies the real seal and signature.
+ */
+
+const BARANGAY = 'Sto. Angel';
+const CITY = 'San Pablo City';
+const PROVINCE = 'Laguna';
+
+interface Props {
   document: DocumentRequest;
   onClose: () => void;
 }
 
-export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> = ({ document, onClose }) => {
-  const handlePrint = () => {
-    window.print();
-  };
+const TITLES: Record<string, string> = {
+  barangay_clearance: 'Barangay Clearance',
+  certificate_of_residency: 'Certificate of Residency',
+  certificate_of_indigency: 'Certificate of Indigency',
+  business_clearance: 'Barangay Business Clearance',
+  first_time_jobseeker: 'First-Time Jobseeker Certification',
+  good_moral: 'Certificate of Good Moral Character',
+};
 
-  const getDocTitle = () => {
-    switch (document.documentType) {
-      case 'barangay_clearance':
-        return 'BARANGAY CLEARANCE';
-      case 'certificate_of_residency':
-        return 'CERTIFICATE OF RESIDENCY';
-      case 'certificate_of_indigency':
-        return 'CERTIFICATE OF INDIGENCY';
-      case 'business_clearance':
-        return 'BARANGAY BUSINESS CLEARANCE';
-      case 'first_time_jobseeker':
-        return 'FIRST-TIME JOBSEEKER CERTIFICATION (RA 11261)';
-      default:
-        return 'BARANGAY CERTIFICATION';
-    }
-  };
+const ordinal = (n: number) => {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
 
-  const getDocBodyText = () => {
-    switch (document.documentType) {
+/** "9th day of September 2026" from the mock data's date strings. */
+const issuedPhrase = (value: string) => {
+  const m = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  const d = m ? new Date(`${m[1]}T00:00:00`) : new Date(value);
+  const date = Number.isNaN(d.getTime()) ? new Date() : d;
+  return `${ordinal(date.getDate())} day of ${date.toLocaleDateString('en-US', { month: 'long' })} ${date.getFullYear()}`;
+};
+
+const Seal: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    aria-hidden="true"
+    className="w-[72px] h-[72px] rounded-full border-2 border-dashed border-field-line hidden sm:grid print:grid place-items-center text-center text-[0.625rem] leading-tight font-semibold uppercase tracking-wide text-muted shrink-0 print:text-[7pt]"
+  >
+    {label}
+    <br />
+    seal
+  </div>
+);
+
+export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClose }) => {
+  const { officials, services } = useBarangay();
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  const service = services.find(s => s.id === doc.documentType);
+  const title = TITLES[doc.documentType] ?? 'Barangay Certification';
+  const place = `${doc.purok}, Barangay ${BARANGAY}, ${CITY}, ${PROVINCE}`;
+  const purpose = doc.purpose || 'general purposes';
+  const free = doc.isFreeDueToExemption || doc.fee === 0;
+
+  const current = officials.filter(o => o.status !== 'Inactive (Former)' && o.status !== 'Suspended');
+  const captain = current.find(o => /captain|punong/i.test(o.position));
+  const council = current.filter(o => /kagawad|sk chair/i.test(o.position));
+  const staff = current.filter(o => /secretary|treasurer/i.test(o.position));
+
+  // Escape closes; focus the close button; mark <body> so print CSS shows only the sheet.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    window.document.body.classList.add('printing-certificate');
+    closeRef.current?.focus();
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.document.body.classList.remove('printing-certificate');
+    };
+  }, [onClose]);
+
+  const Name: React.FC<{ children: React.ReactNode }> = ({ children }) => <b className="font-semibold">{children}</b>;
+
+  const body = (() => {
+    switch (doc.documentType) {
       case 'barangay_clearance':
         return (
           <>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, of legal age, Filipino citizen, and a bonafide resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, is a person of good moral character and reputable standing in the community.
+            <p>
+              This is to certify that <Name>{doc.residentName}</Name>, of legal age, Filipino, and a resident of {place}, is
+              known to this office as a person of good moral character and reputation in the community.
             </p>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              Records of this office further show that as of this date, the subject individual has <strong>NO DEROGATORY RECORD</strong> nor any pending criminal case, citation, or dispute filed before the Lupon Tagapamayapa of this barangay.
+            <p>
+              Based on the records of this office, the above-named person has <Name>no derogatory record</Name> and no pending
+              case or complaint filed before the Lupon Tagapamayapa of this barangay as of this date.
             </p>
-            <p className="indent-8 leading-relaxed text-justify">
-              This certification is hereby issued upon the request of the interested party for: <strong>{document.purpose || 'Official employment and general legal purposes'}</strong>.
+            <p>
+              This clearance is issued upon the request of the above-named person for: <Name>{purpose}</Name>.
             </p>
           </>
         );
       case 'certificate_of_residency':
         return (
           <>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, of legal age, is a documented resident residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, Metro Manila, having continuously resided in this jurisdiction for more than six (6) months.
+            <p>
+              This is to certify that <Name>{doc.residentName}</Name>, of legal age, is a bona fide resident of {place}, and has
+              resided in this barangay for at least six (6) months.
             </p>
-            <p className="indent-8 leading-relaxed text-justify">
-              This certification is issued upon the request of the bearer for the purpose of: <strong>{document.purpose || 'School enrollment, postal ID, and general identification'}</strong>.
+            <p>
+              This certification is issued upon the request of the above-named person for: <Name>{purpose}</Name>.
             </p>
           </>
         );
       case 'certificate_of_indigency':
         return (
           <>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, belongs to an indigent family residing in this barangay, with monthly household earnings falling within the low-income threshold.
+            <p>
+              This is to certify that <Name>{doc.residentName}</Name>, a resident of {place}, belongs to an indigent family in
+              this barangay based on the records of this office.
             </p>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              Pursuant to government social welfare guidelines and local ordinances, all local processing fees for this document have been <strong>WAIVED (100% FREE OF CHARGE)</strong>.
-            </p>
-            <p className="indent-8 leading-relaxed text-justify">
-              This certificate is issued to support the bearer's application for: <strong>{document.purpose || 'Financial, medical, or legal assistance through DSWD / Malasakit Center'}</strong>.
+            <p>
+              This certification is issued free of charge upon the request of the above-named person for:{' '}
+              <Name>{purpose}</Name>.
             </p>
           </>
         );
       case 'business_clearance':
         return (
           <>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This certifies that commercial enterprise or establishment registered under <strong>{document.residentName}</strong>, situated at <strong>{document.purok}</strong>, Barangay 4A, has complied with the barangay environmental, sanitation, and peace ordinances.
+            <p>
+              This is to certify that the business owned by <Name>{doc.residentName}</Name>, located at {place}, is permitted
+              to operate within the jurisdiction of this barangay, subject to compliance with barangay ordinances and
+              regulations.
             </p>
-            <p className="indent-8 leading-relaxed text-justify">
-              Clearance is granted for the operation of: <strong>{document.purpose || 'Commercial business permit renewal'}</strong>, subject to regular inspection and compliance with local municipal codes.
+            <p>
+              This clearance is issued for: <Name>{purpose}</Name>.
             </p>
           </>
         );
       case 'first_time_jobseeker':
         return (
           <>
-            <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This certification is issued in compliance with <strong>Republic Act No. 11261 (First Time Jobseekers Assistance Act)</strong>, certifying that <strong>{document.residentName}</strong> is a qualified first-time jobseeker residing in <strong>{document.purok}</strong>, Barangay 4A.
+            <p>
+              This is to certify that <Name>{doc.residentName}</Name>, a resident of {place}, is a qualified first-time
+              jobseeker under <Name>Republic Act No. 11261</Name>, the First Time Jobseekers Assistance Act.
             </p>
-            <p className="indent-8 leading-relaxed text-justify">
-              By virtue of RA 11261, no government fees or charges were collected for this document. Valid for one (1) year from date of issuance.
+            <p>
+              Pursuant to RA 11261, this certification is issued free of charge and may be used only once, within one (1)
+              year from the date of issue.
+            </p>
+          </>
+        );
+      case 'good_moral':
+        return (
+          <>
+            <p>
+              This is to certify that <Name>{doc.residentName}</Name>, a resident of {place}, is known to this office as a
+              person of good moral character and has no derogatory record in this barangay.
+            </p>
+            <p>
+              This certification is issued upon the request of the above-named person for: <Name>{purpose}</Name>.
             </p>
           </>
         );
       default:
         return (
-          <p className="indent-8 leading-relaxed text-justify">
-            This certifies that <strong>{document.residentName}</strong> is an active resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, and that this document is issued for: <strong>{document.purpose}</strong>.
+          <p>
+            This is to certify that <Name>{doc.residentName}</Name> is a resident of {place}. This certification is issued for:{' '}
+            <Name>{purpose}</Name>.
           </p>
         );
     }
-  };
+  })();
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs overflow-y-auto print:static print:block print:p-0 print:bg-transparent print:backdrop-blur-none">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full border border-slate-200 overflow-hidden my-auto animate-in zoom-in-95 print:block print:max-w-none print:w-full print:border-none print:shadow-none print:rounded-none print:m-0 print:animate-none">
-        {/* Top Control Bar (Hidden on print) */}
-        <div className="print:hidden bg-slate-900 text-white px-5 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <span className="font-semibold text-sm">Official Barangay Issued Document Viewer</span>
-            <span className="text-[11px] bg-emerald-800/80 text-emerald-200 px-2 py-0.5 rounded-full">
-              Status: {document.status.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              id="print-document-btn"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print / Download PDF</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+  return createPortal(
+    <div
+      className="certificate-viewer fixed inset-0 z-[90] flex flex-col bg-navy/60"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="certificate-title"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      {/* Toolbar (screen only) */}
+      <div className="print:hidden bg-surface border-b border-line px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-3 gap-y-2.5 shrink-0">
+        <div className="flex-1 min-w-0 order-1">
+          <p id="certificate-title" className="font-display font-semibold text-navy text-h3 leading-tight truncate">
+            {title}
+          </p>
+          <p className="text-meta text-muted truncate">
+            {doc.referenceNumber} · {doc.residentName}
+          </p>
         </div>
-
-        {/* Printable Official Document Sheet */}
-        <div className="p-8 sm:p-12 text-slate-900 bg-white relative print:p-0 print:border-none">
-          {/* Subtle Watermark Seal */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035]">
-            <Building2 className="w-96 h-96 text-slate-900" />
-          </div>
-
-          {/* Letterhead Header */}
-          <div className="border-b-2 border-slate-900 pb-4 text-center relative">
-            <div className="flex items-center justify-between mb-2">
-              {/* San Pablo City Seal Placeholder */}
-              <div className="w-16 h-16 rounded-full border-2 border-slate-800 flex items-center justify-center bg-slate-50 shrink-0">
-                <span className="text-[10px] font-bold text-center leading-tight">SAN<br/>PABLO</span>
-              </div>
-
-              <div className="flex-1 px-4">
-                <p className="text-xs font-medium tracking-wider text-slate-600 uppercase">Republic of the Philippines</p>
-                <p className="text-xs font-medium text-slate-600">Province of Laguna • City of San Pablo</p>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-heading tracking-tight mt-0.5">
-                  BARANGAY 4A
-                </h2>
-                <p className="text-xs font-semibold text-slate-700 uppercase tracking-widest mt-0.5">
-                  Office of the Punong Barangay
-                </p>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Barangay Hall Complex, E. Santos St., San Pablo City • Tel: (02) 8642-1111
-                </p>
-              </div>
-
-              {/* Barangay 4A Seal */}
-              <div className="w-16 h-16 rounded-full border-2 border-emerald-800 bg-emerald-50 text-emerald-900 flex items-center justify-center font-bold text-xs shrink-0">
-                <span className="text-[10px] font-extrabold text-center leading-tight">BRGY<br/>4A</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Document Content Split Layout */}
-          <div className="grid grid-cols-12 gap-6 mt-6">
-            {/* Left Sidebar: Sangguniang Barangay Council */}
-            <div className="col-span-12 sm:col-span-4 border-r-0 sm:border-r border-slate-200 pr-0 sm:pr-4 text-center sm:text-left text-xs space-y-3">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <p className="text-[11px] font-black text-slate-900 uppercase">Hon. Roberto V. Gomez</p>
-                <p className="text-[10px] font-semibold text-emerald-700">Punong Barangay</p>
-              </div>
-
-              <div className="space-y-1.5 text-[11px] text-slate-700">
-                <p className="font-bold text-slate-900 uppercase text-[10px] tracking-wider mb-1">
-                  Sangguniang Barangay Kagawad
-                </p>
-                <p className="font-medium">Hon. Antonio Morales <span className="text-[10px] text-slate-500 block">Peace & Order</span></p>
-                <p className="font-medium">Hon. Dr. Evelyn Cruz <span className="text-[10px] text-slate-500 block">Health & Sanitation</span></p>
-                <p className="font-medium">Hon. Gabriel Santos <span className="text-[10px] text-slate-500 block">Infrastructure</span></p>
-                <p className="font-medium">Hon. Corazon Dizon <span className="text-[10px] text-slate-500 block">Social Services</span></p>
-                <p className="font-medium">Hon. Jaime Rivera <span className="text-[10px] text-slate-500 block">Livelihood & Commerce</span></p>
-                <p className="font-medium">Hon. Patricia Reyes <span className="text-[10px] text-slate-500 block">Education & Youth</span></p>
-                <p className="font-medium">Hon. Mark Alcantara <span className="text-[10px] text-slate-500 block">SK Chairman</span></p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-600">
-                <p><strong>Atty. Katrina David</strong><br/>Barangay Secretary</p>
-                <p className="mt-1"><strong>Ramon S. Perez</strong><br/>Barangay Treasurer</p>
-              </div>
-            </div>
-
-            {/* Main Certificate Body */}
-            <div className="col-span-12 sm:col-span-8 flex flex-col justify-between">
-              <div>
-                {/* Title */}
-                <div className="text-center my-4">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 font-heading tracking-wide underline underline-offset-4 decoration-2 decoration-emerald-600">
-                    {getDocTitle()}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 font-mono mt-1">Ref: {document.referenceNumber}</p>
-                </div>
-
-                <p className="font-bold text-xs uppercase tracking-widest text-slate-800 mb-3">
-                  TO WHOM IT MAY CONCERN:
-                </p>
-
-                <div className="text-xs sm:text-sm text-slate-800">
-                  {getDocBodyText()}
-                </div>
-              </div>
-
-              {/* Signatures & QR Authentication Footer */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                  {/* Dynamic QR Verification Box */}
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-slate-50/80">
-                    {/* SVG Stylized QR representation */}
-                    <div className="w-16 h-16 bg-white p-1 rounded-md border border-slate-300 shadow-2xs shrink-0 flex flex-col items-center justify-center">
-                      <div className="w-full h-full grid grid-cols-5 gap-0.5 p-0.5">
-                        <div className="bg-slate-900 col-span-2 row-span-2"></div>
-                        <div className="bg-slate-200"></div>
-                        <div className="bg-slate-900 col-span-2 row-span-2"></div>
-                        <div className="bg-slate-900"></div>
-                        <div className="bg-slate-900"></div>
-                        <div className="bg-slate-200"></div>
-                        <div className="bg-slate-900"></div>
-                        <div className="bg-slate-900"></div>
-                        <div className="bg-slate-900 col-span-2 row-span-2"></div>
-                        <div className="bg-slate-200"></div>
-                        <div className="bg-slate-900"></div>
-                        <div className="bg-slate-900"></div>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                        e-Kapitan QR Verified
-                      </p>
-                      <p className="text-[9px] font-mono text-slate-500">{document.verificationCode}</p>
-                      <p className="text-[9px] text-slate-500 mt-0.5 leading-tight">
-                        Scan or enter code on portal to verify document authenticity.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Punong Barangay Signature */}
-                  <div className="text-center sm:text-right min-w-[180px]">
-                    <div className="h-10 flex items-end justify-center sm:justify-end">
-                      <span className="font-serif italic text-emerald-800 text-sm font-semibold transform -rotate-3">
-                        R.V. Gomez
-                      </span>
-                    </div>
-                    <div className="border-t border-slate-900 pt-1">
-                      <p className="text-xs font-black text-slate-900 uppercase">HON. ROBERTO V. GOMEZ</p>
-                      <p className="text-[10px] font-medium text-slate-600">Punong Barangay</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-wrap items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2">
-                  <span>Issued on: {document.updatedAt || document.submittedAt}</span>
-                  <span>Document Fee: {document.isFreeDueToExemption ? 'FREE (Exempt)' : `₱${document.fee}.00`}</span>
-                  <span>System Ref: {document.referenceNumber}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="order-3 sm:order-2 w-full sm:w-auto flex items-center justify-between gap-3">
+          <StatusPill tone={documentStatus[doc.status].tone}>{documentStatus[doc.status].label}</StatusPill>
+          <Button size="sm" onClick={() => window.print()} icon={<Printer className="w-5 h-5" aria-hidden="true" />}>
+            Print or save as PDF
+          </Button>
         </div>
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close certificate"
+          className="order-2 sm:order-3 w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy hover:bg-surface-muted cursor-pointer"
+        >
+          <X className="w-5 h-5" aria-hidden="true" />
+        </button>
       </div>
-    </div>
+
+      {/* Sheet area */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 print:p-0 print:overflow-visible" onClick={e => e.target === e.currentTarget && onClose()}>
+        <article className="certificate-sheet mx-auto w-full max-w-[820px] bg-surface text-ink shadow-float rounded-[4px] px-6 py-8 sm:px-12 sm:py-12 print:shadow-none print:rounded-none print:max-w-none print:p-0">
+          {/* Letterhead */}
+          <header className="flex items-center gap-4 pb-4 border-b-[3px] border-double border-navy">
+            <Seal label="City" />
+            <div className="flex-1 text-center">
+              <p className="text-caption uppercase tracking-[0.12em] text-muted">Republic of the Philippines</p>
+              <p className="text-caption text-muted">
+                Province of {PROVINCE} · {CITY}
+              </p>
+              <p className="font-display font-bold text-navy text-[1.5rem] sm:text-[1.75rem] leading-tight mt-1 uppercase">
+                Barangay {BARANGAY}
+              </p>
+              <p className="text-caption font-semibold uppercase tracking-[0.14em] text-ink mt-0.5">Office of the Punong Barangay</p>
+            </div>
+            <Seal label="Barangay" />
+          </header>
+
+          <div className="grid sm:grid-cols-[200px_1fr] print:grid-cols-[170px_1fr] gap-6 sm:gap-8 mt-6">
+            {/* Council column */}
+            <aside className="order-2 sm:order-1 print:order-1 sm:border-r print:border-r border-line sm:pr-6 print:pr-5 text-caption">
+              {captain && (
+                <div className="mb-4">
+                  <p className="font-semibold uppercase text-ink">{captain.name}</p>
+                  <p className="text-muted">Punong Barangay</p>
+                </div>
+              )}
+              {council.length > 0 && (
+                <>
+                  <p className="font-semibold uppercase tracking-[0.06em] text-ink mb-2">Sangguniang Barangay</p>
+                  <ul className="space-y-2">
+                    {council.map(o => (
+                      <li key={o.id}>
+                        <span className="block text-ink">{o.name}</span>
+                        <span className="block text-muted">{o.position.replace('Barangay ', '')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {staff.length > 0 && (
+                <ul className="mt-4 pt-3 border-t border-line space-y-2">
+                  {staff.map(o => (
+                    <li key={o.id}>
+                      <span className="block text-ink">{o.name}</span>
+                      <span className="block text-muted">{o.position}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </aside>
+
+            {/* Certificate body */}
+            <div className="order-1 sm:order-2 print:order-2 flex flex-col">
+              <h2 className="font-display font-bold text-navy text-center uppercase tracking-[0.06em] text-[1.25rem] sm:text-[1.5rem] leading-tight">
+                {title}
+              </h2>
+              <p className="text-center text-caption text-muted mt-1">Reference no. {doc.referenceNumber}</p>
+
+              <p className="font-semibold uppercase tracking-[0.08em] text-meta mt-6 mb-3">To whom it may concern:</p>
+              <div className="space-y-3.5 text-[0.9375rem] leading-[1.75] text-justify [&_p]:indent-8">{body}</div>
+
+              <p className="text-[0.9375rem] leading-[1.75] indent-8 mt-3.5 text-justify">
+                Issued this {issuedPhrase(doc.updatedAt || doc.submittedAt)} at Barangay {BARANGAY}, {CITY}, {PROVINCE}.
+              </p>
+
+              {/* Signature (signed by hand at the hall) */}
+              <div className="mt-12 self-end text-center min-w-[240px]">
+                <div className="border-t border-ink pt-1.5">
+                  <p className="font-semibold uppercase">{captain?.name ?? 'Punong Barangay'}</p>
+                  <p className="text-caption text-muted">Punong Barangay</p>
+                </div>
+              </div>
+
+              {/* Record details */}
+              <dl className="mt-10 pt-4 border-t border-line grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-x-4 gap-y-3 text-caption">
+                <div>
+                  <dt className="text-muted">Fee</dt>
+                  <dd className="font-semibold">{free ? 'Free' : formatPeso(doc.fee)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">O.R. no.</dt>
+                  <dd className="font-semibold">{free ? 'Not applicable' : '________________'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Valid for</dt>
+                  <dd className="font-semibold">
+                    {doc.documentType === 'first_time_jobseeker' ? '1 year' : service ? `${service.validityMonths} months` : '6 months'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Verification code</dt>
+                  <dd className="font-semibold font-mono break-all">{doc.verificationCode}</dd>
+                </div>
+              </dl>
+              <p className="text-caption text-muted mt-3">
+                Not valid without the official barangay seal. To check that this document is genuine, enter the verification
+                code in e-Kapitan under Verify a Document.
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>,
+    window.document.body,
   );
 };

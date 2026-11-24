@@ -35,6 +35,15 @@ import { NotificationsView } from './components/citizen/NotificationsView';
 import { residentBottomNav, residentNavGroups } from './components/citizen/residentNav';
 import { useResidentActivity } from './components/citizen/useResidentActivity';
 import { AppShell } from './components/layout/AppShell';
+import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
+import { AdminPlaceholder } from './components/admin/AdminPlaceholder';
+import { AdminOverview } from './components/admin/AdminOverview';
+import { AdminDocumentRequests } from './components/admin/AdminDocumentRequests';
+import { AdminComplaints } from './components/admin/AdminComplaints';
+import { AdminPrintingRequests } from './components/admin/AdminPrintingRequests';
+import { AdminCourtReservations } from './components/admin/AdminCourtReservations';
+import { AdminResidents } from './components/admin/AdminResidents';
+import { AdminPersonnel } from './components/admin/AdminPersonnel';
 
 // Staff Components
 import { StaffDashboard } from './components/staff/StaffDashboard';
@@ -227,6 +236,32 @@ const MainAppContent: React.FC = () => {
       case 'manage_officials':
         return <ManageOfficials />;
 
+      // Admin Views (demo admin, redesigned shell). Old screens show until the Admin team redesigns them.
+      case 'admin_overview':
+        return <AdminOverview />;
+      case 'admin_documents':
+        return <AdminDocumentRequests />;
+      case 'admin_complaints':
+        return <AdminComplaints />;
+      case 'admin_printing':
+        return <AdminPrintingRequests />;
+      case 'admin_court':
+        return <AdminCourtReservations />;
+      case 'admin_residents':
+        return <AdminResidents />;
+      case 'admin_personnel':
+        return <AdminPersonnel />;
+      case 'admin_services':
+        return <AdminPlaceholder title="Services" description="Documents and services residents can request, with fees and requirements." />;
+      case 'admin_officials':
+        return <ManageOfficials />;
+      case 'admin_chatbot':
+        return <AdminPlaceholder title="Chatbot Knowledge" description="Answers Ka-Barangay AI is allowed to give." />;
+      case 'admin_reports':
+        return <ExecutiveDashboard />;
+      case 'admin_audit':
+        return <AuditTrailViewer />;
+
       // Guest Views (added explicitly here for clarity, though qr_verify/ai_assistant fall through to Citizen if no exact match, we should handle them explicitly here if we want to ensure separation)
       case 'guest_home':
         return <GuestPortal />;
@@ -271,6 +306,22 @@ const MainAppContent: React.FC = () => {
   );
 
   // Redesigned shell (DESIGN.md). Residents first; other roles move over as they are redesigned.
+  if (currentRole === 'admin') {
+    return (
+      <>
+        <ToastContainer />
+        <AppShell
+          groups={adminNavGroups}
+          bottomNav={adminBottomNav}
+          mobileBrand={{ title: 'e-Kapitan Admin', subtitle: 'Administrator portal' }}
+        >
+          {pageTransition}
+        </AppShell>
+        {printModal}
+      </>
+    );
+  }
+
   if (currentRole === 'citizen') {
     return (
       <>

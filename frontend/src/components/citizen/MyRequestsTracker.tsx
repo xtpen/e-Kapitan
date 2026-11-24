@@ -47,6 +47,13 @@ const documentStages = (d: DocumentRequest): TimelineStage[] => {
   const order: RequestStatus[] = ['submitted', 'under_review', 'approved', 'ready_for_release', 'completed'];
   const labels = ['Received', 'Under review', 'Approved', 'Ready for pickup', 'Claimed'];
   const tones: TimelineStage['tone'][] = ['success', 'info', 'success', 'success', 'success'];
+  if (d.status === 'returned') {
+    return [
+      { label: 'Received', tone: 'success', reached: true, detail: formatShortDateTime(d.submittedAt) },
+      { label: 'Under review', tone: 'info', reached: true },
+      { label: 'Returned for correction', tone: 'warning', reached: true, detail: formatShortDateTime(d.updatedAt), note: d.staffNotes },
+    ];
+  }
   if (d.status === 'rejected') {
     return [
       { label: 'Received', tone: 'success', reached: true, detail: formatShortDateTime(d.submittedAt) },

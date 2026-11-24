@@ -51,7 +51,7 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 ## Login and registration
 
 - [ ] **Confirm: registering no longer logs you in.** Following the mockup ("Staff will verify your details before activating your account"), registration now shows a "waiting for verification" message. If the demo script relied on "register, then land on the dashboard", log in afterwards instead.
-- [ ] **Note: demo login rules.** Any email or 09 mobile opens the resident view. An email containing "staff" or "captain"/"official" opens those roles. Passwords aren't checked (prototype only).
+- [ ] **Note: demo login rules.** Any email or 09 mobile opens the resident view. An email containing **"admin"** (e.g. `admin@demo.test`) opens the demo Administrator; "staff" or "captain"/"official" open those old roles. Passwords aren't checked (prototype only). The real admin account comes with the database phase.
 - [ ] **Note:** the old login page's marketing badges ("ARTA Compliant", "Barangay 4A", floating cards) were removed because the mockup has none.
 
 ## My Profile and Notifications (built without a mockup)
@@ -76,11 +76,83 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 
 ## Code health
 
-- [ ] **Fix: 12 TypeScript errors that existed before the redesign.** Duplicate keys, a duplicate `UserRole` type, and `incidentReports` / `dateReported` in `GuestReportStatus.tsx`. The app runs, but **`npm run build` fails** until they're fixed.
+- [ ] **Fix: 9 TypeScript errors that existed before the redesign** (was 12; the duplicate `UserRole` type and a dead role check were fixed with the admin role). Remaining: duplicate object keys (`BarangayContext.tsx`, `AICitizenAssistant.tsx`, `ResidentRecordsDirectory.tsx`), `isActive` in `ManageOfficials.tsx`, and `incidentReports` / `dateReported` in `GuestReportStatus.tsx`. The app runs, but **`npm run build` fails** until they're fixed.
   - Check with: `npx tsc --noEmit` inside `frontend/`.
 - [ ] **Note: uncommitted edits from before the redesign** (in `App.tsx`, `Header.tsx`, `AICitizenAssistant.tsx`, `DocumentVerification.tsx`, `OfficialDocumentTemplate.tsx`) are mixed in with the redesign work. Review them before committing.
 
+## Roles
+
+- [ ] **Decide: what happens to the old Staff and Official roles.** The mockup has only Resident and Admin. A demo **Admin** role now exists in the new shell, and it reuses the old Staff/Official screens (Operations Desk, Document Queue, Blotter, Residents, Officials, Executive dashboard, Audit Trail) until they're redesigned. Merge Staff/Official into Admin with permissions per position, or keep them as separate roles with their own nav?
+
+## Admin · Overview
+
+- [ ] **Confirm: what the numbers count.** Desktop stat cards and the chart show **all-time totals** in the mock data; the phone version shows what's **waiting now** (new requests, open reports, print jobs in progress, pending court requests), as the mockups label them. Should desktop be "this month" instead? That needs real dates from the database.
+- [ ] **Note: "Needs attention"** lists items nobody has acted on yet (new document requests, unassigned complaints, pending print and court requests), oldest first.
+- [ ] **Note: Export report** downloads a CSV (totals + the needs-attention list). A formatted PDF report can come later if the barangay wants one.
+
+## Admin · Document Requests
+
+- [ ] **Confirm: the request workflow.** Pending → (assign staff → Under review) → Approved → Ready for pickup → Claimed, with "Returned for correction" (resident fixes something; shown in My Requests with the staff note) and Rejected (with a reason) as side exits. Does this match how the hall actually works?
+- [ ] **Note: new status `returned`.** Added to the data so "Return for correction" is a real state, not a rejection. Residents see it in My Requests, their notifications, and the timeline.
+- [ ] **Confirm: staff names.** The "Assigned to" list is placeholder names (`BARANGAY_STAFF` in `data/mockData.ts`). It should come from the Personnel screen / staff accounts later.
+- [ ] **Note: no ID preview yet.** The detail panel shows where the uploaded valid ID will appear; it needs file storage (Supabase Storage) to work.
+- [ ] **Note:** the old Staff role's "Document Queue" screen still exists for the Staff login; the Admin screen replaces it in the new shell.
+
+## Admin · Personnel
+
+- [ ] **Review: team sign-off on the look and the roles.** Roles are presets of access areas: Administrator (everything), Records staff (documents, printing, residents), Front desk (documents, complaints, printing, court), Peace and order (complaints), Health worker (residents), View only (reports). Single areas can be added or removed per person. Do these match the barangay's real jobs?
+- [ ] **Needs the database: real accounts.** Access is shown and saved, but nothing enforces it yet: the demo login still decides the view by email ("admin", "staff"). Real sign-in, passwords and per-area permissions on the server come with the database phase.
+- [ ] **Note: "Assigned to" lists now come from Personnel.** Document Requests offers active staff with document access; Complaints offers active staff with complaint access (plus Kagawads, Tanod, Lupon). Staff on leave or deactivated aren't offered. The old placeholder `BARANGAY_STAFF` list is gone.
+- [ ] **Note: safety rule.** The only active administrator can't be demoted, put on leave or deactivated, so the barangay can't lock itself out.
+- [ ] **Note:** Personnel are staff accounts; Officials (Captain, Kagawads) are a separate list. Someone like the Barangay Secretary can be in both.
+
+## Admin · Residents
+
+- [ ] **Review: team sign-off on the look.** No mockup; follows the admin list + detail pattern.
+- [ ] **Confirm: what staff may edit.** Name, birthdate and sex are locked in the edit form ("correct with a supporting document at the hall"). Civil status, address, purok, contact, occupation and the PWD/voter/indigent flags can be edited. Senior status is automatic from age (60+).
+- [ ] **Confirm: merging duplicates.** "Same person" keeps the older record and **archives** the newer one with a note ("Merged into B4A-…"); nothing is deleted. Request history is not moved between records yet.
+- [ ] **Note: privacy.** Every time staff open a resident record, it's written to the audit log (RA 10173). In development mode React runs effects twice, so a view can appear twice in the log; a production build logs it once.
+- [ ] **Note: no export.** The old screen had none and a full masterlist export is sensitive personal data, so none was added. If the barangay needs one, it should be limited to specific roles and logged.
+- [ ] **Note: 300 demo residents.** `generateDemoResidents(300)` at the end of `data/mockData.ts` adds invented residents (fixed seed, same for everyone) so the screen can be tried at a realistic size. Remove that line when real records are loaded.
+- [ ] **Note: at real scale the database should do the searching and paging** (e.g. 25 rows per request). The current page loads every resident in the browser, which is fine for hundreds but not for many thousands.
+- [ ] **Fix: resident numbers** still use the old `B4A-` prefix (from Barangay 4A) in the mock data and for new residents.
+- [ ] **Note: duplicate detection fix.** The old detector always claimed "Same purok" and a fixed 88% score; it now lists only the fields that really match and scores from them. It's still a simple rule (same last name + birthdate, or same mobile).
+- [ ] **Note:** registrations from the login page's "Create account" aren't saved anywhere yet, so there's no "waiting for verification" list here; that needs the database.
+
+## Admin · Court Reservations
+
+- [ ] **Confirm: closing a day cancels its bookings.** "Close this day" cancels every pending and approved booking that day and sends the closing reason to those residents (they see "Court booking cancelled" in notifications). Reopening the day does **not** restore those bookings. Is that what the barangay wants?
+- [ ] **Confirm: first come, first served.** Pending requests are numbered (#1, #2…) and ordered by when they were **requested**, with the request time shown on each. Since a slot can only be requested once, this decides who gets reviewed first, not who wins a slot. Should staff be *required* to handle them in that order?
+- [ ] **Decide: can staff move a booking** to another slot instead of declining it? Not built.
+- [ ] **Note:** Approve has no conflict check because residents can't request a slot that's already taken; if staff ever enter bookings directly, a check will be needed.
+- [ ] **Note:** the admin can look back at past months (read-only) and up to 2 months ahead.
+
+## Admin · Printing Requests
+
+- [ ] **Review: team sign-off on the look.** No mockup; follows the admin list + detail pattern, with status chips instead of a status dropdown (only a few statuses).
+- [ ] **Needs the database: opening the file.** Staff can't open the uploaded file yet; the detail panel says where it will appear once uploads are stored (Supabase Storage).
+- [ ] **Confirm: limits.** Is there a daily page limit per resident, or content the barangay won't print? "Don't accept" asks for a reason the resident sees.
+- [ ] **Note:** two pending sample jobs were added to the mock data (PRT-2026-0092, PRT-2026-0093) so the full flow can be demoed.
+
+## Admin · Complaints
+
+- [ ] **Review: team sign-off on the look.** There's no Admin Complaints mockup; it follows the Document Requests layout.
+- [ ] **Confirm: the complaint workflow.** Received → Assign (Under review) → Record action taken / Schedule hearing (repeatable) → Mark as resolved, or Close without action. Each step needs a message, and **the resident sees it** in their report progress.
+- [ ] **Note: privacy fix.** Status updates used to be copied into the staff-only notes (and vice versa). Now the public update and the **staff-only note** are separate; residents never see the staff note.
+- [ ] **Confirm: who can be assigned.** The list is active Kagawads and the Captain (from Officials), the placeholder staff names, "Barangay Tanod" and "Lupon Tagapamayapa". Should it follow committees (e.g. noise → Peace and Order Kagawad)?
+- [ ] **Note: out of scope reminder.** PRODUCT.md says Katarungang Pambarangay mediation itself is out of scope; "Schedule hearing" only records the date for the resident, it doesn't manage the case.
+- [ ] **Note:** one new sample complaint (INC-2026-0315, unassigned streetlight) was added to the mock data so the full flow can be demoed.
+
+## Certificate (View certificate)
+
+- [ ] **Confirm: certificate wording with the barangay.** The body text for each document type is a reasonable standard wording, not the barangay's official template. Ask for a real issued sample of each document and match it.
+- [ ] **Needs from the barangay: official seals.** The letterhead shows dashed "City seal" / "Barangay seal" placeholders. Replace them with the real seal images once the barangay provides them (PRODUCT.md: don't make one up).
+- [ ] **Decide: real QR code.** The old certificate had a fake QR pattern; it was removed. The verification code is printed instead (residents can enter it under Verify a Document). A real, scannable QR needs a small library (e.g. `qrcode`) and should encode a verification link or hash.
+- [ ] **Note:** the council list on the certificate comes from the Officials data, so updating an official there updates every certificate. The hall address and phone number were removed until real ones are provided.
+
 ## For Admin teammates (ready to use)
+
+- **Log in as admin:** any email containing "admin", any password. The Admin nav, top bar and mobile nav are done (`components/admin/adminNav.tsx`). Replace your tab's component in `App.tsx` (search for `admin_`).
 
 These data functions already exist in `BarangayContext`, so the Admin screens don't need new ones:
 

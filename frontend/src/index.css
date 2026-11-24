@@ -104,6 +104,23 @@
     background: white !important;
     color: black !important;
   }
+
+  /* Certificate viewer open: print only the certificate sheet, on A4. */
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  body.printing-certificate #root {
+    display: none !important;
+  }
+  body.printing-certificate .certificate-viewer {
+    position: static !important;
+    display: block !important;
+    background: white !important;
+  }
+  .certificate-sheet {
+    font-size: 11pt;
+  }
   .no-print {
     display: none !important;
   }

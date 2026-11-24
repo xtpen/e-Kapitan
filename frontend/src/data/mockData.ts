@@ -601,6 +601,29 @@ export const INITIAL_QUEUE: QueueTicket[] = [
 
 export const INITIAL_INCIDENTS: IncidentReport[] = [
   {
+    id: 'inc-004',
+    referenceNumber: 'INC-2026-0315',
+    category: 'Public Safety / Streetlight',
+    title: 'Public Safety / Streetlight: Dark corner near the chapel',
+    description: 'The street light at the corner near the chapel has been off for a week. The corner is very dark at night and students pass there.',
+    location: 'Near the chapel, Rizal St.',
+    purok: 'Purok 3 - Bukidnon',
+    incidentDateTime: '2026-09-09',
+    reporterName: 'Ana Liza Domingo',
+    reporterContact: '0918-555-0144',
+    isAnonymous: false,
+    status: 'received',
+    statusHistory: [
+      {
+        status: 'received',
+        updatedAt: '2026-09-09 06:40 PM',
+        updatedBy: 'Ana Liza Domingo',
+        note: 'Report submitted via e-Kapitan Citizen Portal and queued for staff review.'
+      }
+    ],
+    submittedAt: '2026-09-09 06:40 PM'
+  },
+  {
     id: 'inc-001',
     referenceNumber: 'INC-2026-0312',
     category: 'Noise Disturbance',
@@ -939,6 +962,34 @@ export const ANALYTICS_DATA = {
 
 export const INITIAL_PRINT_REQUESTS: import('../types').PrintRequest[] = [
   {
+    id: 'prt-003',
+    referenceNumber: 'PRT-2026-0092',
+    residentId: 'res-003',
+    residentName: 'Eduardo Villanueva Reyes Sr.',
+    fileName: 'senior-citizen-id-application.pdf',
+    pages: 3,
+    copies: 2,
+    paperSize: 'A4',
+    color: 'black_and_white',
+    sides: 'one_sided',
+    status: 'pending',
+    submittedAt: '2026-09-09 10:05 AM',
+  },
+  {
+    id: 'prt-004',
+    referenceNumber: 'PRT-2026-0093',
+    residentId: 'res-004',
+    residentName: 'Juan Paolo Alcantara Mendoza',
+    fileName: 'resume-and-cover-letter.docx',
+    pages: 2,
+    copies: 5,
+    paperSize: 'Letter',
+    color: 'black_and_white',
+    sides: 'one_sided',
+    status: 'pending',
+    submittedAt: '2026-09-09 11:20 AM',
+  },
+  {
     id: 'prt-001',
     referenceNumber: 'PRT-2026-0087',
     residentId: 'res-001',
@@ -1001,3 +1052,97 @@ export const INITIAL_COURT_CLOSURES: import('../types').CourtClosure[] = [
   { date: daysFromToday(5), reason: 'Barangay event' },
   { date: daysFromToday(6), reason: 'Court repainting' },
 ];
+
+/* ---------- Personnel (staff accounts). Placeholder people for the demo. ---------- */
+
+/** What each role can use by default. Staff can be given or denied single areas. */
+export const ROLE_ACCESS: Record<import('../types').StaffRole, import('../types').AccessArea[]> = {
+  administrator: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'],
+  records: ['documents', 'printing', 'residents'],
+  desk: ['documents', 'complaints', 'printing', 'court'],
+  peace_order: ['complaints'],
+  health: ['residents'],
+  viewer: ['reports'],
+};
+
+export const INITIAL_PERSONNEL: import('../types').Personnel[] = [
+  { id: 'stf-1', name: 'Elena Ramos', position: 'Desk Officer and Records Custodian', role: 'records', access: ['documents', 'printing', 'residents', 'complaints'], email: 'elena.ramos@e-kapitan.local', mobile: '09175550101', status: 'active', lastActive: '2026-09-09 10:15 AM', addedOn: '2021-06-01' },
+  { id: 'stf-2', name: 'Lourdes P. Bautista', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'lourdes.bautista@e-kapitan.local', mobile: '09175550102', status: 'active', lastActive: '2026-09-09 09:40 AM', addedOn: '2022-01-10' },
+  { id: 'stf-3', name: 'Ramon D. Villanueva', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'ramon.villanueva@e-kapitan.local', mobile: '09175550103', status: 'active', lastActive: '2026-09-08 04:55 PM', addedOn: '2023-03-15' },
+  { id: 'stf-4', name: 'Grace M. Lim', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'grace.lim@e-kapitan.local', mobile: '09175550104', status: 'on_leave', lastActive: '2026-08-29 03:10 PM', addedOn: '2023-03-15' },
+  { id: 'stf-5', name: 'Danilo Castro', position: 'Tanod Commander', role: 'peace_order', access: ['complaints'], email: 'danilo.castro@e-kapitan.local', mobile: '09175550105', status: 'active', lastActive: '2026-09-09 09:15 AM', addedOn: '2020-11-02' },
+  { id: 'stf-6', name: 'Rhea S. Manalo', position: 'Barangay Health Worker', role: 'health', access: ['residents'], email: 'rhea.manalo@e-kapitan.local', mobile: '09175550106', status: 'active', lastActive: '2026-09-07 11:20 AM', addedOn: '2024-02-05' },
+  { id: 'stf-7', name: 'Juan Carlos T. Ramos', position: 'Barangay Secretary', role: 'administrator', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'], email: 'secretary.ramos@e-kapitan.local', mobile: '09175550107', status: 'active', lastActive: '2026-09-09 08:05 AM', addedOn: '2022-07-01' },
+  { id: 'stf-8', name: 'Noel B. Aguilar', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'noel.aguilar@e-kapitan.local', mobile: '09175550108', status: 'deactivated', lastActive: '2025-12-19 05:00 PM', addedOn: '2021-06-01' },
+];
+
+/* ---------- Demo population (so the Residents screen can be tried at a realistic size) ---------- */
+
+/**
+ * Adds ~300 generated residents, grouped into households, from a fixed seed so every
+ * teammate sees the same people. Names are invented. Remove when real records are loaded.
+ */
+const generateDemoResidents = (count: number): Resident[] => {
+  let seed = 20261124;
+  const rand = () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+
+  const female = ['Maria', 'Ana', 'Rosa', 'Liza', 'Grace', 'Joy', 'Kristine', 'Angelica', 'Marites', 'Lorna', 'Cecilia', 'Jasmine', 'Rowena', 'Teresa', 'Divina', 'Andrea', 'Camille', 'Nicole', 'Elena', 'Gloria'];
+  const male = ['Jose', 'Juan', 'Mark', 'John Paul', 'Ramon', 'Eduardo', 'Rodel', 'Jericho', 'Carlo', 'Ricardo', 'Danilo', 'Arnel', 'Benjie', 'Christian', 'Rolando', 'Joshua', 'Paolo', 'Ernesto', 'Noel', 'Vincent'];
+  const last = ['Dela Cruz', 'Reyes', 'Santos', 'Garcia', 'Mendoza', 'Bautista', 'Villanueva', 'Ramos', 'Aquino', 'Castillo', 'Flores', 'Gonzales', 'Navarro', 'Torres', 'Domingo', 'Mercado', 'Pascual', 'Salazar', 'Valdez', 'Manalo', 'Dimaculangan', 'Brion', 'Cuevas', 'Lopez', 'Perez'];
+  const middle = ['Cruz', 'Lim', 'Tan', 'Rivera', 'Medina', 'Aguilar', 'Soriano', 'Ocampo', 'Macaraeg', 'Belen'];
+  const streets = ['Rizal St.', 'Mabini St.', 'Sampaguita St.', 'Ilang-Ilang Lane', 'Acacia St.', 'Camia St.', 'Rosal St.', 'Narra Ave.', 'Mangga St.', 'Bonifacio St.'];
+  const puroks = ['Purok 1 - Centro', 'Purok 2 - Riverside', 'Purok 3 - Bukidnon', 'Purok 4 - Pag-asa', 'Purok 5 - San Roque', 'Purok 6 - Industrial Zone'];
+  const jobs = ['Vendor', 'Tricycle Driver', 'Farmer', 'Teacher', 'Housewife', 'Student', 'Construction Worker', 'Call Center Agent', 'Sari-sari Store Owner', 'Retired', 'Nurse', 'Mechanic', 'OFW', 'Barangay Health Worker', 'Unemployed'];
+
+  const out: Resident[] = [];
+  let n = 0;
+  let hh = 0;
+  while (n < count) {
+    hh += 1;
+    const family = pick(last);
+    const purok = pick(puroks);
+    const address = `#${1 + Math.floor(rand() * 180)} ${pick(streets)}, ${purok.split(' - ')[0]}`;
+    const size = 1 + Math.floor(rand() * 5);
+    const headIsMale = rand() < 0.6;
+    for (let m = 0; m < size && n < count; m++, n++) {
+      const isHead = m === 0;
+      const isFemale = isHead ? !headIsMale : rand() < 0.5;
+      const birthYear = isHead ? 1945 + Math.floor(rand() * 50) : 1950 + Math.floor(rand() * 58);
+      const birthDate = `${birthYear}-${String(1 + Math.floor(rand() * 12)).padStart(2, '0')}-${String(1 + Math.floor(rand() * 28)).padStart(2, '0')}`;
+      const ageNow = 2026 - birthYear;
+      const statusRoll = rand();
+      out.push({
+        id: `res-gen-${n + 1}`,
+        residentNumber: `B4A-20${String(15 + Math.floor(rand() * 11)).padStart(2, '0')}-${String(1000 + n).padStart(4, '0')}`,
+        firstName: pick(isFemale ? female : male),
+        middleName: pick(middle),
+        lastName: family,
+        birthDate,
+        gender: isFemale ? 'Female' : 'Male',
+        civilStatus: ageNow < 22 ? 'Single' : pick(['Single', 'Married', 'Married', 'Married', 'Widowed', 'Separated'] as Resident['civilStatus'][]),
+        address,
+        purok,
+        householdId: `hh-gen-${hh}`,
+        isHouseholdHead: isHead,
+        contactNumber: rand() < 0.8 ? `09${String(100000000 + Math.floor(rand() * 899999999)).slice(0, 9)}` : '',
+        occupation: ageNow < 22 ? 'Student' : ageNow >= 65 ? 'Retired' : pick(jobs),
+        isSenior: ageNow >= 60,
+        isPWD: rand() < 0.05,
+        isIndigent: rand() < 0.12,
+        isVoter: ageNow >= 18 && rand() < 0.85,
+        registeredDate: `20${String(15 + Math.floor(rand() * 11)).padStart(2, '0')}-${String(1 + Math.floor(rand() * 12)).padStart(2, '0')}-15`,
+        status: statusRoll < 0.92 ? 'active' : statusRoll < 0.97 ? 'transferred' : 'deceased',
+      });
+    }
+  }
+  return out;
+};
+
+INITIAL_RESIDENTS.push(...generateDemoResidents(300));

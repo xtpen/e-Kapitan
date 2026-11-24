@@ -10,7 +10,7 @@ const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const isMobile = (v: string) => /^09\d{9}$/.test(v.replace(/[\s-]/g, ''));
 const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-type Role = 'citizen' | 'staff' | 'official' | 'guest';
+type Role = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
 
 const ErrorSummary: React.FC<{ show: boolean }> = ({ show }) =>
   show ? (
@@ -21,8 +21,8 @@ const ErrorSummary: React.FC<{ show: boolean }> = ({ show }) =>
 
 /**
  * Login and registration. Mockup: "Login and registration". See DESIGN.md.
- * Prototype auth: any login works; an email containing "staff" or "captain"/"official"
- * opens those roles for the demo.
+ * Prototype auth: any login works; an email containing "staff", "captain"/"official"
+ * or "admin" opens those roles for the demo.
  */
 export const LandingLogin: React.FC = () => {
   const { setIsAuthenticated, switchUserRole } = useBarangay();
@@ -82,6 +82,7 @@ export const LandingLogin: React.FC = () => {
     let role: Role = 'citizen';
     if (id.includes('staff')) role = 'staff';
     if (id.includes('captain') || id.includes('official')) role = 'official';
+    if (id.includes('admin')) role = 'admin';
     enter(role);
   };
 

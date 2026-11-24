@@ -30,19 +30,21 @@ export interface AppShellProps {
   /** Tab opened by the notification bell. */
   notificationsTab?: string;
   unreadCount?: number;
+  /** Phone header text, e.g. { title: 'e-Kapitan Admin', subtitle: 'Administrator portal' }. */
+  mobileBrand?: { title: string; subtitle: string };
   children: React.ReactNode;
 }
 
 const BARANGAY = 'Sto. Angel';
 
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .filter(Boolean)
-    .filter((_, i, arr) => i === 0 || i === arr.length - 1)
-    .map(p => p[0])
-    .join('')
-    .toUpperCase();
+const initials = (name: string) => {
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+/** Bottom-nav item id that opens the full menu drawer instead of a page. */
+export const OPEN_MENU = '__menu';
 
 const isActive = (item: NavItem, activeTab: string) =>
   item.id === activeTab || (item.alsoActiveFor?.includes(activeTab) ?? false);
@@ -91,7 +93,7 @@ const SidebarNav: React.FC<{ groups: NavGroup[]; activeTab: string; onSelect: (i
   </nav>
 );
 
-export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificationsTab, unreadCount = 0, children }) => {
+export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificationsTab, unreadCount = 0, mobileBrand, children }) => {
   const { currentUser, activeTab, setActiveTab, largeTextMode, setLargeTextMode, setIsAuthenticated } = useBarangay();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -214,8 +216,8 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
       <header className="md:hidden sticky top-0 z-40 h-[68px] bg-navy text-white flex items-center gap-2.5 px-4">
         <LogoDisc size="sm" inverse />
         <div className="flex-1 min-w-0">
-          <b className="block leading-tight">e-Kapitan</b>
-          <div className="text-label truncate">Brgy. {BARANGAY}, San Pablo City</div>
+          <b className="block leading-tight">{mobileBrand?.title ?? 'e-Kapitan'}</b>
+          <div className="text-label truncate">{mobileBrand?.subtitle ?? `Brgy. ${BARANGAY}, San Pablo City`}</div>
         </div>
         {notificationsTab && (
           <button
@@ -264,7 +266,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
               <button
                 key={item.id}
                 type="button"
-                onClick={() => go(item.id)}
+                onClick={() => (item.id === OPEN_MENU ? setDrawerOpen(true) : go(item.id))}
                 aria-current={active ? 'page' : undefined}
                 className={`flex flex-col items-center justify-center gap-0.5 text-caption font-semibold cursor-pointer [&_svg]:w-5 [&_svg]:h-5
                   ${active ? 'text-navy shadow-[inset_0_3px_0_var(--color-primary)]' : 'text-muted'}`}
