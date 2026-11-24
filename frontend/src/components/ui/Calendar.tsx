@@ -2,7 +2,8 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
 
-export type DayState = 'past' | 'available' | 'booked' | 'closed';
+/** `open` = a plain day (admin calendar), any day can be opened to see its schedule. */
+export type DayState = 'past' | 'available' | 'booked' | 'closed' | 'open';
 
 export interface CalendarProps {
   /** Any date inside the month to show. */
@@ -16,6 +17,10 @@ export interface CalendarProps {
   onSelect: (iso: string) => void;
   /** Optional extra content inside a day cell (admin calendar: event chips). */
   renderDayExtra?: (iso: string) => React.ReactNode;
+  /** Which days can be clicked. Default: only `available` days. */
+  isSelectable?: (iso: string, state: DayState) => boolean;
+  /** Replaces the default legend. */
+  legend?: React.ReactNode;
   className?: string;
 }
 
@@ -32,6 +37,7 @@ const stateClass: Record<DayState, string> = {
   available: 'bg-success-bg text-success-fg border-success-bg hover:border-success-fg cursor-pointer',
   booked: 'bg-danger-bg text-danger-fg border-danger-bg',
   closed: 'bg-danger-bg text-danger-fg border-danger-bg',
+  open: 'bg-surface text-ink border-line hover:border-navy cursor-pointer',
 };
 
 const stateWord: Record<DayState, string> = {
@@ -39,6 +45,7 @@ const stateWord: Record<DayState, string> = {
   available: 'available',
   booked: 'fully booked',
   closed: 'closed',
+  open: 'open',
 };
 
 /** Month calendar with day states and a legend. See DESIGN.md section 5.10. */
@@ -51,6 +58,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   selected,
   onSelect,
   renderDayExtra,
+  isSelectable,
+  legend,
   className = '',
 }) => {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -94,7 +103,7 @@ export const Calendar: React.FC<CalendarProps> = ({
             const iso = toISODate(date);
             const state = dayState(iso);
             const isSelected = selected === iso;
-            const selectable = state === 'available';
+            const selectable = isSelectable ? isSelectable(iso, state) : state === 'available';
             const label = `${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}, ${stateWord[state]}`;
             return (
               <div key={iso}>
@@ -104,7 +113,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                   onClick={() => onSelect(iso)}
                   aria-label={label}
                   aria-pressed={isSelected}
-                  className={`w-full ${renderDayExtra ? 'min-h-[92px] text-left p-2 block' : 'h-11 sm:h-[52px] grid place-items-center'}
+                  className={`w-full ${renderDayExtra ? 'min-h-[92px] p-2 flex flex-col items-stretch justify-start text-left' : 'h-11 sm:h-[52px] grid place-items-center'}
                     rounded-control border font-semibold transition-colors disabled:cursor-not-allowed
                     ${isSelected ? 'bg-navy text-white border-navy outline-3 outline-navy outline-offset-1' : stateClass[state]}`}
                 >
@@ -117,7 +126,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         </div>
       </div>
 
-      <ul className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-meta" aria-label="Legend">
+      {legend ?? <ul className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-meta" aria-label="Legend">
         {[
           ['bg-success-bg border-success-fg/30', 'Available'],
           ['bg-danger-bg border-danger-fg/30', 'Booked or closed'],
@@ -129,7 +138,7 @@ export const Calendar: React.FC<CalendarProps> = ({
             {text}
           </li>
         ))}
-      </ul>
+      </ul>}
     </div>
   );
 };

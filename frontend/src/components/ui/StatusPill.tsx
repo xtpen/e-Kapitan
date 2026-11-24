@@ -41,6 +41,7 @@ export const documentStatus: Record<RequestStatus, StatusInfo> = {
   ready_for_release: { label: 'Ready for pickup', tone: 'success' },
   completed: { label: 'Completed', tone: 'neutral' },
   rejected: { label: 'Rejected', tone: 'danger' },
+  returned: { label: 'Returned for correction', tone: 'warning' },
 };
 
 export const incidentStatus: Record<IncidentStatus, StatusInfo> = {

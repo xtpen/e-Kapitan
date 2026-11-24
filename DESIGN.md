@@ -55,13 +55,15 @@ A calm, trustworthy civic service. Deep navy authority, a green that means "go /
   - `DataTable` (table on tablet/desktop, stacked cards on phones; you supply `columns` and a `mobile` title/status/meta)
   - `formatPeso(50)` → "₱50.00", `formatShortDateTime(...)` → "Sep 9, 8:30 AM"
   - `ProgressTimeline` (`stages`: label, tone, reached, detail, optional note)
-  - `Calendar` (month view with Previous/Next, day states `available` / `booked` / `closed` / `past`, selected day in navy, and a legend; `renderDayExtra` lets the admin calendar put event chips in each day). Use `toISODate()` for its YYYY-MM-DD keys.
+  - `Calendar` (month view with Previous/Next, day states `available` / `booked` / `closed` / `past`, selected day in navy, and a legend; `renderDayExtra` lets the admin calendar put event chips in each day; `isSelectable` makes any day clickable; `legend` replaces the default legend; the `open` day state is a plain white day). Use `toISODate()` for its YYYY-MM-DD keys.
   - `TimeSlot` (radio-style slot button with an Available / Booked pill)
   - `FilterChips` (pill filters with counts; navy when active; wrap on desktop, swipe on phones). Used by Notifications and My Requests; admin lists can use it for status filters.
   - `DataTable` also takes `isSelected` to highlight the chosen row in list + detail layouts.
+  - **Sorting:** give a column `sortValue: row => …` (text sorts A to Z, numbers low to high) and its header becomes clickable (click again to reverse, arrow shows the order); phones get a "Sort by" menu above the cards. `defaultSort={{ header, direction }}` sets the starting order. `sortLabels` names the directions in plain words: dates use `['oldest first', 'newest first']`; status columns sort by **workflow stage** (`sortValue: r => STATUS_ORDER.indexOf(r.status)`, labels `['by stage', 'by stage, reversed']`), never alphabetically. Make the main columns of every admin list sortable (done for Residents, Document Requests, Complaints, Printing Requests).
+  - **Long lists (hundreds of rows):** set `pageSize={25}` and `itemLabel="residents"` for pages ("Showing 1–25 of 282 residents", Previous / page menu / Next; resets to page 1 when filters or sort change), and `dense` for tighter rows. Clickable rows support **arrow keys** (up/down moves and opens the next row). Pair it with a match count above the table, counts on filter chips, and a detail panel that stays in view (`lg:sticky`). Reference: Admin · Residents.
 
   Reference implementations: the Documents list (`citizen/ServicesDirectory.tsx`) and the request form (`citizen/DocumentRequestWizard.tsx`) show fields, validation, stepper, review and confirmation done the house way.
-- App shell: `frontend/src/components/layout/AppShell.tsx`. It takes `groups` (sidebar sections), `bottomNav`, `notificationsTab` and `unreadCount`. Every role uses this same component with its own nav config. Don't fork it per screen. The resident config is in `components/citizen/residentNav.tsx`. Admin teammates: add an `adminNav.tsx` next to your screens and render `<AppShell>` for your role in `App.tsx`, the same way the `citizen` role does.
+- App shell: `frontend/src/components/layout/AppShell.tsx`. It takes `groups` (sidebar sections), `bottomNav`, `notificationsTab` and `unreadCount`. Every role uses this same component with its own nav config. Don't fork it per screen. The resident config is in `components/citizen/residentNav.tsx`; the admin config is in `components/admin/adminNav.tsx` (already wired up for the demo `admin` role). Admin teammates: build your screen in `components/admin/`, then in `App.tsx` replace the component for your `admin_…` tab id. Until then each tab shows the old screen or a "Not built yet" placeholder.
 
 ---
 
@@ -231,14 +233,14 @@ Variants:
 
 | Status text | Tone |
 |---|---|
-| Pending · Pending approval · Received (report waiting for staff) | warning |
+| Pending · Pending approval · Received (report waiting for staff) · Returned for correction | warning |
 | Processing · Under review · Action taken · Hearing scheduled · Unassigned | info |
 | Ready for pickup · Ready · Approved · Resolved · Available | success |
 | Rejected · Declined · Booked · Closed · Cancelled | danger |
 | Completed (already claimed / done, no action needed) · Not started | neutral |
 
 How the data maps (already coded in `components/ui/StatusPill.tsx`):
-- Document requests: `submitted` → Pending, `under_review` → Under review, `approved` → Approved, `ready_for_release` → Ready for pickup, `completed` → Completed, `rejected` → Rejected.
+- Document requests: `submitted` → Pending, `under_review` → Under review, `returned` → Returned for correction, `approved` → Approved, `ready_for_release` → Ready for pickup, `completed` → Completed, `rejected` → Rejected.
 - Incident reports: `received` → Received, `assigned` → Under review, `in_progress` → Action taken, `hearing_scheduled` → Hearing scheduled, `resolved` → Resolved, `dismissed` → Closed.
 - Appointments: `confirmed` → Approved, `rescheduled` → Pending, `completed` → Completed, `cancelled` → Cancelled.
 - Court reservations (`courtStatus`): `pending` → Pending approval, `approved` → Approved, `declined` → Declined, `cancelled` → Cancelled, `completed` → Completed.
@@ -308,11 +310,14 @@ A card with a grid `2fr 1fr 1fr`, gap-x 16: Search input, Status select, Type se
 
 ### 5.14 List + detail (admin processing screens)
 
+Grid: `lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]`, so the detail panel never gets squeezed by a wide table. Inside narrow panels, key-value rows stack (label above value) using a container query: `<dl className="@container">` with rows `grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]`.
+
+
 A grid `1.7fr 1fr`. The table on the left highlights the selected row with `navy-tint`. The detail card on the right holds the `h3` reference with its pill, a key-value table, any attachment preview (`line-soft` block), an "Assigned to" select, then **Primary approve (full width)**, then a 2-col row of **Secondary "Return for correction"** and **Danger "Reject"**.
 
 ### 5.15 Simple bar chart (overview)
 
-Vertical bars, `rounded-t-lg`, alternating `primary` and `navy`, with the value inside the top of the bar in white 600 and category labels underneath in muted. Keep charts this simple. No 3D, gradients or pie charts with more than 4 slices.
+Use the shared `BarChart` component (`components/ui/BarChart.tsx`). One series is **one color** (`primary`; color carries identity only when there are several series, and the category names sit under the columns). Columns are at most 24px wide with a 4px rounded top, square at the 1px baseline; the value sits **on top of** each column in text color (never the bar color); a hover tooltip shows the exact value; a visually hidden table gives screen readers every number. Keep charts this simple: no 3D, gradients, dual axes, or pie charts with more than 4 slices. Supersedes the mockup's alternating green/navy bars.
 
 ### 5.17 Toast pop-ups
 
@@ -323,6 +328,14 @@ Shared by every role (`common/ToastContainer.tsx`); call `addToast(title, descri
 - Copy follows section 7: a short sentence-case title ("Request submitted"), then the next step ("Reference REQ-2026-1234. You can follow it in My Requests."). No Title Case, no "Successfully".
 
 The between-pages loading placeholder (`common/PageSkeleton.tsx`) uses `surface-muted` blocks with `line` borders.
+
+### 5.18 Certificate viewer and printed certificate
+
+`common/OfficialDocumentTemplate.tsx`, opened with `setSelectedDocumentForPrint(request)` from anywhere (resident or admin).
+- **Screen:** white toolbar (document name, reference + resident, status pill, Primary "Print or save as PDF", 44px close) over a navy/60 backdrop; the certificate is an A4-proportioned white sheet. Escape or clicking outside closes it.
+- **Print:** only the certificate prints (the app is hidden), on A4 with 16mm margins.
+- **The certificate itself** is a formal document, so it stays mostly ink-on-white (navy only for the letterhead and title) and prints well in black and white: letterhead (Republic of the Philippines → Barangay Sto. Angel → Office of the Punong Barangay) over a double rule; a council column filled from the **Officials data**; title, reference, "To whom it may concern:", justified body per document type, "Issued this 9th day of …"; a blank signature line over the Punong Barangay's name; and a footer row (fee, O.R. no., validity, verification code) with "Not valid without the official barangay seal".
+- **Never draw** a seal, logo, signature or fake QR. The dashed circles are placeholders for the real seals; signatures and the dry seal are applied by hand at the hall.
 
 ### 5.16 Notification item
 
@@ -433,7 +446,15 @@ All grids collapse to a single column below 1024px, in source order.
 | Resident · Court Reservation | Done (ppen). Data: `courtSlots`, `courtReservations`, `courtClosures`, `createCourtReservation`, `updateCourtReservationStatus`, `closeCourtDate` in `BarangayContext` (Admin · Court Reservations can use these: Approve/Decline and "Close a date"). Residents only ever see other people's bookings as "Booked", never names. |
 | Resident · My Profile | Done (ppen), no mockup. Personal details are read-only (changed at the hall); mobile/email editable; change password; Large text and SMS preferences. |
 | Resident · Notifications | Done (ppen), no mockup. Filter chips, unread dots, mark read on open, "Mark all as read". Read state: `readNotificationIds` / `markNotificationsRead` in `BarangayContext`. |
-| Login and registration | Done (ppen). Demo login: any email or 09 mobile opens the resident view; an email containing "staff" or "captain"/"official" opens those roles. |
+| Login and registration | Done (ppen). Demo login: any email or 09 mobile opens the resident view; an email containing "admin" opens the **demo Administrator** (new shell, Admin nav); "staff" or "captain"/"official" open those old roles. |
+| Admin shell (demo `admin` role) | Done (ppen): Admin nav, top bar, mobile bottom nav (Overview · Requests · Calendar · More), phone header "e-Kapitan Admin / Administrator portal". |
+| Admin · Overview | Done (ppen): 4 stat cards, Transactions by service chart, Needs attention (oldest first, click to open), Recent activity from the audit log, Export report (CSV). Phone: "Today at the barangay". |
+| Admin · Document Requests | Done (ppen): filter bar (search, status, document) or search + chips on phones, list + detail with requirements, Assigned to, and actions by stage (Approve / Return for correction / Reject → Mark ready for pickup → Mark as claimed), Export list (CSV). Reference for every admin list + detail screen. |
+| Admin · Complaints | Done (ppen), no dedicated mockup (follows Document Requests). Open reports first, list + detail with full history, staff-only note, and actions by stage (Assign → Record action taken / Schedule hearing → Mark as resolved, or Close without action). Every action asks for a message the resident will see. |
+| Admin · Printing Requests | Done (ppen), no dedicated mockup. Queue summary in the header (jobs and sheets to print), status chips with counts, oldest job first, detail with big page/copy/sheet numbers and print settings, actions Start printing → Mark ready for pickup → Mark as picked up, or Don't accept (with reason). Never shows a cost other than "Free". |
+| Admin · Residents | Done (ppen), no mockup. Masterlist with search, purok, group chips (Senior, PWD, Indigent, Voters, Household heads), inactive toggle; detail with household and requests; Add resident, Edit details (name/birthdate/sex locked), status changes; duplicate review (system suggests, a person decides, with a note). Opening a record is written to the audit log. Built for hundreds of residents: 25 per page, compact rows, multi-word search ("santos purok 2"), counts on every group chip, arrow-key browsing, and a details panel that stays in view. |
+| Admin · Personnel | Done (ppen), no mockup. Staff accounts with role presets (Administrator, Records staff, Front desk, Peace and order, Health worker, View only) plus per-area access, add / edit, on leave, deactivate (confirm). The last active administrator can't be demoted, put on leave or deactivated. "Assigned to" lists elsewhere come from here (`staffFor(area)`: active staff with that access). |
+| Admin · Court Reservations | Done (ppen): calendar with booking chips (Approved / Pending / Closed), Pending requests numbered first come, first served with the request time, Approve / Decline (reason), selected-day schedule per slot, Close this day (cancels that day's bookings with the reason) / Reopen. Phone: "Court approvals" first, calendar below without chips. |
 | Guest, Staff, Official/Admin screens | Old design and old layout |
 
 Update this table in the same PR as your screen.

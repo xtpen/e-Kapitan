@@ -1,5 +1,4 @@
-export type UserRole = 'citizen' | 'staff' | 'official' | 'guest';
-export type UserRole = 'citizen' | 'guest' | 'staff' | 'official';
+export type UserRole = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
 
 export interface UserProfile {
   id: string;
@@ -87,7 +86,8 @@ export type RequestStatus =
   | 'approved' 
   | 'ready_for_release' 
   | 'completed' 
-  | 'rejected';
+  | 'rejected'
+  | 'returned'; // sent back to the resident to fix something (see staffNotes)
 
 export interface DocumentRequest {
   id: string;
@@ -265,6 +265,25 @@ export interface CourtReservation {
 export interface CourtClosure {
   date: string; // YYYY-MM-DD
   reason: string;
+}
+
+/** Areas of the admin side a staff account can use. */
+export type AccessArea = 'documents' | 'complaints' | 'printing' | 'court' | 'residents' | 'management' | 'reports';
+
+/** Preset bundles of access; staff can still be given or denied single areas. */
+export type StaffRole = 'administrator' | 'records' | 'desk' | 'peace_order' | 'health' | 'viewer';
+
+export interface Personnel {
+  id: string;
+  name: string;
+  position: string; // e.g. "Records Clerk", "Tanod Commander"
+  role: StaffRole;
+  access: AccessArea[];
+  email: string;
+  mobile: string;
+  status: 'active' | 'on_leave' | 'deactivated';
+  lastActive?: string; // date string
+  addedOn: string; // YYYY-MM-DD
 }
 
 export interface Announcement {

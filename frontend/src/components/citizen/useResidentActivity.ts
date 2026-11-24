@@ -152,6 +152,7 @@ export const useResidentActivity = () => {
       if (d.status === 'ready_for_release') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is ready.`, 'Claim it with a valid ID.');
       else if (d.status === 'approved') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} approved.`, 'We will tell you when it is ready to claim.');
       else if (d.status === 'under_review') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is being reviewed.`, 'Barangay staff are checking your request.');
+      else if (d.status === 'returned') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} needs a correction.`, d.staffNotes ?? 'Open the request to see what to fix.');
       else if (d.status === 'rejected') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} was not approved.`, d.rejectionReason ?? 'Open the request to see why.');
       else if (d.status === 'submitted') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} request received.`, 'Awaiting review.');
     });
@@ -164,6 +165,7 @@ export const useResidentActivity = () => {
       if (c.status === 'pending') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request received.', 'Awaiting approval.');
       else if (c.status === 'approved') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court reservation approved.', `${courtDate(c.date)}, ${slotStart(c.slotId)}.`);
       else if (c.status === 'declined') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request declined.', c.notes ?? c.referenceNumber);
+      else if (c.status === 'cancelled') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court booking cancelled.', c.notes ?? c.referenceNumber);
     });
     reports.forEach(i => {
       const when = i.statusHistory[i.statusHistory.length - 1]?.updatedAt ?? i.submittedAt;

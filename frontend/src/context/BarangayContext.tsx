@@ -22,7 +22,9 @@ import {
   CourtReservation,
   CourtReservationStatus,
   CourtSlot,
-  CourtClosure
+  CourtClosure,
+  Personnel,
+  AccessArea
 } from '../types';
 import { 
   INITIAL_SERVICES, 
@@ -38,6 +40,7 @@ import {
   INITIAL_AUDIT_LOGS,
   INITIAL_OFFICIALS,
   INITIAL_PRINT_REQUESTS,
+  INITIAL_PERSONNEL,
   COURT_SLOTS,
   INITIAL_COURT_RESERVATIONS,
   INITIAL_COURT_CLOSURES
@@ -85,6 +88,14 @@ interface BarangayContextType {
   // Interactive Operations
   createDocumentRequest: (data: Partial<DocumentRequest>) => DocumentRequest;
   updateDocumentRequestStatus: (id: string, status: RequestStatus, staffNotes?: string, rejectionReason?: string) => void;
+  assignDocumentRequest: (id: string, staffName: string) => void;
+  /** Names of active staff, for "Assigned to" lists. */
+  barangayStaff: string[];
+  /** Active staff who have access to one area (e.g. only staff who handle documents). */
+  staffFor: (area: AccessArea) => string[];
+  personnel: Personnel[];
+  addPersonnel: (data: Omit<Personnel, 'id' | 'addedOn' | 'lastActive'>) => Personnel;
+  updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
   
   createQueueTicket: (data: Partial<QueueTicket>) => QueueTicket;
   callQueueTicket: (ticketId: string, counterNumber?: number) => void;
@@ -94,8 +105,11 @@ interface BarangayContextType {
   
   createIncidentReport: (data: Partial<IncidentReport>) => IncidentReport;
   updateIncidentReportStatus: (id: string, status: IncidentStatus, note: string, assignedTo?: string) => void;
+  setIncidentInternalNote: (id: string, note: string) => void;
   
   registerResident: (data: Omit<Resident, 'id' | 'residentNumber' | 'registeredDate'>) => Resident;
+  updateResident: (id: string, updates: Partial<Resident>) => void;
+  recordResidentAccess: (id: string) => void;
   resolveDuplicateFlag: (flagId: string, resolution: 'merge' | 'keep_separate' | 'false_positive', notes: string) => void;
   
   updatePriorityConfig: (id: string, updates: Partial<PriorityCriteriaConfig>) => void;
@@ -116,6 +130,7 @@ interface BarangayContextType {
   createCourtReservation: (data: Pick<CourtReservation, 'date' | 'slotId' | 'activity'>) => CourtReservation;
   updateCourtReservationStatus: (id: string, status: CourtReservationStatus, notes?: string) => void;
   closeCourtDate: (date: string, reason: string) => void;
+  reopenCourtDate: (date: string) => void;
 
   // Resident account
   readNotificationIds: string[];
@@ -185,6 +200,14 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
     role: 'guest',
     roleTitle: 'Unregistered Guest / Non-Resident',
     email: 'guest@public.web'
+  },
+  // Demo administrator (no real login yet). Opens the redesigned Admin shell.
+  admin: {
+    id: 'user-admin',
+    name: 'Administrator',
+    role: 'admin',
+    roleTitle: 'System Administrator',
+    email: 'admin@e-kapitan.local'
   }
 };
 
@@ -221,6 +244,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [courtSlots] = useState<CourtSlot[]>(COURT_SLOTS);
   const [courtReservations, setCourtReservations] = useState<CourtReservation[]>(INITIAL_COURT_RESERVATIONS);
   const [courtClosures, setCourtClosures] = useState<CourtClosure[]>(INITIAL_COURT_CLOSURES);
+  const [personnel, setPersonnel] = useState<Personnel[]>(INITIAL_PERSONNEL);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
   const [smsUpdates, setSmsUpdates] = useState<boolean>(true);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
@@ -273,8 +297,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setActiveTab('announcements');
     } else if (role === 'staff') {
       setActiveTab('dashboard');
-    } else if (role === 'guest') {
-      setActiveTab('guest_home');
+    } else if (role === 'admin') {
+      setActiveTab('admin_overview');
     } else {
       setActiveTab('executive_dashboard');
     }
@@ -347,7 +371,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             updatedAt: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
             staffNotes: staffNotes !== undefined ? staffNotes : req.staffNotes,
             rejectionReason: rejectionReason !== undefined ? rejectionReason : req.rejectionReason,
-            assignedStaffName: currentUser.name,
+            assignedStaffName: req.assignedStaffName ?? currentUser.name,
             completedAt: status === 'completed' ? new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : req.completedAt
           };
           return updated;
@@ -362,11 +386,19 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       approved: 'Approved',
       ready_for_release: 'Ready for Release',
       completed: 'Completed',
-      rejected: 'Rejected'
+      rejected: 'Rejected',
+      returned: 'Returned for correction'
     };
 
-    logAudit(`Updated Document Status to ${statusLabels[status]}`, 'Documents', `Request ID: ${id}. Staff: ${currentUser.name}`);
-    addToast('Request Status Updated', `Document request moved to "${statusLabels[status]}".`, 'success');
+    const ref = documentRequests.find((r) => r.id === id)?.referenceNumber ?? id;
+    logAudit(`Updated Document Status to ${statusLabels[status]}`, 'Documents', `Request ${ref}. Staff: ${currentUser.name}`);
+    addToast(`${ref}: ${statusLabels[status].toLowerCase()}`, 'The resident will see the update in My Requests.', 'success');
+  };
+
+  const assignDocumentRequest = (id: string, staffName: string) => {
+    setDocumentRequests((prev) => prev.map((r) => (r.id === id ? { ...r, assignedStaffName: staffName } : r)));
+    const ref = documentRequests.find((r) => r.id === id)?.referenceNumber ?? id;
+    logAudit('Assigned Document Request', 'Documents', `Request ${ref} assigned to ${staffName} by ${currentUser.name}`);
   };
 
   const calculatePriority = (params: {
@@ -534,15 +566,22 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             status,
             statusHistory: updatedHistory,
             assignedTo: assignedTo || inc.assignedTo,
-            internalNotes: note || inc.internalNotes,
             resolutionSummary: status === 'resolved' ? note : inc.resolutionSummary
           };
         }
         return inc;
       })
     );
-    logAudit(`Updated Incident Status to ${status}`, 'Records', `Incident ID: ${id}. Staff: ${currentUser.name}`);
-    addToast('Incident Record Updated', `Status changed to ${status}.`, 'success');
+    const ref = incidents.find((i) => i.id === id)?.referenceNumber ?? id;
+    logAudit(`Updated Incident Status to ${status}`, 'Records', `Incident ${ref}. Staff: ${currentUser.name}`);
+    addToast(`${ref} updated`, 'The resident will see the update in their report progress.', 'success');
+  };
+
+  /** Staff-only note on a report. Never shown to residents. */
+  const setIncidentInternalNote = (id: string, note: string) => {
+    setIncidents((prev) => prev.map((inc) => (inc.id === id ? { ...inc, internalNotes: note } : inc)));
+    const ref = incidents.find((i) => i.id === id)?.referenceNumber ?? id;
+    logAudit('Updated Internal Note', 'Records', `Incident ${ref}. Staff: ${currentUser.name}`);
   };
 
   const registerResident = (data: Omit<Resident, 'id' | 'residentNumber' | 'registeredDate'>): Resident => {
@@ -561,32 +600,49 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
 
     if (match) {
+      // List only the fields that really match, and score from them (advisory only).
+      const fields: string[] = [];
+      if (match.lastName.toLowerCase() === data.lastName.toLowerCase()) fields.push(`Same last name: ${data.lastName}`);
+      if (match.firstName.toLowerCase().split(' ')[0] === data.firstName.toLowerCase().split(' ')[0]) fields.push(`Same first name: ${data.firstName.split(' ')[0]}`);
+      if (match.birthDate === data.birthDate) fields.push(`Same birthdate: ${data.birthDate}`);
+      if (data.contactNumber && match.contactNumber === data.contactNumber) fields.push(`Same mobile number: ${data.contactNumber}`);
+      if (match.purok === data.purok) fields.push(`Same purok: ${data.purok}`);
       const newFlag: DuplicateRecordFlag = {
         id: 'dup-' + Date.now(),
         sourceResidentId: newResident.id,
         matchedResidentId: match.id,
-        matchScore: 88,
-        matchingFields: [
-          `Identical Last Name: "${data.lastName}"`,
-          `Matching Birthdate: ${data.birthDate}`,
-          `Same Purok Area: ${data.purok}`
-        ],
+        matchScore: Math.min(95, 40 + fields.length * 15),
+        matchingFields: fields,
         status: 'pending_review',
         detectedDate: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
         resolutionNotes: 'Profile matching algorithm detected potential duplicate record upon registration.'
       };
       setDuplicateFlags((prev) => [newFlag, ...prev]);
       addToast(
-        'Advisory Warning: Potential Duplicate Detected',
-        `A similar profile exists for "${match.firstName} ${match.lastName}". Flagged for staff review.`,
+        'Possible duplicate record',
+        `A similar record exists for ${match.firstName} ${match.lastName}. It was flagged for staff review; nothing was merged.`,
         'warning'
       );
     }
 
     setResidents((prev) => [newResident, ...prev]);
     logAudit('Registered New Resident', 'Records', `Resident ${resNum}: ${newResident.firstName} ${newResident.lastName}`);
-    addToast('Resident Registered', `Assigned Barangay ID: ${resNum}`, 'success');
+    addToast('Resident added', `Resident number ${resNum}.`, 'success');
     return newResident;
+  };
+
+  /** Staff edit of a resident record (audit-logged). */
+  const updateResident = (id: string, updates: Partial<Resident>) => {
+    const r = residents.find((x) => x.id === id);
+    setResidents((prev) => prev.map((x) => (x.id === id ? { ...x, ...updates } : x)));
+    logAudit('Updated Resident Record', 'Records', `${r?.residentNumber ?? id} (${Object.keys(updates).join(', ')}). Staff: ${currentUser.name}`);
+    addToast('Resident record saved', `${r ? `${r.firstName} ${r.lastName}` : 'The record'} was updated.`, 'success');
+  };
+
+  /** Data Privacy Act: every time staff open a resident record, it is written to the audit log. */
+  const recordResidentAccess = (id: string) => {
+    const r = residents.find((x) => x.id === id);
+    logAudit('Viewed Resident Record', 'Security', `${r?.residentNumber ?? id} opened by ${currentUser.name}`);
   };
 
   const resolveDuplicateFlag = (flagId: string, resolution: 'merge' | 'keep_separate' | 'false_positive', notes: string) => {
@@ -673,7 +729,16 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setPrintRequests((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status, notes: notes ?? p.notes, rejectionReason: status === 'rejected' ? notes : p.rejectionReason } : p))
     );
-    logAudit('Updated Print Request', 'Documents', `Print request ${id} set to ${status}`);
+    const ref = printRequests.find((p) => p.id === id)?.referenceNumber ?? id;
+    const labels: Record<PrintStatus, string> = {
+      pending: 'pending',
+      processing: 'printing',
+      ready_for_pickup: 'ready for pickup',
+      completed: 'picked up',
+      rejected: 'not accepted',
+    };
+    logAudit('Updated Print Request', 'Documents', `Print request ${ref} set to ${status}. Staff: ${currentUser.name}`);
+    addToast(`${ref}: ${labels[status]}`, 'The resident will see the update in My Requests.', 'success');
   };
 
   const createCourtReservation = (data: Pick<CourtReservation, 'date' | 'slotId' | 'activity'>): CourtReservation => {
@@ -696,12 +761,47 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateCourtReservationStatus = (id: string, status: CourtReservationStatus, notes?: string) => {
     setCourtReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status, notes: notes ?? r.notes } : r)));
-    logAudit('Updated Court Reservation', 'Queue', `Court reservation ${id} set to ${status}`);
+    const ref = courtReservations.find((r) => r.id === id)?.referenceNumber ?? id;
+    logAudit('Updated Court Reservation', 'Queue', `Court reservation ${ref} set to ${status}. Staff: ${currentUser.name}`);
+    addToast(`${ref}: ${status}`, 'The resident will see the update in My Requests.', 'success');
   };
 
   const closeCourtDate = (date: string, reason: string) => {
     setCourtClosures((prev) => [...prev.filter((c) => c.date !== date), { date, reason }]);
-    logAudit('Closed Court Date', 'Configuration', `Court closed on ${date}: ${reason}`);
+    // Bookings on that day can't go ahead: cancel them and tell the residents why.
+    const affected = courtReservations.filter((r) => r.date === date && (r.status === 'pending' || r.status === 'approved'));
+    if (affected.length) {
+      setCourtReservations((prev) =>
+        prev.map((r) => (affected.some((a) => a.id === r.id) ? { ...r, status: 'cancelled', notes: `Court closed: ${reason}` } : r))
+      );
+    }
+    logAudit('Closed Court Date', 'Configuration', `Court closed on ${date}: ${reason}. ${affected.length} booking(s) cancelled. Staff: ${currentUser.name}`);
+    addToast(
+      'Court closed for that day',
+      affected.length ? `${affected.length} booking${affected.length === 1 ? ' was' : 's were'} cancelled and the residents will be told why.` : 'Residents can no longer book it.',
+      'success'
+    );
+  };
+
+  const reopenCourtDate = (date: string) => {
+    setCourtClosures((prev) => prev.filter((c) => c.date !== date));
+    logAudit('Reopened Court Date', 'Configuration', `Court reopened on ${date}. Staff: ${currentUser.name}`);
+    addToast('Court reopened for that day', 'Residents can book it again.', 'success');
+  };
+
+  const addPersonnel = (data: Omit<Personnel, 'id' | 'addedOn' | 'lastActive'>): Personnel => {
+    const p: Personnel = { ...data, id: 'stf-' + Date.now(), addedOn: new Date().toISOString().slice(0, 10) };
+    setPersonnel((prev) => [p, ...prev]);
+    logAudit('Added Staff Account', 'Security', `${p.name} (${p.position}), role ${p.role}, access: ${p.access.join(', ')}. By ${currentUser.name}`);
+    addToast('Staff account added', `${p.name} can now be assigned work.`, 'success');
+    return p;
+  };
+
+  const updatePersonnel = (id: string, updates: Partial<Personnel>) => {
+    const before = personnel.find((p) => p.id === id);
+    setPersonnel((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    logAudit('Updated Staff Account', 'Security', `${before?.name ?? id}: ${Object.keys(updates).join(', ')} changed. By ${currentUser.name}`);
+    addToast('Staff account saved', `${before?.name ?? 'The account'} was updated.`, 'success');
   };
 
   const markNotificationsRead = (ids: string[]) => {
@@ -813,6 +913,12 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         priorityCriteria,
         createDocumentRequest,
         updateDocumentRequestStatus,
+        assignDocumentRequest,
+        barangayStaff: personnel.filter((p) => p.status === 'active').map((p) => p.name),
+        staffFor: (area: AccessArea) => personnel.filter((p) => p.status === 'active' && p.access.includes(area)).map((p) => p.name),
+        personnel,
+        addPersonnel,
+        updatePersonnel,
         createQueueTicket,
         callQueueTicket,
         callNextQueueTicket,
@@ -820,8 +926,11 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         dismissQueueTicket,
         createIncidentReport,
         updateIncidentReportStatus,
+        setIncidentInternalNote,
         registerResident,
         resolveDuplicateFlag,
+        updateResident,
+        recordResidentAccess,
         updatePriorityConfig,
         addKnowledgeItem,
         updateKnowledgeItem,
@@ -835,6 +944,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createCourtReservation,
         updateCourtReservationStatus,
         closeCourtDate,
+        reopenCourtDate,
         readNotificationIds,
         markNotificationsRead,
         smsUpdates,
