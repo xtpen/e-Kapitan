@@ -1,452 +1,318 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { IncidentCategory, IncidentReport } from '../../types';
-import { 
-  AlertTriangle, 
-  Send, 
-  CheckCircle2, 
-  Clock, 
-  MapPin, 
-  Calendar, 
-  User, 
-  ShieldAlert, 
-  Paperclip,
-  Search,
-  ChevronRight,
-  Info
-} from 'lucide-react';
+import type { IncidentCategory, IncidentReport, IncidentStatus } from '../../types';
+import {
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  DataTable,
+  Field,
+  FileUpload,
+  Input,
+  PageHeader,
+  ProgressTimeline,
+  Select,
+  StatusPill,
+  Textarea,
+  formatShortDateTime,
+  incidentStatus,
+  type TimelineStage,
+} from '../ui';
 
+const CATEGORIES: IncidentCategory[] = [
+  'Noise Disturbance',
+  'Neighbor Dispute',
+  'Sanitation & Garbage',
+  'Public Safety / Streetlight',
+  'Stray Animal Concern',
+  'Drainage / Flooding',
+  'Other Community Concern',
+];
+
+const PUROKS = [
+  'Purok 1 - Centro',
+  'Purok 2 - Riverside',
+  'Purok 3 - Bukidnon',
+  'Purok 4 - Pag-asa',
+  'Purok 5 - San Roque',
+  'Purok 6 - Industrial Zone',
+];
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+const todayISO = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+};
+
+type Errors = Partial<Record<'date' | 'location' | 'description' | 'files' | 'consent', string>>;
+
+/** Report progress: Received → Under review → Action taken → Resolved (DESIGN.md 5.12). */
+export const buildReportStages = (r: IncidentReport): TimelineStage[] => {
+  const order: IncidentStatus[] = ['received', 'assigned', 'in_progress', 'resolved'];
+  const rank: Record<IncidentStatus, number> = {
+    received: 0,
+    assigned: 1,
+    in_progress: 2,
+    hearing_scheduled: 2,
+    resolved: 3,
+    dismissed: 3,
+  };
+  const current = rank[r.status];
+  const entryFor = (s: IncidentStatus) =>
+    [...r.statusHistory].reverse().find(h => h.status === s || (s === 'in_progress' && h.status === 'hearing_scheduled'));
+
+  const stages: TimelineStage[] = order.map((s, i) => {
+    const entry = entryFor(s);
+    const isHearing = s === 'in_progress' && r.status === 'hearing_scheduled';
+    const info = isHearing ? incidentStatus.hearing_scheduled : incidentStatus[s];
+    return {
+      label: info.label,
+      tone: s === 'received' ? 'success' : info.tone,
+      reached: i <= current && !(r.status === 'dismissed' && i === 3),
+      detail: entry ? formatShortDateTime(entry.updatedAt) : undefined,
+      note: entry && i === Math.min(current, 2) && r.status !== 'resolved' ? entry.note : undefined,
+    };
+  });
+
+  if (r.status === 'dismissed') {
+    const entry = entryFor('dismissed');
+    stages[3] = {
+      label: incidentStatus.dismissed.label,
+      tone: 'danger',
+      reached: true,
+      detail: entry ? formatShortDateTime(entry.updatedAt) : undefined,
+      note: entry?.note,
+    };
+  }
+  if (r.status === 'resolved' && r.resolutionSummary) stages[3].note = r.resolutionSummary;
+  if (r.assignedTo && current >= 1 && !stages[1].detail) stages[1].detail = 'Assigned to barangay staff';
+  return stages;
+};
+
+/**
+ * Resident · Complaints & Reports. Mockup: "Resident · Complaints" (desktop + mobile). See DESIGN.md.
+ * Residents only see their own reports.
+ */
 export const ComplaintsView: React.FC = () => {
-  const { 
-    incidents, 
-    createIncidentReport, 
-    currentUser, 
-    largeTextMode,
-    currentRole
-  } = useBarangay();
+  const { incidents, createIncidentReport, currentUser } = useBarangay();
 
-  const [activeTabSub, setActiveTabSub] = useState<'submit' | 'history'>('submit');
+  const [category, setCategory] = useState<IncidentCategory>(CATEGORIES[0]);
+  const [date, setDate] = useState(todayISO());
+  const [purok, setPurok] = useState(PUROKS[1]);
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [anonymous, setAnonymous] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [errors, setErrors] = useState<Errors>({});
+  const [justFiled, setJustFiled] = useState<IncidentReport | null>(null);
+  const [myAnonymousIds, setMyAnonymousIds] = useState<string[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
 
-  // Form states
-  const [category, setCategory] = useState<IncidentCategory>('Noise Disturbance');
-  const [title, setTitle] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [location, setLocation] = useState<string>('');
-  const [purok, setPurok] = useState<string>('Purok 2 - Riverside');
-  const [incidentDateTime, setIncidentDateTime] = useState<string>(
-    new Date().toISOString().substring(0, 16).replace('T', ' ')
-  );
-  const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
-  const [privacyConsent, setPrivacyConsent] = useState<boolean>(false);
-  const [searchRef, setSearchRef] = useState<string>('');
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string>(incidents[0]?.id || '');
-  const [showMobileDetail, setShowMobileDetail] = useState<boolean>(false);
+  const myReports = incidents.filter(i => i.reporterName === currentUser.name || myAnonymousIds.includes(i.id));
+  const selected = myReports.find(r => r.id === selectedId) ?? myReports[0];
 
-  const categories: IncidentCategory[] = [
-    'Noise Disturbance',
-    'Neighbor Dispute',
-    'Sanitation & Garbage',
-    'Public Safety / Streetlight',
-    'Stray Animal Concern',
-    'Drainage / Flooding',
-    'Other Community Concern'
-  ];
+  const validate = (): Errors => {
+    const e: Errors = {};
+    if (!date) e.date = 'Enter the date it happened.';
+    else if (date > todayISO()) e.date = 'The date cannot be in the future.';
+    if (!location.trim()) e.location = 'Enter a street or landmark so staff can find it.';
+    if (description.trim().length < 15) e.description = 'Describe what happened in a sentence or two.';
+    if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = 'Attach JPG, PNG or PDF files only.';
+    else if (files.some(f => f.size > MAX_FILE_BYTES)) e.files = 'Each file must be 5 MB or smaller.';
+    if (!consent) e.consent = 'Check the box to agree before you submit.';
+    return e;
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !description.trim() || !location.trim()) {
-      alert('Please fill out the title, description, and location of the incident.');
-      return;
-    }
-    if (!privacyConsent) {
-      alert('Please agree to the Data Privacy terms before submitting.');
-      return;
-    }
+  const submit = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
 
     const created = createIncidentReport({
       category,
-      title,
-      description,
-      location,
+      title: `${category}: ${location.trim()}`,
+      description: description.trim(),
+      location: location.trim(),
       purok,
-      incidentDateTime,
-      isAnonymous,
-      reporterName: isAnonymous ? 'Anonymous Resident' : currentUser.name,
-      reporterContact: isAnonymous ? '' : currentUser.email
+      incidentDateTime: date,
+      isAnonymous: anonymous,
+      reporterName: currentUser.name,
+      reporterContact: currentUser.email,
     });
-
-    // Reset form & switch to history
-    setTitle('');
-    setDescription('');
+    if (anonymous) setMyAnonymousIds(ids => [created.id, ...ids]);
+    setJustFiled(created);
+    setSelectedId(created.id);
     setLocation('');
-    setSelectedIncidentId(created.id);
-    if (currentRole !== 'guest') {
-      setActiveTabSub('history');
+    setDescription('');
+    setFiles([]);
+    setAnonymous(false);
+    setConsent(false);
+  };
+
+  const statusPill = (r: IncidentReport) => (
+    <StatusPill tone={incidentStatus[r.status].tone}>{incidentStatus[r.status].label}</StatusPill>
+  );
+
+  const selectReport = (r: IncidentReport) => {
+    setSelectedId(r.id);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  const filteredIncidents = incidents.filter((inc) => {
-    if (searchRef.trim()) {
-      return (
-        inc.referenceNumber.toLowerCase().includes(searchRef.toLowerCase()) ||
-        inc.title.toLowerCase().includes(searchRef.toLowerCase()) ||
-        inc.location.toLowerCase().includes(searchRef.toLowerCase())
-      );
-    }
-    return true;
-  });
-
-  const activeIncident = incidents.find(i => i.id === selectedIncidentId) || filteredIncidents[0];
-
   return (
-    <div className={`space-y-6 ${largeTextMode ? 'text-lg' : 'text-base'}`}>
-      {/* Civic Banner */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-amber-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <AlertTriangle className="w-4 h-4" />
-            <span>Community Peace & Order Desk</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading">
-            Complaints, Incidents & Community Concerns
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
-            Submit community concerns or track barangay action and mediation progress. Intended for administrative tracking and amicable community resolution.
-          </p>
-        </div>
+    <div className="max-w-[1200px]">
+      <PageHeader
+        title="Complaints & Reports"
+        description="Tell the barangay about a concern. You will get a tracking number."
+      />
 
-        {/* Tab Toggle */}
-        <div className="flex w-full sm:w-auto bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-          <button
-            onClick={() => setActiveTabSub('submit')}
-            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-              activeTabSub === 'submit'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            File New Report
-          </button>
-          <button
-            onClick={() => { setActiveTabSub('history'); setShowMobileDetail(false); }}
-            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-              activeTabSub === 'history'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Track Reports ({incidents.length})
-          </button>
-          {currentRole !== 'guest' && (
-            <button
-              onClick={() => setActiveTabSub('history')}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                activeTabSub === 'history'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Track Reports ({incidents.length})
-            </button>
+      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-5 items-start">
+        {/* ---------- Form ---------- */}
+        <Card padded="lg">
+          <h2 className="text-h3-lg font-semibold text-navy">File a new report</h2>
+
+          {justFiled && (
+            <div role="status" className="mt-4 flex gap-3 rounded-control bg-success-bg text-success-fg px-4 py-3">
+              <CheckCircle2 className="w-6 h-6 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <p>
+                <b className="font-semibold">Report submitted.</b> Your tracking number is{' '}
+                <b className="font-semibold whitespace-nowrap">{justFiled.referenceNumber}</b>. You can follow its progress
+                under My reports.
+              </p>
+            </div>
+          )}
+
+          <form noValidate onSubmit={submit}>
+            {Object.keys(errors).length > 0 && (
+              <p role="alert" className="mt-4 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
+                Please fix the fields marked below.
+              </p>
+            )}
+            <div className="grid sm:grid-cols-2 gap-x-5">
+              <Field label="Type of concern">
+                {p => (
+                  <Select {...p} value={category} onChange={e => setCategory(e.target.value as IncidentCategory)}>
+                    {CATEGORIES.map(c => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Date of incident" error={errors.date}>
+                {p => <Input {...p} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} />}
+              </Field>
+              <Field label="Purok">
+                {p => (
+                  <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
+                    {PUROKS.map(x => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+              <Field label="Location" error={errors.location}>
+                {p => (
+                  <Input
+                    {...p}
+                    placeholder="Street or landmark"
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                  />
+                )}
+              </Field>
+            </div>
+            <Field label="What happened?" error={errors.description}>
+              {p => (
+                <Textarea
+                  {...p}
+                  placeholder="Describe the concern in your own words"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Photos or documents" optional error={errors.files} help="JPG, PNG or PDF, up to 5 MB each.">
+              {p => (
+                <FileUpload
+                  {...p}
+                  multiple
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  hint="or choose photos or documents"
+                  files={files}
+                  onChange={setFiles}
+                />
+              )}
+            </Field>
+
+            <div className="mt-4">
+              <Checkbox
+                label="Hide my name from the person I'm reporting"
+                description="Only authorized barangay staff will see who filed it. You can still track it here."
+                checked={anonymous}
+                onChange={e => setAnonymous(e.target.checked)}
+              />
+              <Checkbox
+                label="I agree to the processing of my personal data"
+                description="It is used only to act on this report, as required by the Data Privacy Act of 2012."
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+                error={errors.consent}
+              />
+            </div>
+
+            <Button type="submit" fullWidth className="mt-6">
+              Submit report
+            </Button>
+          </form>
+        </Card>
+
+        {/* ---------- My reports + progress ---------- */}
+        <div className="grid gap-3 sm:gap-5">
+          <Card>
+            <CardHeader title="My reports" />
+            <DataTable<IncidentReport>
+              rows={myReports}
+              rowKey={r => r.id}
+              onRowClick={selectReport}
+              rowLabel={r => `Show progress of ${r.referenceNumber}`}
+              columns={[
+                {
+                  header: 'Tracking no.',
+                  cell: r => (
+                    <span className={r.id === selected?.id ? 'font-semibold text-navy' : undefined}>{r.referenceNumber}</span>
+                  ),
+                  className: 'whitespace-nowrap',
+                },
+                { header: 'Concern', cell: r => r.category },
+                { header: 'Status', cell: statusPill },
+              ]}
+              mobile={{ title: r => r.category, status: statusPill, meta: r => r.referenceNumber }}
+              empty={<p className="text-meta text-muted py-2">You have not filed any reports yet.</p>}
+            />
+          </Card>
+
+          {selected && (
+            <div ref={progressRef} className="scroll-mt-24">
+              <Card aria-live="polite">
+                <h3 className="text-h3 font-semibold text-navy mb-1">Progress of {selected.referenceNumber}</h3>
+                <p className="text-meta text-muted mb-4">
+                  {selected.category} · {selected.location}
+                </p>
+                <ProgressTimeline stages={buildReportStages(selected)} />
+              </Card>
+            </div>
           )}
         </div>
       </div>
-
-      {activeTabSub === 'submit' ? (
-        /* Submission Form */
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in">
-          <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-lg font-bold text-slate-900 font-heading">
-              Community Concern / Incident Form
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Please provide clear and truthful details so the Barangay Tanod or Lupon desk can coordinate appropriate action.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Category of Concern *
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as IncidentCategory)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Brief Subject / Title *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Excessive loud music past 10PM on Sampaguita St."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Purok / Area *
-                </label>
-                <select
-                  value={purok}
-                  onChange={(e) => setPurok(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-                >
-                  <option value="Purok 1 - Centro">Purok 1 - Centro</option>
-                  <option value="Purok 2 - Riverside">Purok 2 - Riverside</option>
-                  <option value="Purok 3 - Bukidnon">Purok 3 - Bukidnon</option>
-                  <option value="Purok 4 - Pag-asa">Purok 4 - Pag-asa</option>
-                  <option value="Purok 5 - San Roque">Purok 5 - San Roque</option>
-                  <option value="Purok 6 - Industrial Zone">Purok 6 - Industrial Zone</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Approximate Date & Time *
-                </label>
-                <input
-                  type="text"
-                  value={incidentDateTime}
-                  onChange={(e) => setIncidentDateTime(e.target.value)}
-                  placeholder="YYYY-MM-DD HH:MM"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Exact Street Address / Landmark *
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. In front of House #42, near basketball court"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Detailed Description of Concern *
-              </label>
-              <textarea
-                rows={4}
-                placeholder="Describe what occurred, persons involved (if known), and any previous incidents..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm"
-                required
-              />
-            </div>
-
-            {/* Photo upload attachment simulation */}
-            <div className="p-3.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <Paperclip className="w-4 h-4 text-slate-400" />
-                <span>Optional Attachment (Photo / Document)</span>
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                Photo evidence attached (simulated)
-              </span>
-            </div>
-
-            {/* Anonymous Toggle */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">Submit Anonymously</span>
-                <span className="text-[11px] text-slate-500 block">Hide your personal identity from public record</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
-              />
-            </div>
-
-            {/* Data Privacy Consent */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="privacyConsent"
-                checked={privacyConsent}
-                onChange={(e) => setPrivacyConsent(e.target.checked)}
-                className="mt-1 w-4 h-4 text-emerald-600 rounded cursor-pointer"
-                required
-              />
-              <label htmlFor="privacyConsent" className="text-[11px] text-slate-600 cursor-pointer">
-                I hereby consent to the collection and processing of my data for the purpose of investigating this incident, in accordance with the Data Privacy Act of 2012. I understand that my information is secure and role-restricted.
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              id="submit-incident-btn"
-            >
-              <Send className="w-4 h-4" />
-              <span>Submit Report & Receive Tracking Code</span>
-            </button>
-          </form>
-        </div>
-      ) : (
-        /* Report Tracking Timeline View */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in relative">
-          {/* List of Reports */}
-          <div className={`lg:col-span-5 space-y-3 ${showMobileDetail ? 'hidden lg:block' : 'block'}`}>
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Search report reference..."
-                value={searchRef}
-                onChange={(e) => setSearchRef(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm"
-              />
-            </div>
-
-            <div className="space-y-2.5 max-h-[580px] overflow-y-auto">
-              {filteredIncidents.map((inc) => {
-                const isSelected = activeIncident?.id === inc.id;
-                return (
-                  <div
-                    key={inc.id}
-                    onClick={() => { setSelectedIncidentId(inc.id); setShowMobileDetail(true); }}
-                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-amber-600 bg-amber-50/70 shadow-xs ring-1 ring-amber-600'
-                        : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-mono font-bold text-slate-900">{inc.referenceNumber}</span>
-                      <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                        inc.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' :
-                        inc.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-amber-100 text-amber-800'
-                      }`}>
-                        {inc.status.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{inc.title}</h4>
-                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{inc.location}</p>
-
-                    <div className="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
-                      <span>{inc.category}</span>
-                      <span>{inc.submittedAt}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Timeline & Details */}
-          {activeIncident && (
-            <div className={`lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6 ${!showMobileDetail ? 'hidden lg:block' : 'block animate-in slide-in-from-right-4'}`}>
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-4 border-b border-slate-200">
-                <div>
-                  <button 
-                    onClick={() => setShowMobileDetail(false)}
-                    className="lg:hidden mb-4 flex items-center gap-1 text-slate-500 hover:text-slate-900 font-semibold text-xs bg-slate-100 px-3 py-1.5 rounded-lg w-fit"
-                  >
-                    <ChevronRight className="w-4 h-4 rotate-180" />
-                    Back to List
-                  </button>
-                  <span className="text-xs font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    {activeIncident.referenceNumber}
-                  </span>
-                  <h3 className="text-lg font-bold text-slate-900 font-heading mt-1">
-                    {activeIncident.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Filed by: <strong>{activeIncident.reporterName}</strong> • {activeIncident.purok}
-                  </p>
-                </div>
-
-                <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full shrink-0 ${
-                  activeIncident.status === 'resolved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                  'bg-amber-100 text-amber-800 border border-amber-200'
-                }`}>
-                  Status: {activeIncident.status.replace('_', ' ')}
-                </span>
-              </div>
-
-              {/* Description Card */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-                <div className="flex items-center justify-between text-slate-500">
-                  <span>Location: <strong>{activeIncident.location}</strong></span>
-                  <span>Date/Time: <strong>{activeIncident.incidentDateTime}</strong></span>
-                </div>
-                <p className="text-slate-800 leading-relaxed pt-2 border-t border-slate-200">
-                  {activeIncident.description}
-                </p>
-                {activeIncident.assignedTo && (
-                  <div className="pt-2 text-emerald-800 font-medium">
-                    Assigned Officer: <strong>{activeIncident.assignedTo}</strong> ({activeIncident.assignedRole})
-                  </div>
-                )}
-              </div>
-
-              {/* Progress Timeline */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">
-                  Barangay Investigation & Action Timeline:
-                </h4>
-
-                <div className="space-y-4">
-                  {activeIncident.statusHistory.map((history, idx) => (
-                    <div key={idx} className="flex items-start gap-3.5 relative">
-                      {idx < activeIncident.statusHistory.length - 1 && (
-                        <div className="absolute left-3.5 top-6 w-0.5 h-8 bg-slate-200"></div>
-                      )}
-                      <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900 uppercase">
-                            {history.status.replace('_', ' ')}
-                          </span>
-                          <span className="text-[10px] text-slate-400">{history.updatedAt}</span>
-                        </div>
-                        <p className="text-xs text-slate-600 mt-1">{history.note}</p>
-                        <span className="text-[10px] text-slate-400 block mt-1">Logged by: {history.updatedBy}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resolution if completed */}
-              {activeIncident.resolutionSummary && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
-                  <span className="font-bold block mb-1">Official Resolution Summary:</span>
-                  <p>{activeIncident.resolutionSummary}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

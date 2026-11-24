@@ -1,29 +1,101 @@
 @import "tailwindcss";
 
+/*
+ * e-Kapitan design tokens. See DESIGN.md (repo root) before changing anything here.
+ * Owner: ppen. Every color/font/radius used in components must come from this block.
+ */
 @theme {
   --animate-shimmer: shimmer 1.5s infinite;
-  
+
   @keyframes shimmer {
     100% {
       transform: translateX(100%);
     }
   }
+
+  /* Fonts */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Poppins", "Inter", system-ui, sans-serif;
+
+  /* Type scale (rem, so Large text mode scales everything) */
+  --text-label: 0.75rem;      /* 12px  table headers, sidebar section titles */
+  --text-caption: 0.8125rem;  /* 13px  status pills, small meta */
+  --text-meta: 0.9375rem;     /* 15px  secondary text, table cells, labels */
+  --text-h3: 1.125rem;        /* 18px  card titles */
+  --text-h3-lg: 1.375rem;     /* 22px  form card titles */
+  --text-h2: 1.75rem;         /* 28px  section titles, banner greeting */
+  --text-h1: 2rem;            /* 32px  page titles */
+  --text-stat: 2.375rem;      /* 38px  big numbers */
+  --text-hero: 2.875rem;      /* 46px  public hero only */
+
+  /* Brand */
+  --color-navy: #12304F;
+  --color-navy-deep: #0C2238;
+  --color-navy-tint: #EEF3F9;
+  --color-on-navy: #C9D6E6;
+  --color-ink: #1D2A3A;
+  --color-muted: #556070;
+  --color-primary: #1B7A57;
+  --color-primary-strong: #14604A;
+  --color-primary-tint: #E4F2EA;
+  --color-primary-tint-line: #CFE5D8;
+  --color-gold: #F2B84B;
+
+  /* Surfaces and lines */
+  --color-canvas: #F6F3EB;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F1EFE8;
+  --color-line: #E3DDCC;
+  --color-line-soft: #EEE9DB;
+  --color-field-line: #8A93A0;
+
+  /* Status tones (always use bg + fg together) */
+  --color-success-bg: #D8F0E3;
+  --color-success-fg: #0F5A3E;
+  --color-info-bg: #DCE9FA;
+  --color-info-fg: #1B3F7A;
+  --color-warning-bg: #FFF0C9;
+  --color-warning-fg: #6A4A00;
+  --color-danger-bg: #FBE0DD;
+  --color-danger-tile: #F7E1DC;
+  --color-danger-fg: #8B2418;
+  --color-neutral-bg: #F1EFE8;
+  --color-neutral-fg: #5C5C5C;
+
+  /* Radius and elevation */
+  --radius-control: 10px;
+  --radius-tile: 14px;
+  --radius-card: 16px;
+  --radius-banner: 20px;
+  --shadow-float: 0 8px 24px rgb(18 48 79 / 0.10);
 }
 
 @layer base {
-  :root {
-    --font-sans: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  html.large-text {
+    font-size: 112.5%;
   }
 
   body {
     font-family: var(--font-sans);
-    color: #0f172a;
-    background-color: #f8fafc;
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+    line-height: 1.55;
   }
 
   h1, h2, h3, .font-heading {
     font-family: var(--font-display);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-navy);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

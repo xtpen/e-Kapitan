@@ -16,7 +16,13 @@ import {
   DuplicateRecordFlag,
   RequestStatus,
   IncidentStatus,
-  Official
+  Official,
+  PrintRequest,
+  PrintStatus,
+  CourtReservation,
+  CourtReservationStatus,
+  CourtSlot,
+  CourtClosure
 } from '../types';
 import { 
   INITIAL_SERVICES, 
@@ -30,7 +36,11 @@ import {
   INITIAL_PRIORITY_CRITERIA, 
   INITIAL_KNOWLEDGE_BASE, 
   INITIAL_AUDIT_LOGS,
-  INITIAL_OFFICIALS
+  INITIAL_OFFICIALS,
+  INITIAL_PRINT_REQUESTS,
+  COURT_SLOTS,
+  INITIAL_COURT_RESERVATIONS,
+  INITIAL_COURT_CLOSURES
 } from '../data/mockData';
 
 export interface ToastMessage {
@@ -93,6 +103,26 @@ interface BarangayContextType {
   updateKnowledgeItem: (id: string, updates: Partial<KnowledgeBaseItem>) => void;
   
   bookAppointment: (data: Omit<Appointment, 'id' | 'referenceNumber'>) => Appointment;
+
+  // Printing
+  printRequests: PrintRequest[];
+  createPrintRequest: (data: Omit<PrintRequest, 'id' | 'referenceNumber' | 'status' | 'submittedAt'>) => PrintRequest;
+  updatePrintRequestStatus: (id: string, status: PrintStatus, notes?: string) => void;
+
+  // Court reservation
+  courtSlots: CourtSlot[];
+  courtReservations: CourtReservation[];
+  courtClosures: CourtClosure[];
+  createCourtReservation: (data: Pick<CourtReservation, 'date' | 'slotId' | 'activity'>) => CourtReservation;
+  updateCourtReservationStatus: (id: string, status: CourtReservationStatus, notes?: string) => void;
+  closeCourtDate: (date: string, reason: string) => void;
+
+  // Resident account
+  readNotificationIds: string[];
+  markNotificationsRead: (ids: string[]) => void;
+  smsUpdates: boolean;
+  setSmsUpdates: (val: boolean) => void;
+  updateResidentContact: (residentId: string, contact: { contactNumber: string; email?: string }) => void;
   createAnnouncement: (data: Partial<Announcement>) => void;
 
   updateOfficial: (id: string, updates: Partial<Official>) => void;
@@ -187,6 +217,12 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       referenceNumber: 'APT-2026-0044'
     }
   ]);
+  const [printRequests, setPrintRequests] = useState<PrintRequest[]>(INITIAL_PRINT_REQUESTS);
+  const [courtSlots] = useState<CourtSlot[]>(COURT_SLOTS);
+  const [courtReservations, setCourtReservations] = useState<CourtReservation[]>(INITIAL_COURT_RESERVATIONS);
+  const [courtClosures, setCourtClosures] = useState<CourtClosure[]>(INITIAL_COURT_CLOSURES);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+  const [smsUpdates, setSmsUpdates] = useState<boolean>(true);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseItem[]>(INITIAL_KNOWLEDGE_BASE);
@@ -243,8 +279,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setActiveTab('executive_dashboard');
     }
     addToast(
-      `Role switched to ${ROLE_PROFILES[role].roleTitle}`,
-      `Viewing the platform as ${ROLE_PROFILES[role].name}`,
+      `Welcome, ${ROLE_PROFILES[role].name.split(' ')[0]}`,
+      `Signed in as ${ROLE_PROFILES[role].roleTitle}.`,
       'info'
     );
   };
@@ -297,7 +333,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     logAudit('Submitted Document Request', 'Documents', `Reference ${refNum} for ${newReq.residentName} (${newReq.documentTitle})`);
-    addToast('Request Submitted Successfully', `Tracking reference: ${refNum}. You can monitor status in real-time.`, 'success');
+    addToast('Request submitted', `Reference ${refNum}. You can follow it in My Requests.`, 'success');
     return newReq;
   };
 
@@ -476,7 +512,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setIncidents((prev) => [newInc, ...prev]);
     logAudit('Submitted Community Incident Report', 'Records', `Incident Ref ${refNum}: ${newInc.title}`);
-    addToast('Report Filed Successfully', `Reference code: ${refNum}. The barangay team will review this report.`, 'success');
+    addToast('Report submitted', `Tracking number ${refNum}. Barangay staff will review it.`, 'success');
     return newInc;
   };
 
@@ -612,8 +648,72 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     setAppointments((prev) => [newApt, ...prev]);
     logAudit('Scheduled Citizen Appointment', 'Queue', `Appointment ${refNum} on ${data.date} (${data.timeSlot})`);
-    addToast('Appointment Confirmed', `Scheduled for ${data.date} at ${data.timeSlot}. Reference: ${refNum}`, 'success');
+    addToast('Appointment booked', `${data.date}, ${data.timeSlot}. Reference ${refNum}.`, 'success');
     return newApt;
+  };
+
+  const createPrintRequest = (
+    data: Omit<PrintRequest, 'id' | 'referenceNumber' | 'status' | 'submittedAt'>
+  ): PrintRequest => {
+    const refNum = `PRT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newReq: PrintRequest = {
+      ...data,
+      id: 'prt-' + Date.now(),
+      referenceNumber: refNum,
+      status: 'pending',
+      submittedAt: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    };
+    setPrintRequests((prev) => [newReq, ...prev]);
+    logAudit('Submitted Print Request', 'Documents', `Reference ${refNum} for ${newReq.residentName} (${newReq.pages} pages x ${newReq.copies})`);
+    addToast('Print request submitted', `Reference ${refNum}. We will tell you when it is ready.`, 'success');
+    return newReq;
+  };
+
+  const updatePrintRequestStatus = (id: string, status: PrintStatus, notes?: string) => {
+    setPrintRequests((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status, notes: notes ?? p.notes, rejectionReason: status === 'rejected' ? notes : p.rejectionReason } : p))
+    );
+    logAudit('Updated Print Request', 'Documents', `Print request ${id} set to ${status}`);
+  };
+
+  const createCourtReservation = (data: Pick<CourtReservation, 'date' | 'slotId' | 'activity'>): CourtReservation => {
+    const refNum = `CRT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newRes: CourtReservation = {
+      ...data,
+      id: 'crt-' + Date.now(),
+      referenceNumber: refNum,
+      residentId: currentUser.residentId || currentUser.id,
+      residentName: currentUser.name,
+      status: 'pending',
+      submittedAt: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    };
+    setCourtReservations((prev) => [newRes, ...prev]);
+    const slot = COURT_SLOTS.find((s) => s.id === data.slotId);
+    logAudit('Submitted Court Reservation', 'Queue', `Reservation ${refNum} on ${data.date} (${slot?.label ?? data.slotId})`);
+    addToast('Reservation request sent', `Reference ${refNum}. We will tell you once the barangay approves it.`, 'success');
+    return newRes;
+  };
+
+  const updateCourtReservationStatus = (id: string, status: CourtReservationStatus, notes?: string) => {
+    setCourtReservations((prev) => prev.map((r) => (r.id === id ? { ...r, status, notes: notes ?? r.notes } : r)));
+    logAudit('Updated Court Reservation', 'Queue', `Court reservation ${id} set to ${status}`);
+  };
+
+  const closeCourtDate = (date: string, reason: string) => {
+    setCourtClosures((prev) => [...prev.filter((c) => c.date !== date), { date, reason }]);
+    logAudit('Closed Court Date', 'Configuration', `Court closed on ${date}: ${reason}`);
+  };
+
+  const markNotificationsRead = (ids: string[]) => {
+    setReadNotificationIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const updateResidentContact = (residentId: string, contact: { contactNumber: string; email?: string }) => {
+    setResidents((prev) => prev.map((r) => (r.id === residentId ? { ...r, ...contact } : r)));
+    if (currentUser.residentId === residentId && contact.email) {
+      setCurrentUser((u) => ({ ...u, email: contact.email ?? u.email }));
+    }
+    logAudit('Updated Contact Details', 'Records', `Resident ${residentId} updated their contact details`);
   };
 
   const verifyDocumentCode = (code: string): { found: boolean; document?: DocumentRequest; message: string } => {
@@ -726,6 +826,20 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addKnowledgeItem,
         updateKnowledgeItem,
         bookAppointment,
+        printRequests,
+        createPrintRequest,
+        updatePrintRequestStatus,
+        courtSlots,
+        courtReservations,
+        courtClosures,
+        createCourtReservation,
+        updateCourtReservationStatus,
+        closeCourtDate,
+        readNotificationIds,
+        markNotificationsRead,
+        smsUpdates,
+        setSmsUpdates,
+        updateResidentContact,
         createAnnouncement,
         updateOfficial,
         addOfficial,

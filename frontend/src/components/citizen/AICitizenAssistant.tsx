@@ -126,7 +126,6 @@ export const AICitizenAssistant: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-500">
-            <p className="text-xs text-slate-500 mt-0.5">
               Friendly civic assistant for Barangay 4A services, requirements, and office schedules.
             </p>
           </div>

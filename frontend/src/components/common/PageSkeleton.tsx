@@ -1,51 +1,26 @@
 import React from 'react';
 
-export const PageSkeleton: React.FC = () => {
-  return (
-    <div className="w-full space-y-8">
-      {/* Top Banner Skeleton */}
-      <div className="relative overflow-hidden h-32 sm:h-40 bg-slate-100 rounded-[2rem] w-full border border-slate-200/50 shadow-sm">
-        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+/** One shimmering placeholder block in the design-system colors. */
+const Bone: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div className={`relative overflow-hidden bg-surface-muted border border-line rounded-card ${className}`}>
+    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-surface/70 to-transparent motion-reduce:hidden" />
+  </div>
+);
+
+/** Brief loading placeholder shown when switching pages. Shapes follow the common page layout. */
+export const PageSkeleton: React.FC = () => (
+  <div className="max-w-[1200px] w-full" role="status" aria-label="Loading">
+    <Bone className="h-9 w-56 rounded-control mb-2" />
+    <Bone className="h-5 w-80 max-w-full rounded-control mb-6" />
+    <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5">
+      <div className="grid gap-5">
+        <Bone className="h-56" />
+        <Bone className="h-40" />
       </div>
-      
-      {/* Main Grid Layout Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Main Content Area */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="relative overflow-hidden h-8 bg-slate-100 rounded-xl w-1/3 border border-slate-200/50">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-            <div className="relative overflow-hidden h-8 bg-slate-100 rounded-xl w-24 border border-slate-200/50">
-              <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-            </div>
-          </div>
-          
-          {/* Content Cards */}
-          <div className="relative overflow-hidden h-48 bg-slate-100 rounded-[2rem] w-full border border-slate-200/50 shadow-sm">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-          <div className="relative overflow-hidden h-48 bg-slate-100 rounded-[2rem] w-full border border-slate-200/50 shadow-sm">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-        </div>
-        
-        {/* Sidebar Area */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="relative overflow-hidden h-8 bg-slate-100 rounded-xl w-1/2 mb-4 border border-slate-200/50">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-          <div className="relative overflow-hidden h-72 bg-slate-100 rounded-[2rem] w-full border border-slate-200/50 shadow-sm">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-          <div className="relative overflow-hidden h-40 bg-slate-100 rounded-[2rem] w-full border border-slate-200/50 shadow-sm">
-            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
-          </div>
-        </div>
-        
+      <div className="grid gap-5 content-start">
+        <Bone className="h-44" />
+        <Bone className="h-28" />
       </div>
     </div>
-  );
-};
+  </div>
+);

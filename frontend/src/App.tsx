@@ -28,6 +28,13 @@ import { GuestReportStatus } from './components/citizen/GuestReportStatus';
 import { GuestSettings } from './components/citizen/GuestSettings';
 import { GuestHelp } from './components/citizen/GuestHelp';
 import { OfficialsDirectory } from './components/citizen/OfficialsDirectory';
+import { PrintingView } from './components/citizen/PrintingView';
+import { CourtReservationView } from './components/citizen/CourtReservationView';
+import { ProfileView } from './components/citizen/ProfileView';
+import { NotificationsView } from './components/citizen/NotificationsView';
+import { residentBottomNav, residentNavGroups } from './components/citizen/residentNav';
+import { useResidentActivity } from './components/citizen/useResidentActivity';
+import { AppShell } from './components/layout/AppShell';
 
 // Staff Components
 import { StaffDashboard } from './components/staff/StaffDashboard';
@@ -83,6 +90,12 @@ const MainAppContent: React.FC = () => {
 
   const [selectedServiceForWizard, setSelectedServiceForWizard] = useState<any | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const { unreadCount: residentUnread } = useResidentActivity();
+
+  // Large text mode scales the root font size, so every rem-based size grows with it.
+  useEffect(() => {
+    document.documentElement.classList.toggle('large-text', largeTextMode);
+  }, [largeTextMode]);
 
   // Trigger simulated loading skeleton when route changes
   useEffect(() => {
@@ -104,22 +117,7 @@ const MainAppContent: React.FC = () => {
     { id: 'qr_verify', label: 'Verify QR', icon: <QrCode className="w-5 h-5" /> },
     { id: 'ai_assistant', label: 'AI Assistant', icon: <Sparkles className="w-5 h-5" /> },
     { id: 'announcements', label: 'Advisories', icon: <Megaphone className="w-5 h-5" /> },
-    { id: 'home', label: 'Overview' },
-    { id: 'services', label: 'Services & Clearances' },
-    { id: 'tracking', label: 'My Applications' },
-    { id: 'complaints', label: 'Report Incident' },
-    { id: 'appointments', label: 'Book Appointment' },
-    { id: 'qr_verify', label: 'Verify QR Code' },
-    { id: 'ai_assistant', label: 'Ka-Barangay AI' },
-    { id: 'announcements', label: 'Advisories' },
-    { id: 'officials_directory', label: 'Officials Directory' },
-  ];
-
-  const guestTabs = [
-    { id: 'complaints', label: 'Report Incident' },
-    { id: 'qr_verify', label: 'Verify Document' },
-    { id: 'announcements', label: 'Advisories' },
-    { id: 'officials_directory', label: 'Officials Directory' },
+    { id: 'officials_directory', label: 'Officials Directory', icon: <Users2 className="w-5 h-5" /> },
   ];
 
   const staffTabs = [
@@ -137,6 +135,7 @@ const MainAppContent: React.FC = () => {
     { id: 'official_blotter', label: 'Blotter', icon: <ShieldCheck className="w-5 h-5" /> },
     { id: 'official_audit', label: 'Audit Trail', icon: <ClipboardList className="w-5 h-5" /> },
     { id: 'official_announcements', label: 'Advisories', icon: <Megaphone className="w-5 h-5" /> },
+    { id: 'manage_officials', label: 'Manage Officials', icon: <Users2 className="w-5 h-5" /> },
   ];
 
   const guestTabs = [
@@ -145,15 +144,10 @@ const MainAppContent: React.FC = () => {
     { id: 'report_status', label: 'Report Status', icon: <FileCheck2 className="w-5 h-5" /> },
     { id: 'qr_verify', label: 'Verify Document', icon: <QrCode className="w-5 h-5" /> },
     { id: 'ai_assistant', label: 'Ka-Barangay AI', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'executive_dashboard', label: 'Executive Intelligence' },
-    { id: 'official_blotter', label: 'Peace & Order Blotter' },
-    { id: 'official_audit', label: 'Audit Trail' },
-    { id: 'official_announcements', label: 'Barangay Advisories' },
-    { id: 'manage_officials', label: 'Manage Officials' },
+    { id: 'officials_directory', label: 'Officials Directory', icon: <Users2 className="w-5 h-5" /> },
   ];
 
   const currentTabs = 
-    currentRole === 'guest' ? guestTabs :
     currentRole === 'citizen' ? citizenTabs :
     currentRole === 'staff' ? staffTabs : 
     currentRole === 'official' ? officialTabs : 
@@ -193,6 +187,14 @@ const MainAppContent: React.FC = () => {
         return <OfficialAnnouncementsManager />;
       case 'officials_directory':
         return <OfficialsDirectory />;
+      case 'printing':
+        return <PrintingView />;
+      case 'court':
+        return <CourtReservationView />;
+      case 'profile':
+        return <ProfileView />;
+      case 'notifications':
+        return <NotificationsView />;
 
       // Staff Views
       case 'dashboard':
@@ -238,10 +240,8 @@ const MainAppContent: React.FC = () => {
         return <GuestHelp />;
 
       default:
-        return currentRole === 'citizen'
-          ? <CitizenHome />
-          : currentRole === 'guest'
-          ? <OfficialAnnouncementsManager />
+        return currentRole === 'citizen' 
+          ? <CitizenHome /> 
           : currentRole === 'staff' 
           ? <StaffDashboard /> 
           : currentRole === 'guest'
@@ -251,6 +251,42 @@ const MainAppContent: React.FC = () => {
   };
 
   // The login check is now handled in MainAppWrapper
+
+  const pageTransition = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`${activeTab}-${currentRole}-${isPageLoading ? 'skeleton' : 'loaded'}`}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+      >
+        {renderCurrentView()}
+      </motion.div>
+    </AnimatePresence>
+  );
+
+  const printModal = selectedDocumentForPrint && (
+    <OfficialDocumentTemplate document={selectedDocumentForPrint} onClose={() => setSelectedDocumentForPrint(null)} />
+  );
+
+  // Redesigned shell (DESIGN.md). Residents first; other roles move over as they are redesigned.
+  if (currentRole === 'citizen') {
+    return (
+      <>
+        <ToastContainer />
+        <AppShell
+          groups={residentNavGroups}
+          bottomNav={residentBottomNav}
+          notificationsTab="notifications"
+          unreadCount={residentUnread}
+        >
+          {pageTransition}
+        </AppShell>
+        {printModal}
+      </>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col font-sans bg-slate-50 text-slate-900 ${
@@ -266,13 +302,6 @@ const MainAppContent: React.FC = () => {
       {currentTabs.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden">
           <div className="flex items-center justify-around w-full overflow-x-auto scrollbar-none px-2 py-2 gap-2">
-      {/* Role-Specific Sub-Navbar Navigation */}
-      <div className="hidden lg:block bg-white border-b border-slate-200 shadow-2xs overflow-x-auto scrollbar-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-1 sm:gap-2 py-2.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2 hidden md:inline">
-              Navigation:
-            </span>
             {currentTabs.map((tab) => {
               const isActive = activeTab === tab.id || (tab.id === 'dashboard' && activeTab === 'staff_dashboard') || (tab.id === 'executive_dashboard' && activeTab === 'official_dashboard') || (tab.id === 'guest_home' && activeTab === 'guest_home');
               return (
@@ -282,13 +311,7 @@ const MainAppContent: React.FC = () => {
                   title={tab.label}
                   className={`flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors rounded-xl ${
                     isActive
-                      ? currentRole === 'citizen'
-                        ? 'text-emerald-700 bg-emerald-50'
-                      ? currentRole === 'guest'
-                        ? 'bg-amber-700 text-white shadow-xs'
-                        : currentRole === 'citizen'
-                        ? 'bg-emerald-700 text-white shadow-xs'
-                        : currentRole === 'staff'
+                      ? currentRole === 'staff'
                         ? 'text-blue-700 bg-blue-50'
                         : currentRole === 'official'
                         ? 'text-purple-800 bg-purple-50'
@@ -323,9 +346,7 @@ const MainAppContent: React.FC = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
                       isActive
-                        ? currentRole === 'citizen'
-                          ? 'bg-emerald-700 text-white shadow-xs'
-                          : currentRole === 'staff'
+                        ? currentRole === 'staff'
                           ? 'bg-blue-700 text-white shadow-xs'
                           : currentRole === 'official'
                           ? 'bg-purple-800 text-white shadow-xs'
@@ -368,8 +389,6 @@ const MainAppContent: React.FC = () => {
             {renderCurrentView()}
           </motion.div>
         </AnimatePresence>
-      <main className="print:hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {renderCurrentView()}
       </main>
 
       {/* Printable Official Certificate Modal Overlay */}
@@ -383,41 +402,6 @@ const MainAppContent: React.FC = () => {
       {/* Clean Civic Footer */}
       <footer className="no-print bg-white border-t border-slate-200 mt-auto py-6 text-center text-slate-500 text-xs">
         © 2026 e-Kapitan Civic Platform. All rights reserved.
-      <footer className="print:hidden bg-white border-t border-slate-200 mt-12 py-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border border-slate-300 flex items-center justify-center font-bold text-[11px] text-emerald-800 bg-emerald-50">
-              B4A
-            </div>
-            <div>
-              <p className="font-bold text-slate-800 text-xs">
-                e-Kapitan Civic Platform • Barangay 4A, San Pablo City, Laguna
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Republic of the Philippines • National Capital Region • Anti-Red Tape Authority (ARTA) Compliant
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-600">
-            <button
-              onClick={() => setActiveTab('qr_verify')}
-              className="hover:text-emerald-700 cursor-pointer font-medium"
-            >
-              Verify Document Authenticity
-            </button>
-            <span>•</span>
-            <button
-              onClick={() => setActiveTab('ai_assistant')}
-              className="hover:text-emerald-700 cursor-pointer font-medium flex items-center gap-1"
-            >
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>Ka-Barangay AI Citizen Guide</span>
-            </button>
-            <span>•</span>
-            <span className="font-mono text-slate-400">Version 2.4.0-ARTA</span>
-          </div>
-        </div>
       </footer>
     </div>
   );
@@ -435,7 +419,7 @@ const MainAppWrapper: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="min-h-screen bg-slate-50"
+          className="min-h-screen bg-canvas"
         >
           <LandingLogin />
         </motion.div>

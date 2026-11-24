@@ -35,7 +35,6 @@ export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> =
         return (
           <>
             <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, of legal age, Filipino citizen, and a bonafide resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, is a person of good moral character and reputable standing in the community.
               This is to certify that <strong>{document.residentName}</strong>, of legal age, Filipino citizen, and a bonafide resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, is a person of good moral character and reputable standing in the community.
             </p>
             <p className="indent-8 leading-relaxed mb-4 text-justify">
@@ -50,7 +49,6 @@ export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> =
         return (
           <>
             <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, of legal age, is a documented resident residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Metro Manila, having continuously resided in this jurisdiction for more than six (6) months.
               This is to certify that <strong>{document.residentName}</strong>, of legal age, is a documented resident residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, Metro Manila, having continuously resided in this jurisdiction for more than six (6) months.
             </p>
             <p className="indent-8 leading-relaxed text-justify">
@@ -62,7 +60,6 @@ export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> =
         return (
           <>
             <p className="indent-8 leading-relaxed mb-4 text-justify">
-              This is to certify that <strong>{document.residentName}</strong>, residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, belongs to an indigent family residing in this barangay, with monthly household earnings falling within the low-income threshold.
               This is to certify that <strong>{document.residentName}</strong>, residing at <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, belongs to an indigent family residing in this barangay, with monthly household earnings falling within the low-income threshold.
             </p>
             <p className="indent-8 leading-relaxed mb-4 text-justify">
@@ -98,7 +95,6 @@ export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> =
       default:
         return (
           <p className="indent-8 leading-relaxed text-justify">
-            This certifies that <strong>{document.residentName}</strong> is an active resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, and that this document is issued for: <strong>{document.purpose}</strong>.
             This certifies that <strong>{document.residentName}</strong> is an active resident of <strong>{document.purok}</strong>, Barangay 4A, San Pablo City, Laguna, and that this document is issued for: <strong>{document.purpose}</strong>.
           </p>
         );
@@ -153,9 +149,6 @@ export const OfficialDocumentTemplate: React.FC<OfficialDocumentTemplateProps> =
 
               <div className="flex-1 px-4">
                 <p className="text-xs font-medium tracking-wider text-slate-600 uppercase">Republic of the Philippines</p>
-                <p className="text-xs font-medium text-slate-600">National Capital Region • San Pablo City</p>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-heading tracking-tight mt-0.5">
-                  Barangay 4A
                 <p className="text-xs font-medium text-slate-600">Province of Laguna • City of San Pablo</p>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-heading tracking-tight mt-0.5">
                   BARANGAY 4A

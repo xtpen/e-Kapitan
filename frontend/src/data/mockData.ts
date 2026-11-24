@@ -934,3 +934,70 @@ export const ANALYTICS_DATA = {
     }
   ]
 };
+
+/* ---------- Printing (redesign) ---------- */
+
+export const INITIAL_PRINT_REQUESTS: import('../types').PrintRequest[] = [
+  {
+    id: 'prt-001',
+    referenceNumber: 'PRT-2026-0087',
+    residentId: 'res-001',
+    residentName: 'Maria Corazon Santos',
+    fileName: 'scholarship-requirements.pdf',
+    pages: 10,
+    copies: 2,
+    paperSize: 'A4',
+    color: 'black_and_white',
+    sides: 'one_sided',
+    status: 'processing',
+    submittedAt: '2026-09-09 09:10 AM',
+  },
+  {
+    id: 'prt-002',
+    referenceNumber: 'PRT-2026-0061',
+    residentId: 'res-001',
+    residentName: 'Maria Corazon Santos',
+    fileName: 'purok-meeting-flyer.pdf',
+    pages: 4,
+    copies: 1,
+    paperSize: 'A4',
+    color: 'color',
+    sides: 'one_sided',
+    status: 'ready_for_pickup',
+    submittedAt: '2026-09-07 02:40 PM',
+  },
+];
+
+/* ---------- Court reservation (redesign) ---------- */
+
+/** Court time slots. Placeholder values from the mockup; the barangay sets the real ones. */
+export const COURT_SLOTS: import('../types').CourtSlot[] = [
+  { id: '16-18', label: '4:00 PM to 6:00 PM', short: '4 PM' },
+  { id: '18-20', label: '6:00 PM to 8:00 PM', short: '6 PM' },
+  { id: '20-22', label: '8:00 PM to 10:00 PM', short: '8 PM' },
+];
+
+/** YYYY-MM-DD for today + n days, so the demo calendar always has upcoming bookings. */
+const daysFromToday = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+};
+
+export const INITIAL_COURT_RESERVATIONS: import('../types').CourtReservation[] = [
+  // Maria's own reservations
+  { id: 'crt-001', referenceNumber: 'CRT-2026-0153', residentId: 'res-001', residentName: 'Maria Corazon Santos', date: daysFromToday(2), slotId: '16-18', activity: 'Basketball practice', status: 'pending', submittedAt: daysFromToday(-1) + ' 09:20 AM' },
+  { id: 'crt-002', referenceNumber: 'CRT-2026-0121', residentId: 'res-001', residentName: 'Maria Corazon Santos', date: daysFromToday(-16), slotId: '18-20', activity: 'Purok volleyball game', status: 'completed', submittedAt: daysFromToday(-20) + ' 03:05 PM' },
+  // Other residents (residents only ever see these as "Booked")
+  { id: 'crt-003', referenceNumber: 'CRT-2026-0154', residentId: 'res-004', residentName: 'Carlo Dizon', date: daysFromToday(1), slotId: '18-20', activity: 'Liga game', status: 'approved', submittedAt: daysFromToday(-3) + ' 10:00 AM' },
+  { id: 'crt-004', referenceNumber: 'CRT-2026-0155', residentId: 'res-005', residentName: 'Barangay Health Workers', date: daysFromToday(3), slotId: '16-18', activity: 'Zumba', status: 'approved', submittedAt: daysFromToday(-4) + ' 08:15 AM' },
+  { id: 'crt-005', referenceNumber: 'CRT-2026-0156', residentId: 'res-006', residentName: 'SK Federation', date: daysFromToday(4), slotId: '16-18', activity: 'SK league', status: 'approved', submittedAt: daysFromToday(-5) + ' 11:40 AM' },
+  { id: 'crt-006', referenceNumber: 'CRT-2026-0157', residentId: 'res-006', residentName: 'SK Federation', date: daysFromToday(4), slotId: '18-20', activity: 'SK league', status: 'approved', submittedAt: daysFromToday(-5) + ' 11:42 AM' },
+  { id: 'crt-007', referenceNumber: 'CRT-2026-0158', residentId: 'res-006', residentName: 'SK Federation', date: daysFromToday(4), slotId: '20-22', activity: 'SK league', status: 'pending', submittedAt: daysFromToday(-5) + ' 11:45 AM' },
+];
+
+export const INITIAL_COURT_CLOSURES: import('../types').CourtClosure[] = [
+  { date: daysFromToday(5), reason: 'Barangay event' },
+  { date: daysFromToday(6), reason: 'Court repainting' },
+];

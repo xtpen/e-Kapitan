@@ -218,6 +218,55 @@ export interface Appointment {
   referenceNumber: string;
 }
 
+export type PrintStatus = 'pending' | 'processing' | 'ready_for_pickup' | 'completed' | 'rejected';
+export type PaperSize = 'A4' | 'Letter' | 'Legal';
+export type PrintColor = 'black_and_white' | 'color';
+export type PrintSides = 'one_sided' | 'two_sided';
+
+export interface PrintRequest {
+  id: string;
+  referenceNumber: string; // e.g. "PRT-2026-0087"
+  residentId: string;
+  residentName: string;
+  fileName: string;
+  pages: number;
+  copies: number;
+  paperSize: PaperSize;
+  color: PrintColor;
+  sides: PrintSides;
+  status: PrintStatus; // printing is free of charge for residents
+  submittedAt: string;
+  notes?: string;
+  rejectionReason?: string;
+}
+
+export type CourtReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'completed';
+
+export interface CourtSlot {
+  id: string; // e.g. "16-18"
+  label: string; // e.g. "4:00 PM to 6:00 PM"
+  short: string; // e.g. "4 PM"
+}
+
+export interface CourtReservation {
+  id: string;
+  referenceNumber: string; // e.g. "CRT-2026-0153"
+  residentId: string;
+  residentName: string;
+  date: string; // YYYY-MM-DD
+  slotId: string; // CourtSlot.id
+  activity: string;
+  status: CourtReservationStatus;
+  submittedAt: string;
+  notes?: string; // e.g. reason when declined
+}
+
+/** A date the barangay closed the court (events, repairs). Set by admins. */
+export interface CourtClosure {
+  date: string; // YYYY-MM-DD
+  reason: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;
