@@ -3,20 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>e-Kapitan - Barangay Citizen & Government Services</title>
-    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
-    <meta name="description" content="Modern web-based barangay information management and citizen service platform connecting residents, staff, and officials with digital document issuance, intelligent queueing, incident tracking, and AI assistance." />
-    <meta property="og:title" content="e-Kapitan - Barangay Citizen & Government Services" />
-    <meta property="og:description" content="Modern web-based barangay information management and citizen service platform connecting residents, staff, and officials with digital document issuance, intelligent queueing, incident tracking, and AI assistance." />
+    <title>eKapitan · Your barangay, a tap away.</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="description" content="Request barangay documents, report concerns, book the court and send print jobs from your phone, and track every request until it is ready." />
+    <meta property="og:title" content="eKapitan · Your barangay, a tap away." />
+    <meta property="og:description" content="Request barangay documents, report concerns, book the court and send print jobs from your phone, and track every request until it is ready." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <!--
+      First-load skeleton: shaped like the landing page and shown before the app's code arrives.
+      Plain CSS on purpose (the app's stylesheet may not be loaded yet). React replaces it on start.
+    -->
+    <style>
+      .boot { min-height: 100vh; background: #fff; font-family: Inter, system-ui, sans-serif; }
+      .boot-bar { height: 64px; display: flex; align-items: center; gap: 10px; padding: 0 16px; max-width: 1200px; margin: 0 auto; }
+      .boot-logo { width: 36px; height: 36px; border-radius: 10px; background: #12304F; }
+      .boot-sp { flex: 1; }
+      .boot-b, .boot-l { position: relative; overflow: hidden; background: #EEF1F5; border-radius: 10px; }
+      .boot-b::after, .boot-l::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); animation: boot-sweep 1.4s ease-in-out infinite; }
+      .boot-l { border-radius: 999px; }
+      .boot-main { max-width: 1200px; margin: 0 auto; padding: 40px 16px; display: grid; gap: 48px; }
+      .boot-card { background: #F5F7FA; border-radius: 20px; padding: 12px; }
+      .boot-card > div { background: #fff; border: 1px solid #E3E8EF; border-radius: 16px; padding: 20px; display: grid; gap: 14px; }
+      @media (min-width: 640px) { .boot-bar { height: 72px; padding: 0 24px; } .boot-main { padding: 64px 24px; } .boot-card { padding: 32px; } }
+      @media (min-width: 1024px) { .boot-bar, .boot-main { padding-left: 40px; padding-right: 40px; }
+        .boot-main { grid-template-columns: 1.05fr 1fr; gap: 80px; align-items: center; padding-top: 96px; } }
+      @keyframes boot-sweep { to { transform: translateX(100%); } }
+      @media (prefers-reduced-motion: reduce) { .boot-b::after, .boot-l::after { animation: none; } }
+    </style>
   </head>
-  <body class="bg-canvas text-ink antialiased font-sans">
-    <div id="root"></div>
+  <body class="antialiased font-sans">
+    <div id="root">
+      <div class="boot" role="status" aria-label="Loading eKapitan">
+        <div class="boot-bar">
+          <span class="boot-logo"></span>
+          <span class="boot-l" style="width: 96px; height: 16px"></span>
+          <span class="boot-sp"></span>
+          <span class="boot-b" style="width: 76px; height: 44px"></span>
+          <span class="boot-b" style="width: 84px; height: 44px; background: #12304F"></span>
+        </div>
+        <div class="boot-main">
+          <div style="display: grid; gap: 14px">
+            <span class="boot-b" style="width: 82%; height: 52px"></span>
+            <span class="boot-b" style="width: 58%; height: 52px"></span>
+            <span class="boot-l" style="width: 92%; height: 14px; margin-top: 16px"></span>
+            <span class="boot-l" style="width: 76%; height: 14px"></span>
+            <div style="display: flex; gap: 12px; margin-top: 20px">
+              <span class="boot-b" style="width: 120px; height: 48px; background: #12304F"></span>
+              <span class="boot-b" style="width: 112px; height: 48px"></span>
+            </div>
+          </div>
+          <div class="boot-card">
+            <div>
+              <span class="boot-l" style="width: 40%; height: 12px"></span>
+              <span class="boot-b" style="width: 60%; height: 22px"></span>
+              <span class="boot-l" style="width: 70%; height: 12px; margin-top: 10px"></span>
+              <span class="boot-l" style="width: 62%; height: 12px"></span>
+              <span class="boot-l" style="width: 74%; height: 12px"></span>
+              <span class="boot-l" style="width: 56%; height: 12px"></span>
+              <span class="boot-b" style="width: 100%; height: 52px; margin-top: 6px"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -18,7 +18,7 @@ Secondary (all role-restricted via RBAC):
 
 ## Product Purpose
 
-e-Kapitan is a web-based barangay information management and decision-support system. It replaces paper logbooks and walk-in queues with centralized resident and household records, digitized services (documents, queue, appointments, complaints), and data-driven insight for planning. Success: fewer physical visits and shorter waits for residents, faster and more consistent service for staff, and officials who can plan staffing, health drives and peace-and-order programs from real data. It is a thesis project (single-barangay implementation and evaluation, Laguna College, San Pablo City).
+eKapitan is a web-based barangay information management and decision-support system. It replaces paper logbooks and walk-in queues with centralized resident and household records, digitized services (documents, queue, appointments, complaints), and data-driven insight for planning. Success: fewer physical visits and shorter waits for residents, faster and more consistent service for staff, and officials who can plan staffing, health drives and peace-and-order programs from real data. It is a thesis project (single-barangay implementation and evaluation, Laguna College, San Pablo City).
 
 ## Positioning
 
@@ -46,7 +46,7 @@ One barangay-level platform that integrates what existing systems (LGUSS-BIMS, B
 
 ## Brand Commitments
 
-Keep the names as they are: product **e-Kapitan** and the AI assistant **Ka-Barangay AI**, with current wording. No official Barangay Sto. Angel logo or seal is on hand yet; do not fabricate one.
+Keep the names as they are: product **eKapitan** and the AI assistant **Ka-Barangay AI**, with current wording. No official Barangay Sto. Angel logo or seal is on hand yet; do not fabricate one.
 
 ## Evidence on Hand
 

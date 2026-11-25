@@ -1,7 +1,7 @@
 {
   "name": "e-kapitan",
   "private": true,
-  "description": "e-Kapitan: barangay information management and citizen service platform (frontend + backend).",
+  "description": "eKapitan: barangay information management and citizen service platform (frontend + backend).",
   "scripts": {
     "install:all": "npm --prefix frontend install && npm --prefix backend install",
     "dev:frontend": "npm --prefix frontend run dev",

@@ -1,5 +1,5 @@
 /*
- * Shared UI primitives for the e-Kapitan redesign. See docs/DESIGN.md.
+ * Shared UI primitives for the eKapitan redesign. See docs/DESIGN.md.
  * Check here before building a component. Ask ppen before adding or changing one.
  */
 export { Button } from './Button';
@@ -29,3 +29,8 @@ export type { TimelineStage } from './ProgressTimeline';
 export { DataTable } from './DataTable';
 export type { Column } from './DataTable';
 export { formatPeso, formatShortDateTime, parseDateTime, dateTimeValue, todayISO, initialsOf } from './format';
+export { LogoMark, Wordmark } from './Logo';
+export type { LogoMarkProps } from './Logo';
+export { Reveal } from './Reveal';
+export type { RevealProps } from './Reveal';
+export { Bone } from './Skeleton';

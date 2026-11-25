@@ -25,7 +25,7 @@ const ErrorSummary: React.FC<{ show: boolean }> = ({ show }) =>
 const TextButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', ...rest }) => (
   <button
     type="button"
-    className={`font-semibold text-primary-strong hover:underline underline-offset-4 cursor-pointer min-h-11 ${className}`}
+    className={`font-semibold text-navy hover:underline underline-offset-4 cursor-pointer min-h-11 ${className}`}
     {...rest}
   />
 );
@@ -302,7 +302,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
                     Forgot password?
                   </TextButton>
                 </div>
-                <Button type="submit" fullWidth disabled={!!busy}>
+                <Button variant="brand" type="submit" fullWidth disabled={!!busy}>
                   {busy && busy !== 'guest' ? 'Signing in…' : 'Sign in'}
                 </Button>
               </form>
@@ -348,7 +348,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
                 )}
                 <div className="grid grid-cols-2 gap-2.5 mt-6">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => {
                       setLoginErrors({});
                       setCode('');
@@ -357,7 +357,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
                   >
                     Back
                   </Button>
-                  <Button type="submit" disabled={!!busy}>
+                  <Button variant="brand" type="submit" disabled={!!busy}>
                     {loginMode === 'forgot' ? 'Send code' : 'Verify'}
                   </Button>
                 </div>
@@ -409,7 +409,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
                   )}
                 </Field>
                 <p className="text-meta text-muted mt-4 mb-5">Staff verify your details before your account opens.</p>
-                <Button type="submit" fullWidth>
+                <Button variant="brand" type="submit" fullWidth>
                   Create account
                 </Button>
               </form>
@@ -418,14 +418,14 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
             {/* ---------- Sign up done ---------- */}
             {screen === 'register' && registered && (
               <div role="status" className="mt-4">
-                <div className="w-13 h-13 rounded-tile grid place-items-center bg-primary-tint text-primary-strong mb-4" aria-hidden="true">
+                <div className="w-13 h-13 rounded-tile grid place-items-center bg-success-bg text-success-fg mb-4" aria-hidden="true">
                   <CheckCircle2 className="w-7 h-7" strokeWidth={1.8} />
                 </div>
                 <p>
                   We received your registration. Staff will check your details and ID, then send an SMS to{' '}
                   <b className="font-semibold whitespace-nowrap">{regMobile}</b> once your account is active.
                 </p>
-                <Button variant="secondary" fullWidth className="mt-6" onClick={resetRegistration}>
+                <Button variant="outline" fullWidth className="mt-6" onClick={resetRegistration}>
                   Back to sign in
                 </Button>
               </div>

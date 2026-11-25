@@ -618,7 +618,7 @@ export const INITIAL_INCIDENTS: IncidentReport[] = [
         status: 'received',
         updatedAt: '2026-09-09 06:40 PM',
         updatedBy: 'Ana Liza Domingo',
-        note: 'Report submitted via e-Kapitan Citizen Portal and queued for staff review.'
+        note: 'Report submitted via eKapitan Citizen Portal and queued for staff review.'
       }
     ],
     submittedAt: '2026-09-09 06:40 PM'
@@ -641,7 +641,7 @@ export const INITIAL_INCIDENTS: IncidentReport[] = [
         status: 'received',
         updatedAt: '2026-09-09 07:45 AM',
         updatedBy: 'Desk Officer Elena Ramos',
-        note: 'Report logged via e-Kapitan Citizen Portal and forwarded to Tanod outpost.'
+        note: 'Report logged via eKapitan Citizen Portal and forwarded to Tanod outpost.'
       },
       {
         status: 'assigned',
@@ -841,7 +841,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBaseItem[] = [
     id: 'kb-005',
     category: 'Disputes & Blotter',
     question: 'How do I file a neighbor complaint or request Lupon mediation?',
-    answer: 'You can submit an incident or complaint directly via the e-Kapitan Complaints & Reports module, or visit the Lupon Tagapamayapa desk at the Barangay Hall. Mediation hearings with the Pangkat are conducted every Monday, Wednesday, and Friday from 1:00 PM to 4:00 PM.',
+    answer: 'You can submit an incident or complaint directly via the eKapitan Complaints & Reports module, or visit the Lupon Tagapamayapa desk at the Barangay Hall. Mediation hearings with the Pangkat are conducted every Monday, Wednesday, and Friday from 1:00 PM to 4:00 PM.',
     keywords: ['reklamo', 'complaint', 'lupon', 'blotter', 'away', 'ingay'],
     lastUpdated: '2026-09-01'
   }
@@ -1003,14 +1003,14 @@ export const ROLE_ACCESS: Record<import('../types').StaffRole, import('../types'
 };
 
 export const INITIAL_PERSONNEL: import('../types').Personnel[] = [
-  { id: 'stf-1', name: 'Elena Ramos', position: 'Desk Officer and Records Custodian', role: 'records', access: ['documents', 'printing', 'residents', 'complaints'], email: 'elena.ramos@e-kapitan.local', mobile: '09175550101', status: 'active', lastActive: '2026-09-09 10:15 AM', addedOn: '2021-06-01' },
-  { id: 'stf-2', name: 'Lourdes P. Bautista', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'lourdes.bautista@e-kapitan.local', mobile: '09175550102', status: 'active', lastActive: '2026-09-09 09:40 AM', addedOn: '2022-01-10' },
-  { id: 'stf-3', name: 'Ramon D. Villanueva', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'ramon.villanueva@e-kapitan.local', mobile: '09175550103', status: 'active', lastActive: '2026-09-08 04:55 PM', addedOn: '2023-03-15' },
-  { id: 'stf-4', name: 'Grace M. Lim', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'grace.lim@e-kapitan.local', mobile: '09175550104', status: 'on_leave', lastActive: '2026-08-29 03:10 PM', addedOn: '2023-03-15' },
-  { id: 'stf-5', name: 'Danilo Castro', position: 'Tanod Commander', role: 'peace_order', access: ['complaints'], email: 'danilo.castro@e-kapitan.local', mobile: '09175550105', status: 'active', lastActive: '2026-09-09 09:15 AM', addedOn: '2020-11-02' },
-  { id: 'stf-6', name: 'Rhea S. Manalo', position: 'Barangay Health Worker', role: 'health', access: ['residents'], email: 'rhea.manalo@e-kapitan.local', mobile: '09175550106', status: 'active', lastActive: '2026-09-07 11:20 AM', addedOn: '2024-02-05' },
-  { id: 'stf-7', name: 'Juan Carlos T. Ramos', position: 'Barangay Secretary', role: 'administrator', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'], email: 'secretary.ramos@e-kapitan.local', mobile: '09175550107', status: 'active', lastActive: '2026-09-09 08:05 AM', addedOn: '2022-07-01' },
-  { id: 'stf-8', name: 'Noel B. Aguilar', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'noel.aguilar@e-kapitan.local', mobile: '09175550108', status: 'deactivated', lastActive: '2025-12-19 05:00 PM', addedOn: '2021-06-01' },
+  { id: 'stf-1', name: 'Elena Ramos', position: 'Desk Officer and Records Custodian', role: 'records', access: ['documents', 'printing', 'residents', 'complaints'], email: 'elena.ramos@ekapitan.local', mobile: '09175550101', status: 'active', lastActive: '2026-09-09 10:15 AM', addedOn: '2021-06-01' },
+  { id: 'stf-2', name: 'Lourdes P. Bautista', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'lourdes.bautista@ekapitan.local', mobile: '09175550102', status: 'active', lastActive: '2026-09-09 09:40 AM', addedOn: '2022-01-10' },
+  { id: 'stf-3', name: 'Ramon D. Villanueva', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'ramon.villanueva@ekapitan.local', mobile: '09175550103', status: 'active', lastActive: '2026-09-08 04:55 PM', addedOn: '2023-03-15' },
+  { id: 'stf-4', name: 'Grace M. Lim', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'grace.lim@ekapitan.local', mobile: '09175550104', status: 'on_leave', lastActive: '2026-08-29 03:10 PM', addedOn: '2023-03-15' },
+  { id: 'stf-5', name: 'Danilo Castro', position: 'Tanod Commander', role: 'peace_order', access: ['complaints'], email: 'danilo.castro@ekapitan.local', mobile: '09175550105', status: 'active', lastActive: '2026-09-09 09:15 AM', addedOn: '2020-11-02' },
+  { id: 'stf-6', name: 'Rhea S. Manalo', position: 'Barangay Health Worker', role: 'health', access: ['residents'], email: 'rhea.manalo@ekapitan.local', mobile: '09175550106', status: 'active', lastActive: '2026-09-07 11:20 AM', addedOn: '2024-02-05' },
+  { id: 'stf-7', name: 'Juan Carlos T. Ramos', position: 'Barangay Secretary', role: 'administrator', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'], email: 'secretary.ramos@ekapitan.local', mobile: '09175550107', status: 'active', lastActive: '2026-09-09 08:05 AM', addedOn: '2022-07-01' },
+  { id: 'stf-8', name: 'Noel B. Aguilar', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'noel.aguilar@ekapitan.local', mobile: '09175550108', status: 'deactivated', lastActive: '2025-12-19 05:00 PM', addedOn: '2021-06-01' },
 ];
 
 /* ---------- Demo population (so the Residents screen can be tried at a realistic size) ---------- */

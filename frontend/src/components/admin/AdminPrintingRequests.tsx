@@ -68,7 +68,7 @@ export const AdminPrintingRequests: React.FC = () => {
 
   const reject = (p: PrintRequest) => {
     if (reason.trim().length < 5) {
-      setReasonError('Tell the resident why it was not accepted.');
+      setReasonError('Tell the resident why it was rejected.');
       return;
     }
     updatePrintRequestStatus(p.id, 'rejected', reason.trim());
@@ -140,7 +140,7 @@ export const AdminPrintingRequests: React.FC = () => {
               Cancel
             </Button>
             <Button variant="danger" onClick={() => reject(p)}>
-              Don't accept
+              Reject
             </Button>
           </div>
         </div>
@@ -152,7 +152,7 @@ export const AdminPrintingRequests: React.FC = () => {
                 Start printing
               </Button>
               <Button variant="danger" fullWidth onClick={() => setRejecting(true)}>
-                Don't accept
+                Reject
               </Button>
             </>
           )}
@@ -217,7 +217,7 @@ export const AdminPrintingRequests: React.FC = () => {
             { id: 'processing', label: 'Processing', count: count('processing') },
             { id: 'ready_for_pickup', label: 'Ready for pickup', count: count('ready_for_pickup') },
             { id: 'completed', label: 'Picked up', count: count('completed') },
-            { id: 'rejected', label: 'Not accepted', count: count('rejected') },
+            { id: 'rejected', label: 'Rejected', count: count('rejected') },
             { id: 'all', label: 'All', count: count('all') },
           ]}
         />
