@@ -68,7 +68,7 @@ const Row: React.FC<{ title: string; meta: string; right: React.ReactNode }> = (
 const DocumentsPanel: React.FC = () => (
   <div>
     <ScreenHeader icon={<FileText strokeWidth={1.8} />} title="Documents" right={<Search className="w-4 h-4 text-muted" aria-hidden="true" />} />
-    <Row title="Barangay Clearance" meta="₱50.00 · claim 1:00–4:00 PM" right={<Pill tone="ready">Ready for pickup</Pill>} />
+    <Row title="Barangay Clearance" meta="₱50.00 · REQ-2026-0817" right={<Pill tone="ready">Ready for pickup</Pill>} />
     <Row title="Certificate of Residency" meta="₱30.00 · REQ-2026-0820" right={<Pill>Under review</Pill>} />
     <Row title="Certificate of Indigency" meta="Free · REQ-2026-0822" right={<Pill tone="quiet">Pending</Pill>} />
     <div className="mt-4 h-11 rounded-control bg-navy text-white grid place-items-center text-meta font-semibold">Request a document</div>
@@ -212,7 +212,6 @@ export const FEATURES: Feature[] = [
     text: 'Choose the document you need, fill in a short form and upload a photo of your ID. Staff review it, and you get a text when it is ready to claim.',
     points: [
       'Clearance, residency, indigency, business clearance, first-time jobseeker and good moral certificates',
-      'Fees shown up front and paid at the hall; fee waivers for those who qualify',
       'Claim it on weekdays, 1:00 PM to 4:00 PM, with your reference number and a valid ID',
     ],
     notice: 'Your clearance is ready',
@@ -227,7 +226,6 @@ export const FEATURES: Feature[] = [
     points: [
       'Every report gets a tracking number',
       'Hide your name from the person you are reporting; only authorized staff see it',
-      'See each step: received, under review, action taken, resolved, or a scheduled hearing',
     ],
     notice: 'RPT-2026-0034 is under review',
     Panel: ReportsPanel,
@@ -238,7 +236,7 @@ export const FEATURES: Feature[] = [
     icon: CircleDot,
     title: 'Book the court in a few taps',
     text: 'See which days and time slots are open, pick one and say what it is for. The barangay approves it and you get notified.',
-    points: ['A calendar of open, booked and closed days', 'Time slots marked available or booked', 'Your reservation history in one place'],
+    points: ['A calendar of open, booked and closed days', 'Time slots marked available or booked'],
     notice: 'Court booking approved',
     Panel: CourtPanel,
   },
@@ -248,7 +246,7 @@ export const FEATURES: Feature[] = [
     icon: Printer,
     title: 'Send a print job from home',
     text: 'Upload a PDF or Word file, choose paper size, color, sides and copies, and pick up the printout at the hall. Free for residents.',
-    points: ['Page count filled in for you on most PDFs', 'A summary of exactly what will be printed', 'A text when your printout is ready'],
+    points: ['Page count filled in for you on most PDFs', 'A text when your printout is ready'],
     notice: 'Your printout is ready',
     Panel: PrintingPanel,
   },
@@ -258,7 +256,7 @@ export const FEATURES: Feature[] = [
     icon: MessageSquareText,
     title: 'Ask Kap, any time',
     text: 'Ka-Barangay AI answers questions about requirements, fees and office hours in English, Tagalog or Taglish, day or night.',
-    points: ['Answers come from the barangay’s own information', 'Suggested questions to get you started', 'Points you to the right service when you are ready'],
+    points: ['Answers come from the barangay’s own information', 'Points you to the right service when you are ready'],
     Panel: AskKapPanel,
   },
   {
@@ -269,7 +267,6 @@ export const FEATURES: Feature[] = [
     text: 'Staff see every request in one queue, oldest first, and move each one along: approve, return for correction or reject, then mark it ready and claimed.',
     points: [
       'Documents, complaints, printing and court requests in one place',
-      'Resident records with duplicate checks, staff accounts and access levels',
       'An overview of the day, exports for reports, and an audit log of every action',
     ],
     notice: '3 new requests today',
@@ -278,10 +275,14 @@ export const FEATURES: Feature[] = [
 ];
 
 /** Small floating text message shown over a preview. */
-export const Notice: React.FC<{ text: string }> = ({ text }) => (
+export const Notice: React.FC<{ text: string; rippleDelay?: number }> = ({ text, rippleDelay }) => (
   <div className="flex items-center gap-3 bg-surface border border-hairline rounded-tile shadow-float pl-3 pr-4 py-2.5">
     <span className="relative w-8 h-8 rounded-full grid place-items-center bg-navy text-white shrink-0">
-      <span className="absolute inset-0 rounded-full border-2 border-navy ripple-once" />
+      {/* rippleDelay: when the notice itself arrives late, ring once it is actually visible */}
+      <span
+        className="absolute inset-0 rounded-full border-2 border-navy ripple-once"
+        style={rippleDelay === undefined ? undefined : { animationDelay: `${rippleDelay}ms` }}
+      />
       <Bell className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
     </span>
     <span>
