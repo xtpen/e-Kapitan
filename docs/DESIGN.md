@@ -1,6 +1,6 @@
-# e-Kapitan Design System
+# eKapitan Design System
 
-> **AI assistants: read this whole file before you change any UI.** It is the single source of truth for how e-Kapitan looks. If something you need is not covered here, copy the closest existing pattern. Do not invent new colors, fonts, radii or shadows. If you really need something new, stop and ask the person you're working with. That person should check with the foundation owner (ppen) before adding it here.
+> **AI assistants: read this whole file before you change any UI.** It is the single source of truth for how eKapitan looks. If something you need is not covered here, copy the closest existing pattern. Do not invent new colors, fonts, radii or shadows. If you really need something new, stop and ask the person you're working with. That person should check with the foundation owner (ppen) before adding it here.
 
 Also read `PRODUCT.md` (who the users are and the product rules) before designing anything.
 
@@ -8,7 +8,7 @@ Also read `PRODUCT.md` (who the users are and the product rules) before designin
 
 ## 1. Source of truth
 
-The visual direction comes from the **"e-Kapitan UI Mockups"** HTML board (18 screens). When this file and the mockup disagree, **this file wins**. A few mockup inconsistencies are resolved in section 11.
+The visual direction comes from the **"eKapitan UI Mockups"** HTML board (18 screens). When this file and the mockup disagree, **this file wins**. A few mockup inconsistencies are resolved in section 11.
 
 | # | Mockup screen | Width |
 |---|---|---|
@@ -90,6 +90,10 @@ A calm, trustworthy civic service. Deep navy authority, a green that means "go /
 | `line` | `#E3DDCC` | All card, sidebar and top-bar borders; table header underline |
 | `line-soft` | `#EEE9DB` | Table row dividers, placeholder blocks (e.g. "Valid ID preview") |
 | `field-line` | `#8A93A0` | Input / select / textarea border (darker for visibility) |
+| `mist` | `#F5F7FA` | **Landing page only.** Alternating section background and the frame behind the example request |
+| `hairline` | `#E3E8EF` | **Landing page only.** Borders on white and mist |
+
+**Landing page palette.** The landing page is white + navy only, with `mist` and `hairline` as its neutrals: no cream, gold or green. The one exception is green for the "Ready for pickup" moment in the example request, where it means success. Signed-in screens keep the full palette above.
 
 **Status tones.** Always used as a background + text pair:
 
@@ -155,7 +159,7 @@ All tokens are defined in the `@theme` block of `frontend/src/index.css` (owned 
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ (SA) e-Kapitan                              Maria Santos 🔔 (MS)  │  top bar: white, 1px line bottom, padding 14px 40px
+│ (SA) eKapitan                              Maria Santos 🔔 (MS)  │  top bar: white, 1px line bottom, padding 14px 40px
 │      Barangay Sto. Angel, San Pablo City                          │
 ├──────────────┬───────────────────────────────────────────────────┤
 │ SERVICES     │  main: padding 32px 40px, bg canvas                │
@@ -168,8 +172,8 @@ All tokens are defined in the `@theme` block of `frontend/src/index.css` (owned 
   sidebar 264px, white, 1px line right, padding 24px 16px
 ```
 
-- **Logo disc**: 48px navy circle, gold Poppins 700 initials `SA`. This is a placeholder monogram. Do not draw a seal (see PRODUCT.md).
-- **Brand block**: `e-Kapitan` Poppins 700 20px navy, with the barangay name 13px muted under it.
+- **Logo**: the eKapitan mark (`ui/Logo.tsx`, also `public/favicon.svg`): a navy rounded square with a white roof (the barangay hall) over a dot with a ripple (a tap), "your barangay, a tap away" in one shape. Use `<LogoMark />` (44px in the top bar) and `tone="white"` on navy headers. Never redraw it, recolor it or put a barangay seal in its place (see PRODUCT.md).
+- **Brand block**: `eKapitan` Poppins 700 20px navy, with the barangay name 13px muted under it.
 - **Right side of top bar**: user name (muted) → notification icon button (44px, 1.5px line border, radius 10) → 44px avatar disc with initials.
 - **Sidebar section title**: 12px uppercase, letter-spacing .08em, muted, margin `16px 12px 8px`.
 - **Sidebar item**: flex, gap 12, padding 12, radius 10, Inter 600, ink, 20px icon. **Active = solid navy background, white text and icon.** Hover = `surface-muted`.
@@ -189,7 +193,7 @@ Suggested lucide icons (stroke width **1.8**): Dashboard/Overview `Home` · Docu
 
 ### 4.3 Mobile (< 768px)
 
-- **Header**: 68px tall, solid navy, padding 10px 16px. 40px white logo disc with navy initials, `e-Kapitan` bold white plus `Brgy. Sto. Angel, San Pablo City` 12px on the left, and a 44px **Menu** button (2px white border, radius 8) on the right. The menu opens the full sidebar nav as a drawer.
+- **Header**: 68px tall, solid navy, padding 10px 16px. 40px white logo disc with navy initials, `eKapitan` bold white plus `Brgy. Sto. Angel, San Pablo City` 12px on the left, and a 44px **Menu** button (2px white border, radius 8) on the right. The menu opens the full sidebar nav as a drawer.
 - **Bottom nav** (residents): fixed, 68px, white, 1px line top, 4 equal tabs **Home · Services · My Requests · Account**, 13px Inter 600 muted. The active tab gets navy text plus a 3px `primary` bar on its top edge (`box-shadow: inset 0 3px var(--color-primary)`).
 - Content padding 16px. Leave 68px bottom padding so nothing hides behind the bottom nav.
 - Tables become **stacked cards** on mobile (title + status pill on one row, reference / detail in muted text below).
@@ -207,12 +211,17 @@ Class names below are Tailwind v4 with the tokens above. They are the reference 
 
 | Variant | Look | Use |
 |---|---|---|
-| **Primary** | `bg-primary text-white` | The main action on a screen or card (Continue, Submit, Approve, Log in) |
+| **Primary** | `bg-primary text-white` | The main action on a screen or card (Continue, Submit, Approve, Sign in) |
 | **Secondary** | `bg-surface text-navy border-2 border-navy` | Back, Previous/Next, Export, Decline, Return for correction |
 | **Accent** | `bg-gold text-navy` | Only on a navy banner/card, max one per screen |
 | **Danger** | `bg-danger-fg text-white` | Reject, delete |
+| **Brand** | `bg-navy text-white` | Landing page and sign-in dialog main action (Sign up, Sign in, Create account) |
+| **Outline** | `bg-surface text-navy border-hairline` | Landing page secondary action next to Brand |
+| **Inverse / Inverse outline** | white on navy / white border | Buttons on a navy band (landing closing call to action) |
 
 Shared: radius 10, Inter 600 16px, `min-h-12` (48px), horizontal padding 24px. The compact size (inside lists, calendars and toolbars) is `min-h-11` (44px) with padding 18px. **Never go below 44px.** Focus: 3px navy outline with 2px offset. Disabled: `surface-muted` background, `muted` text, no border change.
+
+**Hover is unmistakable** (on devices that can hover; phones only get the press): filled buttons lift 1px, deepen their color and cast a soft shadow in their own hue; outlined buttons fill with `navy-tint` and their border turns navy. Press scales to 0.97 and drops the lift. Disabled buttons never react.
 
 Button text is a plain verb phrase in sentence case: "Submit report", "Request a document", "Approve request".
 
@@ -327,7 +336,7 @@ Shared by every role (`layout/ToastContainer.tsx`); call `addToast(title, descri
 - Errors are announced immediately (`role="alert"`), others politely (`role="status"`).
 - Copy follows section 7: a short sentence-case title ("Request submitted"), then the next step ("Reference REQ-2026-1234. You can follow it in My Requests."). No Title Case, no "Successfully".
 
-The between-pages loading placeholder (`layout/PageSkeleton.tsx`) uses `surface-muted` blocks with `line` borders.
+**Skeletons** (`layout/PageSkeleton.tsx`, `ui/Skeleton.tsx`): every page shows a skeleton shaped like itself while it loads: the same card shells, grids and spacing, with shimmering `Bone` blocks where text and controls go. `skeletonFor(tab)` maps each tab to one of the layouts in section 6 (dashboard, cards, form, list + detail, table, calendar, profile, feed, chat, admin overview, public home). A new page picks the closest one, or adds a layout. The very first load shows a static landing-shaped skeleton written in plain HTML/CSS in `frontend/index.html`, before the app's code arrives.
 
 ### 5.18 Certificate viewer and printed certificate
 
@@ -370,7 +379,10 @@ All grids collapse to a single column below 1024px, in source order.
 - **No online payment language.** Fees are always "paid at the hall". Costs are "estimated" and are confirmed at pickup.
 - Reference number format: `DOC-YYYY-NNNN`, `PRT-`, `CRT-`, `RPT-`.
 - Dates: `Nov 26, 4:00 PM` in tables, `Thursday, November 26` in headings. Times as `4:00 PM to 6:00 PM` (words, not an en dash).
-- Product names are fixed: **e-Kapitan**, **Ka-Barangay AI**.
+- **Tagline: "Your barangay, a tap away."** Use it as written (sentence case, comma, full stop) from `config/brand.ts`: landing hero, closing band, footer and the browser title. Don't write "Barangay services, online".
+- Product names are fixed: **eKapitan** (one word, capital K, no hyphen) and **Ka-Barangay AI**. Buttons and nav items that open the assistant say **Ask Kap**; its page is titled "Ask Kap" and names Ka-Barangay AI in the description.
+- **Account words, everywhere:** **Sign up** opens registration (header, hero, footer, public site, steps), **Sign in** opens sign-in, **Continue as guest** opens the public website, and **Sign out** ends a session. Inside the dialog the submit buttons are **Sign in** and **Create account**. Never "Log in", "Register", "Guest mode" or "Log out".
+- **Button labels:** a short verb phrase in sentence case that says what happens: "Submit report", "Mark as released", "Reject request". No Title Case, no ampersand chains ("Close & Archive Case" → "Close case"), no internal jargon. The same action has the same label on every screen ("Add resident", "Reject" when the status it produces is "Rejected").
 - Bilingual: every user-facing string must be translatable (English and Filipino). Don't bake text into images.
 - Mock data must look real but be clearly mock. Don't invent official statistics.
 
@@ -387,6 +399,9 @@ All grids collapse to a single column below 1024px, in source order.
 - Large text mode must keep working. Use rem sizes and don't fix heights on text containers.
 - Respect `prefers-reduced-motion`. Motion stays subtle (≤ 200ms fades/slides) and is never required to understand the UI.
 - **Motion tokens** (in `index.css`): `ease-out-strong` (cubic-bezier(0.23, 1, 0.32, 1)) for anything entering or responding to a press, `ease-drawer` for sheets. Never `ease-in`. Exits are faster than entrances.
+- **Page changes**: the old page fades out (100ms), then the next page's skeleton fades in; when data is ready the page fades in and its top-level sections rise 10px with a short stagger (`.page-enter`, 0–140ms). Two full pages never cross-fade (too busy). Tabs show their skeleton for about 450ms (standing in for a real fetch).
+- **Scroll reveal** (`ui/Reveal.tsx`): marketing-style pages (landing, public homepage) use the two-way `<Reveal>`: content rises in when it enters the viewport, eases out when it leaves, and comes back on the way back, entering from the side it is coming from. Built on CSS transitions so fast back-and-forth scrolling reverses smoothly. Don't use it on working screens (lists, forms), where content should simply be there.
+- **Landing extras**: the logo draws itself once, the headline lines slide up from behind a mask, the example request plays its statuses (paused off screen), a reading-progress line runs under the header, step connectors draw in. Everything is static under reduced motion.
 - **Press feedback**: every `Button` scales to 0.97 while pressed (150ms). Custom pressable elements should do the same (`active:scale-[0.97]`).
 - **Dialogs**: centered on ≥ 640px (fade + scale from 0.96, 240ms in, 150ms out); a bottom sheet on phones (slide up, 420ms drawer curve). Lock page scroll, close on Escape and backdrop tap, make the page behind `inert`, and focus the panel, not the first field (that would pop the phone keyboard). Reference: `auth/AuthDialog.tsx`.
 - **Mobile**: no tap highlight, `touch-action: manipulation` on controls, and no text selection on long-press of buttons (all in `index.css` base). Inputs stay at 16px so iOS never zooms.
@@ -450,8 +465,8 @@ All grids collapse to a single column below 1024px, in source order.
 | Resident · Court Reservation | Done (ppen). Data: `courtSlots`, `courtReservations`, `courtClosures`, `createCourtReservation`, `updateCourtReservationStatus`, `closeCourtDate` in `BarangayContext` (Admin · Court Reservations can use these: Approve/Decline and "Close a date"). Residents only ever see other people's bookings as "Booked", never names. |
 | Resident · My Profile | Done (ppen), no mockup. Personal details are read-only (changed at the hall); mobile/email editable; change password; Large text and SMS preferences. |
 | Resident · Notifications | Done (ppen), no mockup. Filter chips, unread dots, mark read on open, "Mark all as read". Read state: `readNotificationIds` / `markNotificationsRead` in `BarangayContext`. |
-| Landing page + Sign in / Sign up | Done. No mockup screen for the landing page; follows these patterns. Header with only the product name (no barangay named) and Guest mode / Sign in / Sign up, hero with an example request, services, how it works, closing call to action, footer. Sign in / Sign up is a dialog (`auth/AuthDialog.tsx`): bottom sheet on phones. Demo login: any email or 09 mobile opens the resident view; an email containing "admin" opens the Administrator; "staff" or "captain"/"official" open the old roles. |
-| Admin shell (demo `admin` role) | Done (ppen): Admin nav, top bar, mobile bottom nav (Overview · Requests · Calendar · More), phone header "e-Kapitan Admin / Administrator portal". |
+| Landing page + Sign in / Sign up | Done. No barangay named. Story: tagline + a hero that fills the first screen (with a Scroll to explore cue) and a layered **collage** showing several features at once (Documents in front; Court and Report tilted behind; an Ask Kap reply and a text-message notice floating on top; rises in as one wave, drifts apart with scroll parallax, still under reduced motion; `auth/landing/HeroCollage.tsx`) → a **scroll-driven feature tour** (desktop: explanations scroll on the left while a pinned, enlarged preview switches to match and its rows rise in one after another; phones: each explanation followed by its preview) → **No account needed** (six guest actions that open the page directly) → **Built for everyone** (large text, any phone, English/Filipino, privacy, verified residents, genuine documents) → how it works → FAQ → sign-up band → footer. Feature copy and miniatures live in `auth/landing/features.tsx`. Sign in / Sign up is a dialog (`auth/AuthDialog.tsx`), a bottom sheet on phones. Demo login: any email or 09 mobile opens the resident view; "admin" opens the Administrator; "staff" or "captain"/"official" open the old roles. |
+| Admin shell (demo `admin` role) | Done (ppen): Admin nav, top bar, mobile bottom nav (Overview · Requests · Calendar · More), phone header "eKapitan Admin / Administrator portal". |
 | Admin · Overview | Done (ppen): 4 stat cards, Transactions by service chart, Needs attention (oldest first, click to open), Recent activity from the audit log, Export report (CSV). Phone: "Today at the barangay". |
 | Admin · Document Requests | Done (ppen): filter bar (search, status, document) or search + chips on phones, list + detail with requirements, Assigned to, and actions by stage (Approve / Return for correction / Reject → Mark ready for pickup → Mark as claimed), Export list (CSV). Reference for every admin list + detail screen. |
 | Admin · Complaints | Done (ppen), no dedicated mockup (follows Document Requests). Open reports first, list + detail with full history, staff-only note, and actions by stage (Assign → Record action taken / Schedule hearing → Mark as resolved, or Close without action). Every action asks for a message the resident will see. |
@@ -464,7 +479,7 @@ All grids collapse to a single column below 1024px, in source order.
 | Officials directory (public + resident More group) | Done, styled like the homepage officials row. |
 | Ka-Barangay AI (Ask Kap) | Done, no mockup. Titled "Ask Kap" for guests and "Ka-Barangay AI" for residents. Chat card + "Try asking" suggestions (a swipe row above the input on phones), "Information only" callout. |
 | Verify a Document | Done, no mockup. Accepts the printed verification code (VER-…) only, not request reference numbers. Three results: valid, not issued yet, not found. |
-| Old Staff and Official roles (legacy, demo login with "staff" / "captain") | Old design and old layout |
+| Old Staff and Official roles (legacy, demo login with "staff" / "captain") | Old layout. Colors, type sizes, weights, radii and shadows were moved onto the design tokens (no default Tailwind palette, gradients, glass or text under 12px), and button labels follow section 7. |
 
 Update this table in the same PR as your screen.
 

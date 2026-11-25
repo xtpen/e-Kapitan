@@ -7,7 +7,7 @@ import { setPendingAuthScreen } from './publicNav';
 const STEPS = [
   {
     title: 'Create your account',
-    text: 'Register with your name, mobile number, address and a photo of a valid ID. Staff check your details before your account opens.',
+    text: 'Sign up with your name, mobile number, address and a photo of a valid ID. Staff check your details before your account opens.',
   },
   {
     title: 'Send your request',

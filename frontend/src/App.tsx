@@ -22,7 +22,7 @@ import { BarangayProvider, useBarangay } from './context/BarangayContext';
 import { AppShell } from './components/layout/AppShell';
 import { PublicShell } from './components/layout/PublicShell';
 import { ToastContainer } from './components/layout/ToastContainer';
-import { PageSkeleton } from './components/layout/PageSkeleton';
+import { PageSkeleton, skeletonFor } from './components/layout/PageSkeleton';
 import { LandingPage } from './components/auth/LandingPage';
 import { residentBottomNav, residentNavGroups } from './components/resident/residentNav';
 import { useResidentActivity } from './components/resident/useResidentActivity';
@@ -97,7 +97,8 @@ const MainAppContent: React.FC = () => {
   } = useBarangay();
 
   const [selectedServiceForWizard, setSelectedServiceForWizard] = useState<any | null>(null);
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  // Starts true: the first paint is the page's skeleton, never page → skeleton → page.
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const { unreadCount: residentUnread } = useResidentActivity();
 
   // Large text mode scales the root font size, so every rem-based size grows with it.
@@ -105,13 +106,12 @@ const MainAppContent: React.FC = () => {
     document.documentElement.classList.toggle('large-text', largeTextMode);
   }, [largeTextMode]);
 
-  // Trigger simulated loading skeleton when route changes
+  // New page: start at the top (instantly, so it doesn't fight the transition) and show that
+  // page's skeleton briefly, standing in for a real data fetch.
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 });
     setIsPageLoading(true);
-    const timer = setTimeout(() => {
-      setIsPageLoading(false);
-    }, 600); // 600ms skeleton display
+    const timer = setTimeout(() => setIsPageLoading(false), 450);
     return () => clearTimeout(timer);
   }, [activeTab, currentRole]);
 
@@ -138,7 +138,7 @@ const MainAppContent: React.FC = () => {
 
   const renderCurrentView = () => {
     if (isPageLoading) {
-      return <PageSkeleton />;
+      return <PageSkeleton kind={skeletonFor(activeTab)} />;
     }
 
     switch (activeTab) {
@@ -261,19 +261,26 @@ const MainAppContent: React.FC = () => {
 
   // The login check is now handled in MainAppWrapper
 
+  /*
+   * Page swaps (docs/DESIGN.md section 8): two full pages are too busy to cross-fade, so the old
+   * view leaves quickly (100ms) and the next one (skeleton or page) fades in. The wrapper only fades;
+   * the page's own sections rise in with a short stagger (.page-enter), one entrance, not two.
+   */
   const pageTransition = (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={`${activeTab}-${currentRole}-${isPageLoading ? 'skeleton' : 'loaded'}`}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-      >
-        {/* The skeleton also covers the moment a screen's code is still downloading. */}
-        <Suspense fallback={<PageSkeleton />}>{renderCurrentView()}</Suspense>
-      </motion.div>
-    </AnimatePresence>
+    <div className="relative">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={`${activeTab}-${currentRole}-${isPageLoading ? 'skeleton' : 'loaded'}`}
+          className={isPageLoading ? undefined : 'page-enter'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 0.1 } }}
+        >
+          {/* The skeleton also covers the moment a screen's code is still downloading. */}
+          <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 
   const printModal = selectedDocumentForPrint && (
@@ -300,7 +307,7 @@ const MainAppContent: React.FC = () => {
         <AppShell
           groups={adminNavGroups}
           bottomNav={adminBottomNav}
-          mobileBrand={{ title: 'e-Kapitan Admin', subtitle: 'Administrator portal' }}
+          mobileBrand={{ title: 'eKapitan Admin', subtitle: 'Administrator portal' }}
         >
           {pageTransition}
         </AppShell>
@@ -327,20 +334,20 @@ const MainAppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans bg-slate-50 text-slate-900 ${
-      largeTextMode ? 'text-lg' : 'text-base'
-    }`}>
+    <div className={`min-h-screen flex flex-col font-sans bg-surface-muted text-ink ${
+ largeTextMode ?'text-lg':'text-base'
+ }`}>
       {/* Toast Notifications */}
       <ToastContainer />
 
       {/* Global Civic Header (legacy roles only, so it loads with their screens) */}
-      <Suspense fallback={<div className="h-16 sm:h-20 bg-white border-b border-slate-200" />}>
+      <Suspense fallback={<div className="h-16 sm:h-20 bg-surface border-b border-line" />}>
         <Header />
       </Suspense>
 
       {/* Bottom Navigation Bar */}
       {currentTabs.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-line z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden">
           <div className="flex items-center justify-around w-full overflow-x-auto scrollbar-none px-2 py-2 gap-2">
             {currentTabs.map((tab) => {
               const isActive = activeTab === tab.id || (tab.id === 'dashboard' && activeTab === 'staff_dashboard') || (tab.id === 'executive_dashboard' && activeTab === 'official_dashboard') || (tab.id === 'guest_home' && activeTab === 'guest_home');
@@ -349,18 +356,18 @@ const MainAppContent: React.FC = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   title={tab.label}
-                  className={`flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors rounded-xl ${
-                    isActive
-                      ? currentRole === 'staff'
-                        ? 'text-blue-700 bg-blue-50'
-                        : currentRole === 'official'
-                        ? 'text-purple-800 bg-purple-50'
-                        : 'text-slate-900 bg-slate-100' // Guest active state
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                  }`}
+                  className={`flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors rounded-control ${
+ isActive
+ ? currentRole ==='staff'
+ ?'text-info-fg bg-info-bg'
+ : currentRole ==='official'
+ ?'text-navy bg-info-bg'
+ :'text-ink bg-surface-muted'// Guest active state
+ :'text-muted hover:text-ink hover:bg-surface-muted'
+ }`}
                   id={`bottomnav-${tab.id}`}
                 >
-                  <div className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
+                  <div className={`transition-transform duration-200 ${isActive ?'scale-110':''}`}>
                     {tab.icon}
                   </div>
                 </button>
@@ -372,10 +379,10 @@ const MainAppContent: React.FC = () => {
 
       {/* Desktop Sidebar / Sub-Navbar Navigation */}
       {currentTabs.length > 0 && (
-        <div className="hidden md:block bg-white border-b border-slate-200 sticky top-16 sm:top-20 z-30 shadow-2xs overflow-x-auto scrollbar-none">
+        <div className="hidden md:block bg-surface border-b border-line sticky top-16 sm:top-20 z-30 overflow-x-auto scrollbar-none">
           <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-1 sm:gap-2 py-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2 hidden md:inline">
+              <span className="text-label font-bold uppercase tracking-wider text-muted mr-2 hidden md:inline">
                 Navigation:
               </span>
               {currentTabs.map((tab) => {
@@ -384,15 +391,15 @@ const MainAppContent: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                      isActive
-                        ? currentRole === 'staff'
-                          ? 'bg-blue-700 text-white shadow-xs'
-                          : currentRole === 'official'
-                          ? 'bg-purple-800 text-white shadow-xs'
-                          : 'bg-slate-800 text-white shadow-xs' // Guest active state
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-control text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
+ isActive
+ ? currentRole ==='staff'
+ ?'bg-navy text-white'
+ : currentRole ==='official'
+ ?'bg-navy-deep text-white'
+ :'bg-navy text-white'// Guest active state
+ :'text-muted hover:text-ink hover:bg-surface-muted'
+ }`}
                     id={`subnav-${tab.id}`}
                   >
                     {tab.icon}
@@ -410,9 +417,9 @@ const MainAppContent: React.FC = () => {
         {!currentTabs.some(tab => tab.id === activeTab) && (
           <button 
             onClick={() => setActiveTab(currentRole === 'staff' ? 'staff_dashboard' : currentRole === 'official' ? 'official_dashboard' : 'home')}
-            className="flex items-center gap-2 text-slate-500 hover:text-emerald-700 mb-6 font-bold text-sm transition-colors w-fit cursor-pointer group"
+            className="flex items-center gap-2 text-muted hover:text-primary-strong mb-6 font-bold text-sm transition-colors w-fit cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center group-hover:bg-primary-tint transition-colors">
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             </div>
             Back
@@ -425,8 +432,8 @@ const MainAppContent: React.FC = () => {
       {printModal}
 
       {/* Clean Civic Footer */}
-      <footer className="no-print bg-white border-t border-slate-200 mt-auto py-6 text-center text-slate-500 text-xs">
-        © 2026 e-Kapitan Civic Platform. All rights reserved.
+      <footer className="no-print bg-surface border-t border-line mt-auto py-6 text-center text-muted text-xs">
+        © 2026 eKapitan Civic Platform. All rights reserved.
       </footer>
     </div>
   );

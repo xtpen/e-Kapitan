@@ -98,7 +98,7 @@ export const AdminOverview: React.FC = () => {
   const exportReport = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const lines = [
-      [`e-Kapitan overview, Barangay ${BARANGAY}`, dayLabel],
+      [`eKapitan overview, Barangay ${BARANGAY}`, dayLabel],
       [],
       ['Service', 'Total'],
       ...chartData.map(d => [d.label, d.value]),
@@ -111,7 +111,7 @@ export const AdminOverview: React.FC = () => {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `e-kapitan-overview-${now.toISOString().slice(0, 10)}.csv`;
+    a.download = `ekapitan-overview-${now.toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -194,7 +194,7 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
     name: 'Administrator',
     role: 'admin',
     roleTitle: 'System Administrator',
-    email: 'admin@e-kapitan.local'
+    email: 'admin@ekapitan.local'
   }
 };
 
@@ -417,7 +417,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     if (params.hasAppointment) {
       score += 15;
-      factors.push({ factor: 'Online Scheduled Appointment', points: 15, description: 'Pre-booked time window via e-Kapitan portal' });
+      factors.push({ factor: 'Online Scheduled Appointment', points: 15, description: 'Pre-booked time window via eKapitan portal' });
     }
 
     return { score, factors };
@@ -522,7 +522,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           status: 'received',
           updatedAt: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           updatedBy: currentUser.name,
-          note: 'Report submitted via e-Kapitan Citizen Portal and queued for staff review.'
+          note: 'Report submitted via eKapitan Citizen Portal and queued for staff review.'
         }
       ],
       submittedAt: new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })

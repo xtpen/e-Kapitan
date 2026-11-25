@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * e-Kapitan design tokens. See docs/DESIGN.md before changing anything here.
+ * eKapitan design tokens. See docs/DESIGN.md before changing anything here.
  * Owner: ppen. Every color/font/radius used in components must come from this block.
  */
 @theme {
@@ -49,6 +49,10 @@
   --color-line-soft: #EEE9DB;
   --color-field-line: #8A93A0;
 
+  /* Cool neutrals for the landing page (white + navy only; docs/DESIGN.md section 3.1). */
+  --color-mist: #F5F7FA;      /* alternating section background */
+  --color-hairline: #E3E8EF;  /* borders on white / mist */
+
   /* Status tones (always use bg + fg together) */
   --color-success-bg: #D8F0E3;
   --color-success-fg: #0F5A3E;
@@ -74,13 +78,35 @@
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* First-view entrance (landing hero). Used once per visit, staggered with animation-delay. */
-  --animate-rise: rise 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  /* First-view entrances (landing page). Seen once per visit. Tune per element with
+     --rise (distance), animation-duration and animation-delay; the lead travels furthest. */
+  --animate-rise: rise 480ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  --animate-fade: fade 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  /* A status becoming current: a small settle, never from scale(0). */
+  --animate-pop: pop 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  /* A connector drawing from its start (cause → effect). */
+  --animate-draw: draw 500ms cubic-bezier(0.77, 0, 0.175, 1) both;
 
   @keyframes rise {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(var(--rise, 10px));
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pop {
+    from {
+      opacity: 0.4;
+      transform: scale(0.94);
+    }
+  }
+  @keyframes draw {
+    from {
+      transform: scaleX(0);
     }
   }
 }
@@ -125,7 +151,185 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
       transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------------------------
+ * Motion system (docs/DESIGN.md section 8). Transform + opacity only, custom ease-out curves.
+ * ---------------------------------------------------------------------------------------- */
+@layer components {
+  /* Two-way scroll reveal (components/ui/Reveal.tsx). Transitions, not keyframes, so scrolling
+     back and forth reverses mid-way instead of restarting. Enter is slower than exit. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 18px));
+    transition:
+      opacity 260ms var(--ease-out-strong),
+      transform 320ms var(--ease-out-strong);
+  }
+  .reveal[data-side='above'] {
+    transform: translateY(calc(var(--reveal-y, 18px) * -1));
+  }
+  /* One frame, while the element is moved to the side it's about to enter from. */
+  .reveal[data-instant],
+  .reveal[data-instant] * {
+    transition: none !important;
+  }
+  .reveal[data-shown='true'] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 560ms var(--ease-out-strong) var(--reveal-delay, 0ms),
+      transform 700ms var(--ease-out-strong) var(--reveal-delay, 0ms);
+  }
+
+  /* Inside a Reveal: a headline line sliding up from behind a mask, and a connector that draws. */
+  .reveal .reveal-line {
+    display: block;
+    transform: translateY(105%);
+    transition: transform 260ms var(--ease-out-strong);
+  }
+  .reveal[data-shown='true'] .reveal-line {
+    transform: none;
+    transition: transform 820ms var(--ease-out-strong) calc(var(--reveal-delay, 0ms) + var(--line-delay, 0ms));
+  }
+  .reveal .reveal-draw {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 240ms var(--ease-out-strong);
+  }
+  .reveal[data-shown='true'] .reveal-draw {
+    transform: scaleX(1);
+    transition: transform 640ms cubic-bezier(0.77, 0, 0.175, 1) calc(var(--reveal-delay, 0ms) + 320ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal .reveal-line,
+    .reveal .reveal-draw {
+      transform: none;
+    }
+  }
+
+  /* Page entrance: each page's top-level sections settle in after the skeleton. Small and quick,
+     because people switch pages many times a day. fill-mode backwards keeps hover transforms free. */
+  .page-enter > * > * {
+    animation: rise 380ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+    --rise: 10px;
+  }
+  .page-enter > * > *:nth-child(2) { animation-delay: 45ms; }
+  .page-enter > * > *:nth-child(3) { animation-delay: 85ms; }
+  .page-enter > * > *:nth-child(4) { animation-delay: 115ms; }
+  .page-enter > * > *:nth-child(n + 5) { animation-delay: 140ms; }
+
+  /* Skeleton shimmer: a light sweep across placeholder blocks. */
+  .bone {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-surface-muted);
+  }
+  .bone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* Logo draw-in (components/ui/Logo.tsx, animate prop): roof draws, then the tap lands and ripples. */
+  .logo-animate .logo-roof {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: logo-draw 620ms cubic-bezier(0.77, 0, 0.175, 1) 120ms forwards;
+  }
+  .logo-animate .logo-dot,
+  .logo-animate .logo-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .logo-animate .logo-dot {
+    animation: logo-pop 360ms cubic-bezier(0.23, 1, 0.32, 1) 560ms both;
+  }
+  .logo-animate .logo-ring {
+    animation: logo-ripple 800ms cubic-bezier(0.23, 1, 0.32, 1) 700ms both;
+  }
+
+  @keyframes logo-draw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes logo-pop {
+    from { opacity: 0; transform: scale(0.5); }
+  }
+  @keyframes logo-ripple {
+    from { opacity: 0; transform: scale(0.45); }
+  }
+  /* Preview panels: each row of a mini screen rises in after the one above it.
+     .panel-stagger plays when the panel mounts (pinned tour preview); .panel-stagger-reveal plays
+     every time its <Reveal> comes into view (phones). Shrinking gaps read as a wave. */
+  .panel-stagger > div > *,
+  .reveal[data-shown='true'] .panel-stagger-reveal > div > * {
+    animation: rise 460ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+    --rise: 12px;
+  }
+  .panel-stagger > div > *:nth-child(2), .reveal[data-shown='true'] .panel-stagger-reveal > div > *:nth-child(2) { animation-delay: 70ms; }
+  .panel-stagger > div > *:nth-child(3), .reveal[data-shown='true'] .panel-stagger-reveal > div > *:nth-child(3) { animation-delay: 130ms; }
+  .panel-stagger > div > *:nth-child(4), .reveal[data-shown='true'] .panel-stagger-reveal > div > *:nth-child(4) { animation-delay: 180ms; }
+  .panel-stagger > div > *:nth-child(5), .reveal[data-shown='true'] .panel-stagger-reveal > div > *:nth-child(5) { animation-delay: 220ms; }
+  .panel-stagger > div > *:nth-child(n + 6), .reveal[data-shown='true'] .panel-stagger-reveal > div > *:nth-child(n + 6) { animation-delay: 250ms; }
+
+  /* Hero collage: floating notes bob gently (decorative, slow, never on reduced motion). */
+  @keyframes float-y {
+    from { transform: translateY(0); }
+    to { transform: translateY(-7px); }
+  }
+  .float-slow {
+    animation: float-y 3.6s ease-in-out infinite alternate;
+  }
+  .float-slower {
+    animation: float-y 4.4s ease-in-out 0.8s infinite alternate;
+  }
+
+  /* Hero scroll cue: a small nudge every few seconds. */
+  @keyframes nudge-down {
+    0%, 70%, 100% { transform: translateY(0); }
+    80% { transform: translateY(4px); }
+    90% { transform: translateY(0); }
+  }
+  .nudge {
+    animation: nudge-down 3s ease-in-out 2s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .float-slow,
+    .float-slower,
+    .nudge,
+    .panel-stagger > div > *,
+    .reveal[data-shown='true'] .panel-stagger-reveal > div > * {
+      animation: none;
+    }
+  }
+
+  /* A one-time ripple behind something that just arrived (the example SMS). */
+  @keyframes ripple-out {
+    from { opacity: 0.45; transform: scale(0.6); }
+    to { opacity: 0; transform: scale(1.9); }
+  }
+  .ripple-once {
+    animation: ripple-out 1100ms cubic-bezier(0.23, 1, 0.32, 1) 260ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .reveal[data-side='above'] {
+      opacity: 1;
+      transform: none;
+    }
+    .bone::after,
+    .ripple-once {
+      display: none;
     }
   }
 }

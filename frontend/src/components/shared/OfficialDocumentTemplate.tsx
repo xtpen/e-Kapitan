@@ -306,7 +306,7 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
               </dl>
               <p className="text-caption text-muted mt-3">
                 Not valid without the official barangay seal. To check that this document is genuine, enter the verification
-                code in e-Kapitan under Verify a Document.
+                code in eKapitan under Verify a Document.
               </p>
             </div>
           </div>

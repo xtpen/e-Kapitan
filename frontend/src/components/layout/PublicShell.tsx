@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button } from '../ui';
+import { Button, LogoMark } from '../ui';
 import { BARANGAY } from '../../config/barangay';
 import { scrollToSection, setPendingAuthScreen, setPendingSection } from '../public/publicNav';
 
@@ -50,17 +50,12 @@ const BOTTOM_NAV: PublicNavItem[] = [
   { label: 'Home', icon: Home, action: { kind: 'tab', tab: 'guest_home' }, activeFor: ['guest_home'] },
   { label: 'Services', icon: LayoutGrid, action: { kind: 'section', id: 'services' } },
   { label: 'My Requests', icon: ListChecks, action: { kind: 'tab', tab: 'report_status' }, activeFor: ['report_status'] },
-  { label: 'Account', icon: User, action: { kind: 'auth' } },
+  { label: 'Sign in', icon: User, action: { kind: 'auth' } },
 ];
 
+/** The eKapitan mark (ui/Logo). Inverse = white tile for the navy phone header. */
 const LogoDisc: React.FC<{ inverse?: boolean }> = ({ inverse }) => (
-  <div
-    aria-hidden="true"
-    className={`rounded-full grid place-items-center shrink-0 font-display font-bold
-      ${inverse ? 'w-10 h-10 text-sm bg-surface text-navy' : 'w-12 h-12 text-base bg-navy text-gold'}`}
-  >
-    SA
-  </div>
+  <LogoMark size={inverse ? 40 : 44} tone={inverse ? 'white' : 'navy'} />
 );
 
 export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -129,7 +124,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
         <button type="button" onClick={() => run({ kind: 'tab', tab: 'guest_home' })} className="flex items-center gap-3.5 text-left cursor-pointer">
           <LogoDisc />
           <span>
-            <b className="block font-display text-xl leading-tight font-bold text-navy">e-Kapitan</b>
+            <b className="block font-display text-xl leading-tight font-bold text-navy">eKapitan</b>
             <span className="text-caption text-muted">Barangay {BARANGAY}, San Pablo City</span>
           </span>
         </button>
@@ -168,7 +163,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
         <button type="button" onClick={() => run({ kind: 'tab', tab: 'guest_home' })} className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer">
           <LogoDisc inverse />
           <span className="min-w-0">
-            <b className="block leading-tight">e-Kapitan</b>
+            <b className="block leading-tight">eKapitan</b>
             <span className="block text-label truncate">Brgy. {BARANGAY}, San Pablo City</span>
           </span>
         </button>
@@ -218,7 +213,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
             >
               <FileCheck2 className="w-4 h-4" aria-hidden="true" /> Verify a barangay document
             </button>
-            <span>© 2026 e-Kapitan</span>
+            <span>© 2026 eKapitan</span>
           </div>
         </div>
       </footer>

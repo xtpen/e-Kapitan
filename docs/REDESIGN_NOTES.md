@@ -29,9 +29,14 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 
 ## Landing page
 
-- [ ] **Confirm: wording is now "Sign in" / "Sign up"** (the old login page and public site said "Log in" / "Register"). Changed across the landing page, dialog and public site.
-- [ ] **Confirm: the landing page names no barangay** (as requested); the header uses the e-Kapitan logo (`public/favicon.jpg`) instead of the `SA` monogram. The signed-in shells and the public site still show the barangay name.
+- [x] ~~Account wording~~. **Decided:** "Sign up" / "Sign in" / "Continue as guest" / "Sign out" everywhere (rules in `DESIGN.md` section 7). Legacy Staff/Official labels were rewritten in sentence case too.
+- [ ] **Confirm: product name is now "eKapitan"** across the app, docs and sample data. Left as "e-Kapitan": the GitHub repository and folder name, and the thesis proposal title quoted in `project-context.md` (rename those only if the thesis title changes).
+- [ ] **Review: legacy Staff/Official screens after the color pass.** Their Tailwind colors were mapped to design tokens automatically (about 1,100 classes). Spot-checked the Operations Desk and Executive dashboard; give each legacy screen a quick look for contrast.
+- [ ] **Confirm: the landing page names no barangay** (as requested); every header now uses the new eKapitan mark (`ui/Logo.tsx`, `public/favicon.svg`) instead of the `SA` monogram and the old green shield image. The signed-in shells and the public site still show the barangay name.
 - [ ] **Note: the example request on the landing page is illustrative** (marked "Example"). It shows an SMS "Your clearance is ready"; SMS isn't built yet (needs the backend).
+
+- [ ] **Confirm: landing page feature copy.** The hero collage and feature tour describe every service from what the app does today. Two things are promised but not built yet: text messages (SMS) and the barangay's own Ask Kap knowledge (the AI fallback still describes another barangay, see README Known issues). Soften those lines if the defense needs to be strict.
+- [ ] **Note: landing previews are illustrative** (labelled "Preview"): sample names and numbers, not live data.
 
 ## Public site (guests)
 
