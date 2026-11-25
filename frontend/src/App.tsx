@@ -63,7 +63,6 @@ const ProfileView = lazyNamed(() => import('./components/resident/ProfileView'),
 const NotificationsView = lazyNamed(() => import('./components/resident/NotificationsView'), 'NotificationsView');
 
 // Admin portal
-const AdminPlaceholder = lazyNamed(() => import('./components/admin/AdminPlaceholder'), 'AdminPlaceholder');
 const AdminOverview = lazyNamed(() => import('./components/admin/AdminOverview'), 'AdminOverview');
 const AdminDocumentRequests = lazyNamed(() => import('./components/admin/AdminDocumentRequests'), 'AdminDocumentRequests');
 const AdminComplaints = lazyNamed(() => import('./components/admin/AdminComplaints'), 'AdminComplaints');
@@ -71,6 +70,11 @@ const AdminPrintingRequests = lazyNamed(() => import('./components/admin/AdminPr
 const AdminCourtReservations = lazyNamed(() => import('./components/admin/AdminCourtReservations'), 'AdminCourtReservations');
 const AdminResidents = lazyNamed(() => import('./components/admin/AdminResidents'), 'AdminResidents');
 const AdminPersonnel = lazyNamed(() => import('./components/admin/AdminPersonnel'), 'AdminPersonnel');
+const AdminServices = lazyNamed(() => import('./components/admin/AdminServices'), 'AdminServices');
+const AdminOfficials = lazyNamed(() => import('./components/admin/AdminOfficials'), 'AdminOfficials');
+const AdminChatbotKnowledge = lazyNamed(() => import('./components/admin/AdminChatbotKnowledge'), 'AdminChatbotKnowledge');
+const AdminReports = lazyNamed(() => import('./components/admin/AdminReports'), 'AdminReports');
+const AdminAuditLogs = lazyNamed(() => import('./components/admin/AdminAuditLogs'), 'AdminAuditLogs');
 
 // Legacy Staff and Official roles (old design)
 const StaffDashboard = lazyNamed(() => import('./components/staff/StaffDashboard'), 'StaffDashboard');
@@ -226,15 +230,15 @@ const MainAppContent: React.FC = () => {
       case 'admin_personnel':
         return <AdminPersonnel />;
       case 'admin_services':
-        return <AdminPlaceholder title="Services" description="Documents and services residents can request, with fees and requirements." />;
+        return <AdminServices />;
       case 'admin_officials':
-        return <ManageOfficials />;
+        return <AdminOfficials />;
       case 'admin_chatbot':
-        return <AdminPlaceholder title="Chatbot Knowledge" description="Answers Ka-Barangay AI is allowed to give." />;
+        return <AdminChatbotKnowledge />;
       case 'admin_reports':
-        return <ExecutiveDashboard />;
+        return <AdminReports />;
       case 'admin_audit':
-        return <AuditTrailViewer />;
+        return <AdminAuditLogs />;
 
       // Guest Views (added explicitly here for clarity, though qr_verify/ai_assistant fall through to Citizen if no exact match, we should handle them explicitly here if we want to ensure separation)
       case 'guest_home':

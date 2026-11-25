@@ -17,6 +17,7 @@ import {
   dateTimeValue,
   formatShortDateTime,
   type Tone,
+  AttentionPanel,
 } from '../ui';
 
 type Filter = 'active' | 'on_leave' | 'deactivated' | 'all';
@@ -416,7 +417,7 @@ export const AdminPersonnel: React.FC = () => {
         </Card>
         <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
           {panel !== 'detail' ? (
-            formView
+            <AttentionPanel key={panel}>{formView}</AttentionPanel>
           ) : selected ? (
             detailView(selected)
           ) : (

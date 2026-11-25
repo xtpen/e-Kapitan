@@ -17,6 +17,7 @@ import {
   documentStatus,
   formatShortDateTime,
   type Tone,
+  AttentionPanel,
 } from '../ui';
 import { PUROKS } from '../../data/reference';
 
@@ -705,12 +706,12 @@ export const AdminResidents: React.FC = () => {
         {/* Stays in view while scrolling a long list (desktop). */}
         <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
           {panel === 'add'
-            ? addView
+            ? <AttentionPanel key="add">{addView}</AttentionPanel>
             : panel === 'duplicates'
               ? duplicatesView
               : selected
                 ? panel === 'edit'
-                  ? editView(selected)
+                  ? <AttentionPanel key="edit">{editView(selected)}</AttentionPanel>
                   : detailView(selected)
                 : (
                   <Card>
