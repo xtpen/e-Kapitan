@@ -83,7 +83,7 @@ export const FeatureTour: React.FC = () => {
                 blocks.current[i] = el;
               }}
               data-index={i}
-              className="py-10 lg:py-0 lg:min-h-[68vh] lg:flex lg:items-center border-b border-hairline last:border-b-0 lg:border-b-0"
+              className="py-10 lg:py-0 lg:min-h-[56vh] lg:flex lg:items-center border-b border-hairline last:border-b-0 lg:border-b-0"
             >
               <div className="w-full">
                 <Copy index={i} />
@@ -137,7 +137,7 @@ export const FeatureTour: React.FC = () => {
           </div>
 
           {/* Where you are in the tour; click to jump */}
-          <ol className="mt-12 flex items-center justify-center gap-2" aria-label="Feature tour">
+          <ol className="mt-20 flex items-center justify-center gap-2" aria-label="Feature tour">
             {FEATURES.map((f, i) => (
               <li key={f.id}>
                 <button
