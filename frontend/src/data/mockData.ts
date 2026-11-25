@@ -895,69 +895,6 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
   }
 ];
 
-export const ANALYTICS_DATA = {
-  todayTransactions: 48,
-  pendingRequests: 7,
-  activeQueueCount: 4,
-  todayAppointments: 12,
-  openIncidents: 3,
-  staffWorkloadScore: 68, // out of 100
-  serviceTrends: [
-    { name: 'Barangay Clearance', count: 184, share: '46%' },
-    { name: 'Cert. of Residency', count: 96, share: '24%' },
-    { name: 'Cert. of Indigency', count: 68, share: '17%' },
-    { name: 'Business Clearance', count: 32, share: '8%' },
-    { name: 'First-Time Jobseeker', count: 20, share: '5%' },
-  ],
-  peakHours: [
-    { time: '08:00 AM', volume: 14, label: 'Opening Queue' },
-    { time: '09:00 AM', volume: 38, label: 'Peak Morning' },
-    { time: '10:00 AM', volume: 44, label: 'Peak Office Hours' },
-    { time: '11:00 AM', volume: 32, label: 'Pre-Noon Rush' },
-    { time: '12:00 PM', volume: 12, label: 'Noon Recess' },
-    { time: '01:00 PM', volume: 28, label: 'Afternoon Reopening' },
-    { time: '02:00 PM', volume: 40, label: 'Peak Afternoon' },
-    { time: '03:00 PM', volume: 30, label: 'Regular' },
-    { time: '04:00 PM', volume: 18, label: 'Cut-off Approaching' }
-  ],
-  weeklyVolume: [
-    { day: 'Mon', count: 82 },
-    { day: 'Tue', count: 74 },
-    { day: 'Wed', count: 89 },
-    { day: 'Thu', count: 68 },
-    { day: 'Fri', count: 95 }
-  ],
-  staffWorkload: [
-    { staffName: 'Elena Ramos', role: 'Records & Clearance', activeQueue: 4, processedToday: 18, capacity: '82%' },
-    { staffName: 'Mark Bautista', role: 'Business Permits & Taxes', activeQueue: 2, processedToday: 9, capacity: '54%' },
-    { staffName: 'Kag. Dr. Evelyn Cruz', role: 'Health & Social Welfare', activeQueue: 3, processedToday: 12, capacity: '70%' },
-    { staffName: 'Danilo Castro', role: 'Tanod & Blotter Desk', activeQueue: 1, processedToday: 6, capacity: '45%' },
-  ],
-  demandForecast: [
-    {
-      service: 'First-Time Jobseeker Certificate',
-      projectedChange: '+45% Increase',
-      trendReason: 'College & Senior High School graduation season (Q2 peak)',
-      confidence: 'High (Historical trend)',
-      suggestedAction: 'Dedicate 1 extra express validation lane for jobseekers on Monday mornings.'
-    },
-    {
-      service: 'Certificate of Residency',
-      projectedChange: '+30% Increase',
-      trendReason: 'DepEd public school enrollment window starting in 2 weeks',
-      confidence: 'Moderate (Registration calendar)',
-      suggestedAction: 'Encourage online batch requests through e-Kapitan portal to reduce in-person lines.'
-    },
-    {
-      service: 'Barangay Business Clearance',
-      projectedChange: '-15% Normalizing',
-      trendReason: 'Annual January/Q1 tax renewal period concluded; standard steady volume expected.',
-      confidence: 'High (Post-tax season pattern)',
-      suggestedAction: 'Maintain single counter processing; allocate staff to records digitization.'
-    }
-  ]
-};
-
 /* ---------- Printing (redesign) ---------- */
 
 export const INITIAL_PRINT_REQUESTS: import('../types').PrintRequest[] = [

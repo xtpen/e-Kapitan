@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Editor / agent tooling: machine-specific
+.claude/skills/
+.claude/settings.local.json
+.vscode/
+.idea/

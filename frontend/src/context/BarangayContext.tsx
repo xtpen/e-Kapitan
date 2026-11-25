@@ -143,18 +143,9 @@ interface BarangayContextType {
   updateOfficial: (id: string, updates: Partial<Official>) => void;
   addOfficial: (data: Omit<Official, 'id'>) => Official;
 
-  // Modals / Inspections
-  selectedRequestForReview: DocumentRequest | null;
-  setSelectedRequestForReview: (req: DocumentRequest | null) => void;
-  selectedTicketForExplanation: QueueTicket | null;
-  setSelectedTicketForExplanation: (ticket: QueueTicket | null) => void;
+  // Certificate viewer (opened from resident and admin screens)
   selectedDocumentForPrint: DocumentRequest | null;
   setSelectedDocumentForPrint: (doc: DocumentRequest | null) => void;
-  selectedIncidentForView: IncidentReport | null;
-  setSelectedIncidentForView: (inc: IncidentReport | null) => void;
-
-  // Verification
-  verifyDocumentCode: (code: string) => { found: boolean; document?: DocumentRequest; message: string };
 
   // Toast Alerts
   toasts: ToastMessage[];
@@ -192,10 +183,6 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
   },
   guest: {
     id: 'user-guest',
-    name: 'Guest User',
-    role: 'guest',
-    roleTitle: 'Non-Resident / Guest',
-    email: 'guest@e-kapitan.local',
     name: 'Public Guest',
     role: 'guest',
     roleTitle: 'Unregistered Guest / Non-Resident',
@@ -252,11 +239,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseItem[]>(INITIAL_KNOWLEDGE_BASE);
   const [priorityCriteria, setPriorityCriteria] = useState<PriorityCriteriaConfig[]>(INITIAL_PRIORITY_CRITERIA);
 
-  // Selected modals
-  const [selectedRequestForReview, setSelectedRequestForReview] = useState<DocumentRequest | null>(null);
-  const [selectedTicketForExplanation, setSelectedTicketForExplanation] = useState<QueueTicket | null>(null);
+  // Certificate viewer
   const [selectedDocumentForPrint, setSelectedDocumentForPrint] = useState<DocumentRequest | null>(null);
-  const [selectedIncidentForView, setSelectedIncidentForView] = useState<IncidentReport | null>(null);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -294,7 +278,9 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (role === 'citizen') {
       setActiveTab('home');
     } else if (role === 'guest') {
-      setActiveTab('announcements');
+      // Guests browse the public website; nobody "signs in", so no welcome toast.
+      setActiveTab('guest_home');
+      return;
     } else if (role === 'staff') {
       setActiveTab('dashboard');
     } else if (role === 'admin') {
@@ -816,33 +802,6 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     logAudit('Updated Contact Details', 'Records', `Resident ${residentId} updated their contact details`);
   };
 
-  const verifyDocumentCode = (code: string): { found: boolean; document?: DocumentRequest; message: string } => {
-    const cleanCode = code.trim().toUpperCase();
-    const doc = documentRequests.find(
-      (d) => d.referenceNumber.toUpperCase() === cleanCode || d.verificationCode.toUpperCase() === cleanCode
-    );
-
-    if (doc) {
-      if (doc.status === 'completed' || doc.status === 'ready_for_release' || doc.status === 'approved') {
-        return {
-          found: true,
-          document: doc,
-          message: 'Document record verified as authentic and legally issued by Barangay 4A.'
-        };
-      }
-      return {
-        found: true,
-        document: doc,
-        message: `Record exists in the system but is currently "${doc.status.toUpperCase()}". Official release seal not yet finalized.`
-      };
-    }
-
-    return {
-      found: false,
-      message: 'No matching barangay record was found for this reference code or QR stamp. Verify the code or contact the Barangay Hall.'
-    };
-  };
-
   const updateOfficial = (id: string, updates: Partial<Official>) => {
     setOfficials((prev) => prev.map((o) => (o.id === id ? { ...o, ...updates } : o)));
     logAudit('Update Official', 'Records', `Updated official record for ID: ${id}`);
@@ -953,15 +912,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createAnnouncement,
         updateOfficial,
         addOfficial,
-        selectedRequestForReview,
-        setSelectedRequestForReview,
-        selectedTicketForExplanation,
-        setSelectedTicketForExplanation,
         selectedDocumentForPrint,
         setSelectedDocumentForPrint,
-        selectedIncidentForView,
-        setSelectedIncidentForView,
-        verifyDocumentCode,
         toasts,
         addToast,
         removeToast

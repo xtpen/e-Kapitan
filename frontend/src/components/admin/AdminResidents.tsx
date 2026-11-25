@@ -18,18 +18,10 @@ import {
   formatShortDateTime,
   type Tone,
 } from '../ui';
+import { PUROKS } from '../../data/reference';
 
 type Group = 'all' | 'senior' | 'pwd' | 'voter' | 'head' | 'indigent';
 type Panel = 'detail' | 'edit' | 'add' | 'duplicates';
-
-const PUROKS = [
-  'Purok 1 - Centro',
-  'Purok 2 - Riverside',
-  'Purok 3 - Bukidnon',
-  'Purok 4 - Pag-asa',
-  'Purok 5 - San Roque',
-  'Purok 6 - Industrial Zone',
-];
 
 const STATUS: Record<ResidentStatus, { label: string; tone: Tone }> = {
   active: { label: 'Active', tone: 'success' },

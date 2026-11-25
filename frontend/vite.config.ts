@@ -64,13 +64,39 @@ function aistudioMediaPlugin(): Plugin {
 }
 // LINT.ThenChange(//depot/google3/java/com/google/alkali/boq/makersuite/applet_dev_service/templates/initializers/react_theme/vite.config.ts:aistudio_media_plugin)
 
+/*
+ * Code splitting. Screens are lazy-loaded in App.tsx; this groups them into one chunk per area so a
+ * guest downloads only the public site, a resident only the resident portal, and so on.
+ * Files the app needs at startup (nav configs, publicNav) must stay out of these groups, or their
+ * whole group would load at startup too.
+ */
+const STARTUP_FILES = /components\/(resident\/residentNav|resident\/useResidentActivity|admin\/adminNav|public\/publicNav)\./;
+const AREA_CHUNKS: [RegExp, string][] = [
+  [/components\/public\//, 'area-public'],
+  [/components\/resident\//, 'area-resident'],
+  [/components\/admin\//, 'area-admin'],
+  [/components\/(staff|official)\/|components\/layout\/Header\./, 'area-legacy'],
+  [/components\/shared\/OfficialDocumentTemplate\./, 'certificate'],
+  [/components\/shared\//, 'area-shared'],
+];
+
+const manualChunks = (rawId: string) => {
+  const id = rawId.split(path.sep).join('/');
+  if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
+  if (/node_modules\/(motion|framer-motion|motion-dom|motion-utils)\//.test(id)) return 'vendor-motion';
+  if (/node_modules\/lucide-react\//.test(id)) return 'vendor-icons';
+  // Everything else in src (context, data, ui, shells, login) is startup code. Naming it explicitly
+  // stops Rollup from tucking it into an area chunk, which would make that area load at startup.
+  if (!id.includes('/src/')) return undefined;
+  if (STARTUP_FILES.test(id)) return 'app-core';
+  return AREA_CHUNKS.find(([re]) => re.test(id))?.[1] ?? 'app-core';
+};
+
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
+    build: {
+      rollupOptions: { output: { manualChunks } },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

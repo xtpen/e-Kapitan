@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, LogOut, Menu, Type, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button } from '../ui';
+import { Button, initialsOf } from '../ui';
+import { BARANGAY } from '../../config/barangay';
 
 /*
  * Shared app shell for the redesign (DESIGN.md section 4).
@@ -34,14 +35,6 @@ export interface AppShellProps {
   mobileBrand?: { title: string; subtitle: string };
   children: React.ReactNode;
 }
-
-const BARANGAY = 'Sto. Angel';
-
-const initials = (name: string) => {
-  const parts = name.split(' ').filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
 
 /** Bottom-nav item id that opens the full menu drawer instead of a page. */
 export const OPEN_MENU = '__menu';
@@ -173,7 +166,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
             aria-label="Account menu"
             className="w-11 h-11 rounded-full bg-navy text-gold grid place-items-center font-display font-bold text-sm cursor-pointer"
           >
-            {initials(currentUser.name)}
+            {initialsOf(currentUser.name)}
           </button>
           {accountOpen && (
             <div

@@ -40,7 +40,7 @@ export const ManageOfficials: React.FC = () => {
   const startAdding = () => {
     setIsAdding(true);
     setEditingId(null);
-    setEditForm({ isActive: true, position: 'Barangay Kagawad' });
+    setEditForm({ status: 'Active (Incumbent)', position: 'Barangay Kagawad' });
   };
 
   return (

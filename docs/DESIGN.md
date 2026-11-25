@@ -1,0 +1,471 @@
+# e-Kapitan Design System
+
+> **AI assistants: read this whole file before you change any UI.** It is the single source of truth for how e-Kapitan looks. If something you need is not covered here, copy the closest existing pattern. Do not invent new colors, fonts, radii or shadows. If you really need something new, stop and ask the person you're working with. That person should check with the foundation owner (ppen) before adding it here.
+
+Also read `PRODUCT.md` (who the users are and the product rules) before designing anything.
+
+---
+
+## 1. Source of truth
+
+The visual direction comes from the **"e-Kapitan UI Mockups"** HTML board (18 screens). When this file and the mockup disagree, **this file wins**. A few mockup inconsistencies are resolved in section 11.
+
+| # | Mockup screen | Width |
+|---|---|---|
+| 1 | Public homepage | 1280 |
+| 2 | Login and registration | 1280 |
+| 3 | Resident · Dashboard | 1280 |
+| 4 | Resident · Document request | 1280 |
+| 5 | Resident · Court reservation | 1280 |
+| 6 | Admin · Overview | 1280 |
+| 7 | Public · Homepage (mobile) | 390 |
+| 8 | Resident · Dashboard (mobile) | 390 |
+| 9 | Resident · Document request (mobile) | 390 |
+| 10 | Resident · Court reservation (mobile) | 390 |
+| 11 | Resident · Complaints | 1280 |
+| 12 | Resident · Printing | 1280 |
+| 13 | Admin · Document requests | 1280 |
+| 14 | Admin · Court calendar | 1280 |
+| 15 | Resident · Complaints (mobile) | 390 |
+| 16 | Admin · Overview (mobile) | 390 |
+| 17 | Admin · Requests (mobile) | 390 |
+| 18 | Admin · Court approvals (mobile) | 390 |
+
+Screens without a mockup (e.g. My Profile, Notifications, Personnel, Audit Logs) must be built **only** from the patterns in this file.
+
+### Character in one sentence
+A calm, trustworthy civic service. Deep navy authority, a green that means "go / done", one warm gold accent, on a warm cream paper background. The UI is plain and spacious and uses large text. It is built for senior citizens on cheap Android phones, not for designers.
+
+---
+
+## 2. Stack and where things live
+
+- React 19 + Vite + **Tailwind CSS v4** (`@import "tailwindcss"` with an `@theme` block in `frontend/src/index.css`).
+- Icons: **lucide-react** (already installed).
+- Design tokens: the `@theme` block in `frontend/src/index.css` (section 3). **Use the token classes** (`bg-navy`, `text-muted`, `border-line`, …). Never hard-code hex values in components.
+- Shared UI primitives: `frontend/src/components/ui/`, imported from `'../ui'`. **Check this folder before building a component.** If a primitive you need is missing, ask ppen rather than making a private copy inside your screen. Available now:
+  - `Button` (`variant`: primary | secondary | accent | danger, `size`: md | sm, `fullWidth`)
+  - `Card` (`tone`: default | callout | navy, `padded`: md | lg), `CardHeader`, `TextLink`
+  - `StatusPill` plus the status maps `documentStatus`, `incidentStatus`, `appointmentStatus`. Always use these maps, never write your own labels.
+  - `StatCard`, `IconTile`, `PageHeader` (with optional `breadcrumb` and `action`)
+  - `Field` (label + help + error wrapper; render prop gives the control its `id` and aria props) with `Input`, `PasswordInput` (Show/Hide toggle), `Select`, `Textarea`, and a large `Checkbox`
+  - To hide a `Button` at some screen sizes, wrap it (`<span className="hidden sm:block">`). A `hidden` class on the Button itself loses to its built-in `inline-flex`.
+  - `FileUpload` (drop zone with a "Choose file" button and a list of picked files with Change/Remove; `files`, `onChange`, `accept`, `multiple`, `hint`). **Never use a bare `<input type="file">`**; put size and type limits in the Field's `help`.
+  - `Stepper` (`steps`, `current` index)
+  - `DataTable` (table on tablet/desktop, stacked cards on phones; you supply `columns` and a `mobile` title/status/meta)
+  - `formatPeso(50)` → "₱50.00", `formatShortDateTime(...)` → "Sep 9, 8:30 AM"
+  - `ProgressTimeline` (`stages`: label, tone, reached, detail, optional note)
+  - `Calendar` (month view with Previous/Next, day states `available` / `booked` / `closed` / `past`, selected day in navy, and a legend; `renderDayExtra` lets the admin calendar put event chips in each day; `isSelectable` makes any day clickable; `legend` replaces the default legend; the `open` day state is a plain white day). Use `toISODate()` for its YYYY-MM-DD keys.
+  - `TimeSlot` (radio-style slot button with an Available / Booked pill)
+  - `FilterChips` (pill filters with counts; navy when active; wrap on desktop, swipe on phones). Used by Notifications and My Requests; admin lists can use it for status filters.
+  - `DataTable` also takes `isSelected` to highlight the chosen row in list + detail layouts.
+  - **Sorting:** give a column `sortValue: row => …` (text sorts A to Z, numbers low to high) and its header becomes clickable (click again to reverse, arrow shows the order); phones get a "Sort by" menu above the cards. `defaultSort={{ header, direction }}` sets the starting order. `sortLabels` names the directions in plain words: dates use `['oldest first', 'newest first']`; status columns sort by **workflow stage** (`sortValue: r => STATUS_ORDER.indexOf(r.status)`, labels `['by stage', 'by stage, reversed']`), never alphabetically. Make the main columns of every admin list sortable (done for Residents, Document Requests, Complaints, Printing Requests).
+  - **Long lists (hundreds of rows):** set `pageSize={25}` and `itemLabel="residents"` for pages ("Showing 1–25 of 282 residents", Previous / page menu / Next; resets to page 1 when filters or sort change), and `dense` for tighter rows. Clickable rows support **arrow keys** (up/down moves and opens the next row). Pair it with a match count above the table, counts on filter chips, and a detail panel that stays in view (`lg:sticky`). Reference: Admin · Residents.
+
+  Reference implementations: the Documents list (`resident/ServicesDirectory.tsx`) and the request form (`resident/DocumentRequestWizard.tsx`) show fields, validation, stepper, review and confirmation done the house way.
+- App shell: `frontend/src/components/layout/AppShell.tsx`. It takes `groups` (sidebar sections), `bottomNav`, `notificationsTab` and `unreadCount`. Every role uses this same component with its own nav config. Don't fork it per screen. The resident config is in `components/resident/residentNav.tsx`; the admin config is in `components/admin/adminNav.tsx` (already wired up for the demo `admin` role). Admin teammates: build your screen in `components/admin/`, then in `App.tsx` replace the component for your `admin_…` tab id. Until then each tab shows the old screen or a "Not built yet" placeholder.
+
+---
+
+## 3. Design tokens
+
+### 3.1 Colors
+
+| Token (Tailwind name) | Hex | Use |
+|---|---|---|
+| `navy` | `#12304F` | Brand. Headings, active sidebar item, banners, logo disc, secondary-button outline, selected state |
+| `navy-deep` | `#0C2238` | Public-site utility bar only |
+| `navy-tint` | `#EEF3F9` | Selected table row, selected time slot background |
+| `on-navy` | `#C9D6E6` | Secondary text on navy backgrounds |
+| `ink` | `#1D2A3A` | Body text |
+| `muted` | `#556070` | Secondary text, labels in tables, captions, sidebar section titles |
+| `primary` | `#1B7A57` | **Primary action buttons**, completed step dots, chart bars |
+| `primary-strong` | `#14604A` | Text links, eyebrow text, icon color in green tiles, active top-nav text |
+| `primary-tint` | `#E4F2EA` | Green icon tiles, info "callout" cards, avatar background |
+| `primary-tint-line` | `#CFE5D8` | Border for green callout cards |
+| `gold` | `#F2B84B` | Accent. Logo initials, the one highlighted CTA on a navy banner (`Request a document`). **Max one gold button per screen.** |
+| `canvas` | `#F6F3EB` | Page background (warm cream). Never pure white or slate |
+| `surface` | `#FFFFFF` | Cards, inputs, top bar, sidebar |
+| `surface-muted` | `#F1EFE8` | Disabled / past / not-yet-reached things (past calendar days, booked slots, future steps) |
+| `line` | `#E3DDCC` | All card, sidebar and top-bar borders; table header underline |
+| `line-soft` | `#EEE9DB` | Table row dividers, placeholder blocks (e.g. "Valid ID preview") |
+| `field-line` | `#8A93A0` | Input / select / textarea border (darker for visibility) |
+
+**Status tones.** Always used as a background + text pair:
+
+| Tone | Background | Text | Meaning |
+|---|---|---|---|
+| `success` | `#D8F0E3` | `#0F5A3E` | Done, approved, ready, available, resolved |
+| `info` | `#DCE9FA` | `#1B3F7A` | In progress, processing, under review, unassigned |
+| `warning` | `#FFF0C9` | `#6A4A00` | Waiting on someone, pending |
+| `danger` | `#FBE0DD` | `#8B2418` | Rejected, booked, closed, declined, error |
+| `neutral` | `#F1EFE8` | `#5C5C5C` | Not reached yet, inactive |
+
+Icon tiles use the same pairs (danger tile background is `#F7E1DC`). The **destructive button** is solid `#8B2418` with white text.
+
+### 3.2 Typography
+
+Fonts (Google Fonts): **Poppins** 600/700 for headings and big numbers, **Inter** 400/600/700 for everything else. This replaces Lexend and Outfit. Remove them from `index.html` when the foundation lands.
+
+| Role | Desktop | Mobile | Font / weight | Color |
+|---|---|---|---|---|
+| Hero title (public site only) | 46px / 1.12 | 30px | Poppins 700 | navy (white on navy hero) |
+| Page title `h1` (inside the app) | 32px / 1.2 | 24px | Poppins 700 | navy |
+| Section title `h2` | 28px / 1.25 | 22px | Poppins 600 | navy |
+| Card title `h3` | 18px | 17px | Poppins 600 | navy |
+| Form card title | 22px | 20px | Poppins 600 | navy |
+| Big stat number | 38px / 1 | 30px | Poppins 700 | navy |
+| Body | **16px / 1.55** | 15px / 1.5 | Inter 400 | ink |
+| Secondary text (`muted`) | 15px | 14px | Inter 400 | muted |
+| Labels, nav items, buttons | 15–16px | 15–16px | Inter 600 | ink |
+| Status pill | 13px | 12px | Inter 600 | tone text |
+| Table header, sidebar section title, eyebrow | 12–13px, UPPERCASE, letter-spacing .06–.08em | same | Inter 600 | muted (eyebrow: primary-strong) |
+
+Rules:
+- **Nothing smaller than 12px.** The current code uses `text-[9px]`, `text-[10px]` and `text-[11px]`. Those go away.
+- Use `rem`-based Tailwind sizes so the existing **Large text** mode keeps scaling everything.
+- Headings are never gray, and body text is never navy.
+
+### 3.3 Spacing, radius, shadow
+
+- Spacing scale (px): 4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 64. The defaults to reach for are **20** (gap between cards), **24** (card padding), **32** (form-card padding, page padding top) and **40** (page side padding).
+- Radius: **8** small chips/nav links · **10** buttons, inputs, sidebar items, day cells · **12** time slots · **14** icon tiles, mobile cards · **16** cards · **20** banners · **full** pills, avatars, logo.
+- Shadow: flat by default (border only). One elevation, `0 8px 24px rgba(18,48,79,.10)`, is used only on floating/standalone cards (login, hero overlap cards). Don't add shadows to cards inside the app.
+- No gradients. No glassmorphism, no blur.
+
+### 3.4 Tailwind v4 tokens (live in `frontend/src/index.css`)
+
+All tokens are defined in the `@theme` block of `frontend/src/index.css` (owned by ppen). That file is the source. Don't copy values into components. The class names they create:
+
+| Kind | Classes |
+|---|---|
+| Colors | `bg-*` / `text-*` / `border-*` with every name in 3.1: `navy`, `navy-deep`, `navy-tint`, `on-navy`, `ink`, `muted`, `primary`, `primary-strong`, `primary-tint`, `primary-tint-line`, `gold`, `canvas`, `surface`, `surface-muted`, `line`, `line-soft`, `field-line`, and the tone pairs `success-bg`/`success-fg`, `info-*`, `warning-*`, `danger-*` (plus `danger-tile`), `neutral-*` |
+| Fonts | `font-sans` (Inter, the default), `font-display` (Poppins, automatic on h1–h3) |
+| Text sizes (rem) | `text-label` 12 · `text-caption` 13 · `text-meta` 15 · `text-base` 16 · `text-h3` 18 · `text-h3-lg` 22 · `text-h2` 28 · `text-h1` 32 · `text-stat` 38 · `text-hero` 46 |
+| Radius | `rounded-control` 10 · `rounded-tile` 14 · `rounded-card` 16 · `rounded-banner` 20 · `rounded-full` |
+| Shadow | `shadow-float` (floating cards, menus and dialogs only) |
+
+**Large text mode** adds the `large-text` class to `<html>`, which scales the root font size. Use the rem-based text classes above and never `text-[15px]`-style pixel values, or your screen won't scale.
+
+---
+
+## 4. App shell
+
+### 4.1 Desktop (≥ 1024px)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ (SA) e-Kapitan                              Maria Santos 🔔 (MS)  │  top bar: white, 1px line bottom, padding 14px 40px
+│      Barangay Sto. Angel, San Pablo City                          │
+├──────────────┬───────────────────────────────────────────────────┤
+│ SERVICES     │  main: padding 32px 40px, bg canvas                │
+│ ■ Dashboard  │                                                    │
+│ □ Documents  │                                                    │
+│ …            │                                                    │
+│ ACCOUNT      │                                                    │
+│ □ My Profile │                                                    │
+└──────────────┴───────────────────────────────────────────────────┘
+  sidebar 264px, white, 1px line right, padding 24px 16px
+```
+
+- **Logo disc**: 48px navy circle, gold Poppins 700 initials `SA`. This is a placeholder monogram. Do not draw a seal (see PRODUCT.md).
+- **Brand block**: `e-Kapitan` Poppins 700 20px navy, with the barangay name 13px muted under it.
+- **Right side of top bar**: user name (muted) → notification icon button (44px, 1.5px line border, radius 10) → 44px avatar disc with initials.
+- **Sidebar section title**: 12px uppercase, letter-spacing .08em, muted, margin `16px 12px 8px`.
+- **Sidebar item**: flex, gap 12, padding 12, radius 10, Inter 600, ink, 20px icon. **Active = solid navy background, white text and icon.** Hover = `surface-muted`.
+
+### 4.2 Navigation per role (exact labels and order)
+
+**Resident**
+- *Services*: Dashboard · Documents · Complaints & Reports · Printing · Court Reservation
+- *Account*: My Profile · Notifications
+
+**Admin**
+- *Processing*: Overview · Document Requests · Complaints · Printing Requests · Court Reservations
+- *Management*: Residents · Personnel · Services · Officials · Chatbot Knowledge
+- *Insights*: Reports · Audit Logs
+
+Suggested lucide icons (stroke width **1.8**): Dashboard/Overview `Home` · Documents `FileText` · Complaints `TriangleAlert` · Printing `Printer` · Court `CircleDot` (or `Volleyball`) · My Profile / Residents `User` / `Users` · Notifications `Bell` · Personnel `IdCard` · Services `LayoutGrid` · Officials `Landmark` · Chatbot Knowledge `MessageSquareText` · Reports `ChartColumn` · Audit Logs `ScrollText`. Use the same icon for the same concept everywhere.
+
+### 4.3 Mobile (< 768px)
+
+- **Header**: 68px tall, solid navy, padding 10px 16px. 40px white logo disc with navy initials, `e-Kapitan` bold white plus `Brgy. Sto. Angel, San Pablo City` 12px on the left, and a 44px **Menu** button (2px white border, radius 8) on the right. The menu opens the full sidebar nav as a drawer.
+- **Bottom nav** (residents): fixed, 68px, white, 1px line top, 4 equal tabs **Home · Services · My Requests · Account**, 13px Inter 600 muted. The active tab gets navy text plus a 3px `primary` bar on its top edge (`box-shadow: inset 0 3px var(--color-primary)`).
+- Content padding 16px. Leave 68px bottom padding so nothing hides behind the bottom nav.
+- Tables become **stacked cards** on mobile (title + status pill on one row, reference / detail in muted text below).
+- Buttons are full width on mobile unless they sit in a row of two.
+
+Tablet (768–1023px): keep the desktop top bar and collapse the sidebar into the Menu drawer.
+
+---
+
+## 5. Components
+
+Class names below are Tailwind v4 with the tokens above. They are the reference implementation for the shared primitives.
+
+### 5.1 Buttons
+
+| Variant | Look | Use |
+|---|---|---|
+| **Primary** | `bg-primary text-white` | The main action on a screen or card (Continue, Submit, Approve, Log in) |
+| **Secondary** | `bg-surface text-navy border-2 border-navy` | Back, Previous/Next, Export, Decline, Return for correction |
+| **Accent** | `bg-gold text-navy` | Only on a navy banner/card, max one per screen |
+| **Danger** | `bg-danger-fg text-white` | Reject, delete |
+
+Shared: radius 10, Inter 600 16px, `min-h-12` (48px), horizontal padding 24px. The compact size (inside lists, calendars and toolbars) is `min-h-11` (44px) with padding 18px. **Never go below 44px.** Focus: 3px navy outline with 2px offset. Disabled: `surface-muted` background, `muted` text, no border change.
+
+Button text is a plain verb phrase in sentence case: "Submit report", "Request a document", "Approve request".
+
+### 5.2 Card
+
+`bg-surface border border-line rounded-[16px] p-6`. Forms use `p-8`. Card header row (`.ch`) is a flex row with `justify-between items-center mb-3`: an `h3` on the left and an optional "View all" link (`text-primary-strong font-semibold`) or pill on the right.
+
+Variants:
+- **Callout card** (tips, claiming hours, how to claim): `bg-primary-tint border-primary-tint-line`.
+- **Navy card** (estimated cost, highlight): `bg-navy border-navy`, white text, `on-navy` secondary text, gold accent button.
+- **Welcome banner** (dashboard top): `bg-navy rounded-[20px] px-8 py-7`, flex `justify-between`, with white `h2` "Good day, {first name}", an `on-navy` sub-line, and a gold button on the right.
+
+### 5.3 Status pill
+
+`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-semibold` with a **7px dot in `currentColor`** before the text, and colors from the tone table. Never use a pill without the dot, and never use color alone. The text always says the status.
+
+**Status vocabulary.** Use these exact words and tones everywhere:
+
+| Status text | Tone |
+|---|---|
+| Pending · Pending approval · Received (report waiting for staff) · Returned for correction | warning |
+| Processing · Under review · Action taken · Hearing scheduled · Unassigned | info |
+| Ready for pickup · Ready · Approved · Resolved · Available | success |
+| Rejected · Declined · Booked · Closed · Cancelled | danger |
+| Completed (already claimed / done, no action needed) · Not started | neutral |
+
+How the data maps (already coded in `components/ui/StatusPill.tsx`):
+- Document requests: `submitted` → Pending, `under_review` → Under review, `returned` → Returned for correction, `approved` → Approved, `ready_for_release` → Ready for pickup, `completed` → Completed, `rejected` → Rejected.
+- Incident reports: `received` → Received, `assigned` → Under review, `in_progress` → Action taken, `hearing_scheduled` → Hearing scheduled, `resolved` → Resolved, `dismissed` → Closed.
+- Appointments: `confirmed` → Approved, `rescheduled` → Pending, `completed` → Completed, `cancelled` → Cancelled.
+- Court reservations (`courtStatus`): `pending` → Pending approval, `approved` → Approved, `declined` → Declined, `cancelled` → Cancelled, `completed` → Completed.
+- Print requests (`printStatus`): `pending` → Pending, `processing` → Processing, `ready_for_pickup` → Ready for pickup, `completed` → Completed, `rejected` → Rejected.
+
+In a progress timeline (5.12), reached stages use their tone and unreached stages use neutral.
+
+### 5.4 Stat card
+
+A card containing a muted label (15px), then the big number (Poppins 700 38px navy, `mt-2`). The admin variant puts a 52px icon tile above the label. Stat cards sit 3 or 4 per row with gap 20.
+
+### 5.5 Icon tile
+
+52px (mobile 40px) square, radius 14, centered 24px icon, colors from a tone pair: green (default), info (`n`), warning (`y`), danger (`r`). Used on stat cards, quick-action cards and requirement cards.
+
+### 5.6 Form fields
+
+- **Label** above the field: Inter 600 15px, ink, `mt-4 mb-1.5`. Always a real `<label htmlFor>`. Never use a placeholder as the label.
+- **Input / select**: full width, `min-h-12`, padding `12px 14px`, `border-[1.5px] border-field-line rounded-[10px] bg-surface`, **16px text** (prevents iOS zoom). Focus: navy border plus 3px navy/20% ring.
+- **Textarea**: same, min-height 120px (mobile 96px).
+- **Help text** under a field: muted 15px, `mt-1.5` ("JPG, PNG or PDF, up to 5 MB.").
+- **Error**: border `danger-fg`, message under the field in `danger-fg` 15px, starting with what to do ("Enter your mobile number").
+- Two-column field grid on desktop: `grid grid-cols-2 gap-x-5`. One column on mobile.
+- Form action row: `flex justify-between mt-7`, Secondary "Back" on the left and Primary on the right.
+
+### 5.7 Table
+
+- `w-full border-collapse`.
+- `th`: left-aligned, 12px uppercase, letter-spacing .06em, muted, `py-2.5 px-2`, 2px `line` bottom border.
+- `td`: `py-3.5 px-2`, 15px, 1px `line-soft` bottom border, no border on the last row.
+- Reference numbers (`DOC-2026-0412`) are plain text in the first column. The **status pill goes in the last column**.
+- Selected/active row: `bg-navy-tint`.
+- Key-value detail tables (admin detail panel): the left cell is muted.
+- On mobile, tables turn into stacked cards (section 4.3).
+
+### 5.8 Page header
+
+```
+Documents / Barangay Clearance          ← optional breadcrumb, muted 15px
+Request a Barangay Clearance            ← h1
+Fill in your details. It takes about 3 minutes.   ← muted, mt-1
+```
+A flex row `justify-between items-end mb-6`. An optional Secondary action button sits on the right (Export report, Close a date).
+
+### 5.9 Stepper (multi-step forms)
+
+34px circles with 14px Inter 600 numbers, connected by 48px 2px `line` rules, each step label next to its circle. **Done** = `primary` circle with white number. **Current** = `navy` circle with white number and an ink label. **Upcoming** = `line` circle with a muted label.
+
+### 5.10 Calendar
+
+- 7-column grid, gap 8, weekday headers muted bold.
+- Day cell: 52px tall (mobile 44px), radius 10, 1px line border, centered 600 weight.
+- Day states: **past/unavailable** `neutral` · **available** `success` · **booked/closed** `danger` · **selected** solid navy with white text and a 3px navy outline. Always show a legend under the calendar with pills for each state.
+- Admin calendar variant: taller cells (min 92px), date top-left, events as small 12px tone chips (`rounded-md px-1.5`) stacked inside the cell.
+
+### 5.11 Time slot
+
+A full-width button, flex `justify-between`, padding `12px 16px`, min-height 52, radius 12, 1.5px line border, Inter 600 15px, with a status pill on the right. **Selected**: navy border plus `navy-tint` background. **Unavailable**: `surface-muted` background, muted text, `disabled`.
+
+### 5.12 Progress timeline (request / report tracking)
+
+A vertical list, one row per stage: a status pill (the stage name) followed by muted detail text (date or "Assigned to barangay staff"). Reached stages use their tone. Unreached stages use **neutral**. Stages for reports are Received → Under review → Action taken → Resolved.
+
+### 5.13 Filter bar (admin lists)
+
+A card with a grid `2fr 1fr 1fr`, gap-x 16: Search input, Status select, Type select, each with a label above.
+
+### 5.14 List + detail (admin processing screens)
+
+Grid: `lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]`, so the detail panel never gets squeezed by a wide table. Inside narrow panels, key-value rows stack (label above value) using a container query: `<dl className="@container">` with rows `grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]`.
+
+
+A grid `1.7fr 1fr`. The table on the left highlights the selected row with `navy-tint`. The detail card on the right holds the `h3` reference with its pill, a key-value table, any attachment preview (`line-soft` block), an "Assigned to" select, then **Primary approve (full width)**, then a 2-col row of **Secondary "Return for correction"** and **Danger "Reject"**.
+
+### 5.15 Simple bar chart (overview)
+
+Use the shared `BarChart` component (`components/ui/BarChart.tsx`). One series is **one color** (`primary`; color carries identity only when there are several series, and the category names sit under the columns). Columns are at most 24px wide with a 4px rounded top, square at the 1px baseline; the value sits **on top of** each column in text color (never the bar color); a hover tooltip shows the exact value; a visually hidden table gives screen readers every number. Keep charts this simple: no 3D, gradients, dual axes, or pie charts with more than 4 slices. Supersedes the mockup's alternating green/navy bars.
+
+### 5.17 Toast pop-ups
+
+Shared by every role (`layout/ToastContainer.tsx`); call `addToast(title, description, type)` from the context.
+- White card (`bg-surface border-line rounded-card shadow-float`) with a 4px left edge and a round icon tile in the tone color (success / info / warning / error), plus a 44px dismiss button.
+- Bottom-right on desktop (380px wide); full width above the bottom nav on phones.
+- Errors are announced immediately (`role="alert"`), others politely (`role="status"`).
+- Copy follows section 7: a short sentence-case title ("Request submitted"), then the next step ("Reference REQ-2026-1234. You can follow it in My Requests."). No Title Case, no "Successfully".
+
+The between-pages loading placeholder (`layout/PageSkeleton.tsx`) uses `surface-muted` blocks with `line` borders.
+
+### 5.18 Certificate viewer and printed certificate
+
+`shared/OfficialDocumentTemplate.tsx`, opened with `setSelectedDocumentForPrint(request)` from anywhere (resident or admin).
+- **Screen:** white toolbar (document name, reference + resident, status pill, Primary "Print or save as PDF", 44px close) over a navy/60 backdrop; the certificate is an A4-proportioned white sheet. Escape or clicking outside closes it.
+- **Print:** only the certificate prints (the app is hidden), on A4 with 16mm margins.
+- **The certificate itself** is a formal document, so it stays mostly ink-on-white (navy only for the letterhead and title) and prints well in black and white: letterhead (Republic of the Philippines → Barangay Sto. Angel → Office of the Punong Barangay) over a double rule; a council column filled from the **Officials data**; title, reference, "To whom it may concern:", justified body per document type, "Issued this 9th day of …"; a blank signature line over the Punong Barangay's name; and a footer row (fee, O.R. no., validity, verification code) with "Not valid without the official barangay seal".
+- **Never draw** a seal, logo, signature or fake QR. The dashed circles are placeholders for the real seals; signatures and the dry seal are applied by hand at the hall.
+
+### 5.16 Notification item
+
+A bold one-line title followed by a muted line with the next step ("Claim it with a valid ID."). The newest is first. Unread items get a 7px `primary` dot before the title.
+
+---
+
+## 6. Page layouts
+
+Use one of these grids for the content area (gap 20, `items-start`):
+
+| Pattern | Columns | Used by |
+|---|---|---|
+| Dashboard | Banner → 3 stat cards → `1.7fr 1fr` (recent requests table / notifications + callout) | Resident Dashboard |
+| Form + aside | `1.6fr 1fr` (form card / requirements + how-to-claim callout) | Document request, Printing (`1.5fr 1fr` with the navy cost card) |
+| Form + history | `1.2fr 1fr` (form card / my-items table + progress timeline) | Complaints & Reports |
+| Picker | `1.4fr 1fr` (calendar / slots + details + submit), then a full-width history card | Court Reservation |
+| Overview | 4 stat cards → `1.3fr 1fr` (chart / needs-attention) → full-width recent activity | Admin Overview |
+| List + detail | Filter bar → `1.7fr 1fr` | Admin Document Requests, Complaints, Printing Requests |
+| Calendar + queue | `1.8fr 1fr` (calendar / pending requests with Approve/Decline) | Admin Court Reservations |
+
+Every service page ends with a **"My … history / My requests" table card** when the resident has past items.
+
+All grids collapse to a single column below 1024px, in source order.
+
+---
+
+## 7. Content and voice
+
+- Plain, warm, second person. "Need something from the barangay today?" "You will be notified once the barangay approves it."
+- Tell people the **next step** and the **real-world fact** (hours, what to bring). "Bring your reference number and ID to the barangay hall, 1:00 PM to 4:00 PM. Any fee is paid at the hall."
+- **No online payment language.** Fees are always "paid at the hall". Costs are "estimated" and are confirmed at pickup.
+- Reference number format: `DOC-YYYY-NNNN`, `PRT-`, `CRT-`, `RPT-`.
+- Dates: `Nov 26, 4:00 PM` in tables, `Thursday, November 26` in headings. Times as `4:00 PM to 6:00 PM` (words, not an en dash).
+- Product names are fixed: **e-Kapitan**, **Ka-Barangay AI**.
+- Bilingual: every user-facing string must be translatable (English and Filipino). Don't bake text into images.
+- Mock data must look real but be clearly mock. Don't invent official statistics.
+
+---
+
+## 8. Accessibility (WCAG 2.1 AA, senior-friendly)
+
+- Touch targets ≥ 44px. Primary controls are 48px.
+- Body text is 16px (15px on mobile) and inputs are 16px. Nothing is under 12px.
+- All token pairs above meet AA contrast. Don't put `muted` text on `surface-muted` or on tinted callouts at sizes under 15px.
+- Visible focus on every interactive element (3px navy outline, 2px offset). Never use `outline-none` without a replacement.
+- Status is never shown by color alone. The pill always has words.
+- Every icon-only button has an `aria-label`. Decorative icons get `aria-hidden`.
+- Large text mode must keep working. Use rem sizes and don't fix heights on text containers.
+- Respect `prefers-reduced-motion`. Motion stays subtle (≤ 200ms fades/slides) and is never required to understand the UI.
+- **Motion tokens** (in `index.css`): `ease-out-strong` (cubic-bezier(0.23, 1, 0.32, 1)) for anything entering or responding to a press, `ease-drawer` for sheets. Never `ease-in`. Exits are faster than entrances.
+- **Press feedback**: every `Button` scales to 0.97 while pressed (150ms). Custom pressable elements should do the same (`active:scale-[0.97]`).
+- **Dialogs**: centered on ≥ 640px (fade + scale from 0.96, 240ms in, 150ms out); a bottom sheet on phones (slide up, 420ms drawer curve). Lock page scroll, close on Escape and backdrop tap, make the page behind `inert`, and focus the panel, not the first field (that would pop the phone keyboard). Reference: `auth/AuthDialog.tsx`.
+- **Mobile**: no tap highlight, `touch-action: manipulation` on controls, and no text selection on long-press of buttons (all in `index.css` base). Inputs stay at 16px so iOS never zooms.
+
+---
+
+## 9. Do and don't
+
+**Do**
+- Use tokens (`bg-navy`, `text-muted`, `border-line`) and the shared `components/ui` primitives.
+- Use the cream `canvas` background behind everything and white cards on top.
+- Keep one primary (green) action per card. Make secondary actions outlined navy.
+- Copy layouts from section 6 and the closest mockup screen.
+
+**Don't**
+- Use Tailwind's default palettes (`slate-*`, `emerald-*`, `blue-*`, `rose-*`, `amber-*`). These are the old design.
+- Hard-code hex colors, add new fonts, or use `text-[9px]`–`text-[11px]`.
+- Use gradients, glass/blur, heavy shadows, or colored left-border "accent stripe" cards.
+- Use more than one gold button per screen, or gold for anything except the hero/banner CTA and the logo.
+- Use placeholder-as-label, icon-only buttons without labels, or status shown only by color.
+- Fabricate a barangay seal or logo.
+
+---
+
+## 10. Ownership and workflow
+
+| Area | Owner |
+|---|---|
+| Foundation: tokens, fonts, app shell, `components/ui/*`, this file | **ppen** |
+| Resident: Dashboard, Documents, Complaints & Reports, Printing, Court Reservation, My Profile, Notifications | **ppen** |
+| Admin: Processing, Management, Insights screens | teammates (assign names here) |
+
+- Redesign **one screen per PR/branch**.
+- Changes to tokens, the shell or `components/ui` go through ppen so everyone stays in sync. Update this file in the same PR.
+- Before opening a PR, check your screen against section 9 and at 390px width.
+
+---
+
+## 11. Decisions on mockup inconsistencies
+
+1. **Barangay name**: the mockup says "Sto. Anghel". The project docs (`PRODUCT.md`) say **"Sto. Angel"**. Use **Sto. Angel** until the team confirms otherwise.
+2. **Calendar "Selected" legend**: the mockup legend shows a yellow pill, but the selected day is navy. **Selected = navy** everywhere. The legend shows a navy pill.
+3. **Heading case**: the mockup mixes "Court Reservation" (Title Case) and "Document requests" (sentence case). **Page titles match their sidebar label (Title Case).** Card titles, buttons and messages use sentence case.
+4. **Fonts**: Lexend/Outfit/JetBrains Mono in the current code are replaced by Inter + Poppins.
+6. **Document request flow**: 3 steps as in the mockup (Choose → Your details → Review), then a confirmation that shows the reference number. Documents are claimed at the hall only. The old "Express counter" and "Certified digital copy" options were dropped to match the mockup.
+7. **Residents only see their own reports.** The old Complaints screen listed every resident's reports. The new one shows only the signed-in resident's, and never staff-only fields like `internalNotes`.
+5. **Resident nav "More" group (temporary)**: the new resident nav has no place yet for My Requests, Ka-Barangay AI, Appointments, Verify a Document, Advisories and Officials. They sit in a temporary third sidebar group called **More** until the team decides where they go. Don't copy this pattern for Admin.
+
+---
+
+## 12. Redesign status
+
+| Screen | Status |
+|---|---|
+| Foundation: tokens, fonts, AppShell, `components/ui` | Done (ppen) |
+| Resident · Dashboard | Done (ppen) |
+| Resident · Documents (list + request form) | Done (ppen) |
+| Resident · Complaints & Reports | Done (ppen) |
+| Resident · Printing | Done (ppen). Printing is **free** for residents: never show a cost or fee for it. Data: `printRequests`, `createPrintRequest`, `updatePrintRequestStatus` in `BarangayContext` (Admin · Printing Requests can use these) |
+| Resident · My Requests (More group) | Done (ppen), no mockup. One list of every request type with filters, search, and a detail panel (timeline, details, View certificate, Copy reference). |
+| Resident · Court Reservation | Done (ppen). Data: `courtSlots`, `courtReservations`, `courtClosures`, `createCourtReservation`, `updateCourtReservationStatus`, `closeCourtDate` in `BarangayContext` (Admin · Court Reservations can use these: Approve/Decline and "Close a date"). Residents only ever see other people's bookings as "Booked", never names. |
+| Resident · My Profile | Done (ppen), no mockup. Personal details are read-only (changed at the hall); mobile/email editable; change password; Large text and SMS preferences. |
+| Resident · Notifications | Done (ppen), no mockup. Filter chips, unread dots, mark read on open, "Mark all as read". Read state: `readNotificationIds` / `markNotificationsRead` in `BarangayContext`. |
+| Landing page + Sign in / Sign up | Done. No mockup screen for the landing page; follows these patterns. Header with only the product name (no barangay named) and Guest mode / Sign in / Sign up, hero with an example request, services, how it works, closing call to action, footer. Sign in / Sign up is a dialog (`auth/AuthDialog.tsx`): bottom sheet on phones. Demo login: any email or 09 mobile opens the resident view; an email containing "admin" opens the Administrator; "staff" or "captain"/"official" open the old roles. |
+| Admin shell (demo `admin` role) | Done (ppen): Admin nav, top bar, mobile bottom nav (Overview · Requests · Calendar · More), phone header "e-Kapitan Admin / Administrator portal". |
+| Admin · Overview | Done (ppen): 4 stat cards, Transactions by service chart, Needs attention (oldest first, click to open), Recent activity from the audit log, Export report (CSV). Phone: "Today at the barangay". |
+| Admin · Document Requests | Done (ppen): filter bar (search, status, document) or search + chips on phones, list + detail with requirements, Assigned to, and actions by stage (Approve / Return for correction / Reject → Mark ready for pickup → Mark as claimed), Export list (CSV). Reference for every admin list + detail screen. |
+| Admin · Complaints | Done (ppen), no dedicated mockup (follows Document Requests). Open reports first, list + detail with full history, staff-only note, and actions by stage (Assign → Record action taken / Schedule hearing → Mark as resolved, or Close without action). Every action asks for a message the resident will see. |
+| Admin · Printing Requests | Done (ppen), no dedicated mockup. Queue summary in the header (jobs and sheets to print), status chips with counts, oldest job first, detail with big page/copy/sheet numbers and print settings, actions Start printing → Mark ready for pickup → Mark as picked up, or Don't accept (with reason). Never shows a cost other than "Free". |
+| Admin · Residents | Done (ppen), no mockup. Masterlist with search, purok, group chips (Senior, PWD, Indigent, Voters, Household heads), inactive toggle; detail with household and requests; Add resident, Edit details (name/birthdate/sex locked), status changes; duplicate review (system suggests, a person decides, with a note). Opening a record is written to the audit log. Built for hundreds of residents: 25 per page, compact rows, multi-word search ("santos purok 2"), counts on every group chip, arrow-key browsing, and a details panel that stays in view. |
+| Admin · Personnel | Done (ppen), no mockup. Staff accounts with role presets (Administrator, Records staff, Front desk, Peace and order, Health worker, View only) plus per-area access, add / edit, on leave, deactivate (confirm). The last active administrator can't be demoted, put on leave or deactivated. "Assigned to" lists elsewhere come from here (`staffFor(area)`: active staff with that access). |
+| Admin · Court Reservations | Done (ppen): calendar with booking chips (Approved / Pending / Closed), Pending requests numbered first come, first served with the request time, Approve / Decline (reason), selected-day schedule per slot, Close this day (cancels that day's bookings with the reason) / Reopen. Phone: "Court approvals" first, calendar below without chips. |
+| Public site (guests): shell + Homepage | Done. Mockups "Public homepage" (desktop) and "Public · Homepage (mobile)". Shell in `layout/PublicShell.tsx`: navy-deep utility bar, top bar with Home · Services · Announcements · Officials · Contact · Ask Kap plus Log in / Register (full nav from 1280px; Menu drawer below), phone header + bottom nav Home · Services · My Requests · Account, contact footer on every page. |
+| Public · Announcements, Track your request, Report a concern, How it works | Done, no mockup (built from these patterns). Track looks up any REQ/INC/PRT/CRT reference and shows status only, never names. |
+| Officials directory (public + resident More group) | Done, styled like the homepage officials row. |
+| Ka-Barangay AI (Ask Kap) | Done, no mockup. Titled "Ask Kap" for guests and "Ka-Barangay AI" for residents. Chat card + "Try asking" suggestions (a swipe row above the input on phones), "Information only" callout. |
+| Verify a Document | Done, no mockup. Accepts the printed verification code (VER-…) only, not request reference numbers. Three results: valid, not issued yet, not found. |
+| Old Staff and Official roles (legacy, demo login with "staff" / "captain") | Old design and old layout |
+
+Update this table in the same PR as your screen.
+
+Open questions, placeholders to confirm, and known follow-ups are tracked in **`REDESIGN_NOTES.md`** (in this `docs/` folder). Add to it when you make a guess or leave something unfinished.
