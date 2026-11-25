@@ -8,6 +8,8 @@ import {
   Landmark,
   Languages,
   Megaphone,
+  Menu,
+  X,
   MessageSquareText,
   ScanSearch,
   ShieldCheck,
@@ -16,6 +18,7 @@ import {
   Type,
   UserCheck,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useBarangay } from '../../context/BarangayContext';
 import { Button, LogoMark, Reveal } from '../ui';
 import { takePendingAuthScreen, type AuthScreen } from '../public/publicNav';
@@ -37,13 +40,13 @@ import { FeatureTour } from './landing/FeatureTour';
 
 type IconC = React.ComponentType<{ className?: string; strokeWidth?: number }>;
 
-const GUEST_ACTIONS: { title: string; text: string; icon: IconC; tab: string; link: string }[] = [
-  { title: 'Report a concern', text: 'File a report about your street or neighborhood and get a tracking number.', icon: TriangleAlert, tab: 'file_report', link: 'Report a concern' },
-  { title: 'Track a request', text: 'Enter any reference number to see where a document, report or booking stands.', icon: ScanSearch, tab: 'report_status', link: 'Track a request' },
-  { title: 'Verify a document', text: 'Check that a printed clearance or certificate is real, using the code at its bottom.', icon: FileCheck2, tab: 'qr_verify', link: 'Verify a document' },
-  { title: 'Read announcements', text: 'Advisories, health drives, events and schedule changes from the barangay hall.', icon: Megaphone, tab: 'guest_announcements', link: 'See announcements' },
-  { title: 'Meet your officials', text: 'Who leads the barangay, their committees and how to reach them.', icon: Landmark, tab: 'officials_directory', link: 'See officials' },
-  { title: 'Ask Kap', text: 'Ka-Barangay AI answers questions about requirements, fees and office hours.', icon: MessageSquareText, tab: 'ai_assistant', link: 'Ask a question' },
+const GUEST_ACTIONS: { title: string; text: string; icon: IconC; tab: string }[] = [
+  { title: 'Report a concern', text: 'File a report about your street or neighborhood and get a tracking number.', icon: TriangleAlert, tab: 'file_report' },
+  { title: 'Track a request', text: 'Enter any reference number to see where a document, report or booking stands.', icon: ScanSearch, tab: 'report_status' },
+  { title: 'Verify a document', text: 'Check that a printed clearance or certificate is real, using the code at its bottom.', icon: FileCheck2, tab: 'qr_verify' },
+  { title: 'Read announcements', text: 'Advisories, health drives, events and schedule changes from the barangay hall.', icon: Megaphone, tab: 'guest_announcements' },
+  { title: 'Meet your officials', text: 'Who leads the barangay, their committees and how to reach them.', icon: Landmark, tab: 'officials_directory' },
+  { title: 'Ask Kap', text: 'Ka-Barangay AI answers questions about requirements, fees and office hours.', icon: MessageSquareText, tab: 'ai_assistant' },
 ];
 
 const BUILT_FOR: { title: string; text: string; icon: IconC }[] = [
@@ -211,6 +214,24 @@ export const LandingPage: React.FC = () => {
   const closeAuth = useCallback(() => setAuth(null), []);
   const { bar, scrolled } = useScrollProgress();
   useScrollMemory();
+  const reduceMotion = useReducedMotion();
+
+  // Phone menu: focus its first link on open; Escape or a wider screen closes it.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const firstMenuItem = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    firstMenuItem.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const onWide = () => wide.matches && setMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    wide.addEventListener('change', onWide);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      wide.removeEventListener('change', onWide);
+    };
+  }, [menuOpen]);
 
   /** Enter the app as a role; guests can land on a specific public page. Next visit starts at the top. */
   const go = (role: Role, tab?: string) => {
@@ -260,13 +281,96 @@ export const LandingPage: React.FC = () => {
             >
               {guestLabel}
             </button>
-            <Button variant="outline" size="sm" onClick={() => setAuth('login')}>
-              Sign in
-            </Button>
+            <span className="hidden sm:contents">
+              <Button variant="outline" size="sm" onClick={() => setAuth('login')}>
+                Sign in
+              </Button>
+            </span>
             <Button variant="brand" size="sm" onClick={() => setAuth('register')}>
               Sign up
             </Button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-expanded={menuOpen}
+              aria-controls="landing-menu"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              className="lg:hidden -mr-2 w-11 h-11 grid place-items-center rounded-control text-navy hover:bg-mist cursor-pointer
+                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.94]"
+            >
+              {menuOpen ? <X className="w-6 h-6" strokeWidth={2} aria-hidden="true" /> : <Menu className="w-6 h-6" strokeWidth={2} aria-hidden="true" />}
+            </button>
           </Container>
+
+          {/* Phones and tablets: the page links, Sign in and guest mode drop down under the header */}
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <motion.div
+                  key="scrim"
+                  aria-hidden="true"
+                  onClick={() => setMenuOpen(false)}
+                  className="lg:hidden fixed inset-x-0 bottom-0 top-16 sm:top-[72px] bg-navy/25"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { duration: 0.2 } }}
+                  exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                />
+                <motion.nav
+                  key="menu"
+                  id="landing-menu"
+                  aria-label="Menu"
+                  className="lg:hidden absolute inset-x-0 top-full bg-surface border-b border-hairline shadow-float"
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateY(-8px)' }}
+                  animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.22, ease: [0.23, 1, 0.32, 1] } }}
+                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                >
+                  <Container className="pt-2 pb-5">
+                    <ul>
+                      {NAV.map(([label, id], i) => (
+                        <li key={id} className="border-b border-hairline">
+                          <button
+                            ref={i === 0 ? firstMenuItem : undefined}
+                            type="button"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              requestAnimationFrame(() => scrollToId(id));
+                            }}
+                            className="w-full min-h-13 py-3 flex items-center justify-between text-left text-[1.0625rem] font-semibold text-navy cursor-pointer"
+                          >
+                            {label}
+                            <ArrowRight className="w-4 h-4 text-muted" aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                      <span className="contents sm:hidden">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            setAuth('login');
+                          }}
+                        >
+                          Sign in
+                        </Button>
+                      </span>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          go('guest');
+                        }}
+                        disabled={!!busy}
+                      >
+                        {guestLabel}
+                      </Button>
+                    </div>
+                  </Container>
+                </motion.nav>
+              </>
+            )}
+          </AnimatePresence>
           {/* Reading progress */}
           <span aria-hidden="true" className="absolute left-0 right-0 -bottom-px h-0.5 overflow-hidden">
             <span ref={bar} className="block h-full bg-navy origin-left" style={{ transform: 'scaleX(0)' }} />
@@ -279,18 +383,20 @@ export const LandingPage: React.FC = () => {
           <Container className="min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-72px)] py-10 sm:py-14 lg:pt-10 lg:pb-20 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] content-center gap-10 lg:gap-12 items-center">
             <div className="min-w-0">
               <Reveal y={0} rootMargin="0px">
-                <h1 className="text-[2.5rem] sm:text-[3.25rem] lg:text-[3.375rem] xl:text-[3.75rem] leading-[1.06] lg:whitespace-nowrap font-bold text-navy tracking-[-0.02em]">
+                <h1 className="text-[2.625rem] sm:text-[3.5rem] lg:text-[3.625rem] xl:text-[4.125rem] leading-[1.04] lg:whitespace-nowrap font-bold text-navy tracking-[-0.02em]">
                   <span className="block overflow-hidden pb-1">
                     <span className="reveal-line">Your barangay,</span>
                   </span>
                   <span className="block overflow-hidden pb-1">
-                    <span className="reveal-line text-muted" style={{ '--line-delay': '110ms' } as React.CSSProperties}>
+                    <span className="reveal-line relative" style={{ '--line-delay': '110ms' } as React.CSSProperties}>
                       a tap away.
+                      {/* A short underline draws under the promise once the line is in */}
+                      <span aria-hidden="true" className="hero-underline absolute left-0 right-[0.4em] -bottom-0.5 h-[0.09em] rounded-full bg-navy/20" />
                     </span>
                   </span>
                 </h1>
               </Reveal>
-              <Reveal as="p" delay={180} y={12} rootMargin="0px" className="mt-6 text-[1.125rem] sm:text-[1.25rem] leading-relaxed text-muted max-w-[32rem]">
+              <Reveal as="p" delay={180} y={12} rootMargin="0px" className="mt-6 text-[1.125rem] sm:text-[1.3125rem] leading-relaxed text-muted max-w-[34rem]">
                 eKapitan brings the barangay hall to your phone. Request certificates, report concerns, book the court, send print jobs
                 and ask questions, then follow every request until it is ready.
               </Reveal>
@@ -336,10 +442,12 @@ export const LandingPage: React.FC = () => {
           <button
             type="button"
             onClick={() => scrollToId('features')}
-            className="hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-1 min-h-11 px-3 text-label font-semibold text-muted hover:text-navy cursor-pointer transition-colors animate-fade [animation-delay:1200ms]"
+            className="group hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-2 px-3 py-1 text-meta font-semibold text-muted hover:text-navy cursor-pointer transition-colors animate-fade [animation-delay:1200ms]"
           >
             Scroll to explore
-            <ChevronDown className="w-4 h-4 nudge" aria-hidden="true" />
+            <span className="w-10 h-10 rounded-full grid place-items-center border border-hairline bg-surface transition-[border-color,background-color] duration-200 group-hover:border-navy/40 group-hover:bg-navy-tint">
+              <ChevronDown className="w-5 h-5 nudge" aria-hidden="true" />
+            </span>
           </button>
           </section>
 
@@ -367,31 +475,36 @@ export const LandingPage: React.FC = () => {
                 text="Visitors, workers and anyone in the barangay can use these right away, without signing up."
                 id="guests-title"
               />
-              <ul className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+              <ul className="mt-10 grid md:grid-cols-2 gap-3 lg:gap-4">
                 {GUEST_ACTIONS.map((g, i) => {
                   const Icon = g.icon;
                   return (
-                    <Reveal as="li" key={g.title} delay={[0, 70, 120, 160, 190, 210][i]} y={22}>
+                    <Reveal as="li" key={g.title} delay={[0, 60, 100, 140, 170, 190][i]} y={18}>
                       <button
                         type="button"
                         onClick={() => go('guest', g.tab)}
                         disabled={!!busy}
-                        className="group w-full h-full text-left bg-surface border border-hairline rounded-card p-6 cursor-pointer
-                          transition-[translate,box-shadow,border-color] duration-200 ease-out-strong
-                          hover:-translate-y-1 hover:shadow-float hover:border-navy/25 active:scale-[0.99]"
+                        className="group w-full h-full text-left bg-surface border border-hairline rounded-card p-5 sm:p-6 flex items-center gap-4 sm:gap-5 cursor-pointer
+                          transition-[translate,box-shadow,border-color,scale] duration-200 ease-out-strong
+                          hover:-translate-y-0.5 hover:shadow-float hover:border-navy/25 active:scale-[0.99]"
                       >
                         <span
                           aria-hidden="true"
-                          className="w-11 h-11 rounded-tile grid place-items-center bg-navy-tint text-navy mb-5 transition-[background-color,color,rotate] duration-200 ease-out-strong
+                          className="w-12 h-12 shrink-0 rounded-tile grid place-items-center bg-navy-tint text-navy transition-[background-color,color,rotate] duration-200 ease-out-strong
                             group-hover:bg-navy group-hover:text-white group-hover:-rotate-3"
                         >
                           <Icon className="w-5 h-5" strokeWidth={1.8} />
                         </span>
-                        <b className="block font-display text-h3 font-semibold text-navy">{g.title}</b>
-                        <span className="block text-meta text-muted mt-2">{g.text}</span>
-                        <span className="mt-4 inline-flex items-center gap-1 text-meta font-semibold text-navy">
-                          {g.link}
-                          <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-1" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                          <b className="block font-display text-h3 font-semibold text-navy">{g.title}</b>
+                          <span className="block text-meta text-muted mt-1">{g.text}</span>
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="w-10 h-10 shrink-0 rounded-full grid place-items-center border border-hairline text-navy
+                            transition-[background-color,color,border-color] duration-200 ease-out-strong group-hover:bg-navy group-hover:text-white group-hover:border-navy"
+                        >
+                          <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" />
                         </span>
                       </button>
                     </Reveal>
@@ -403,23 +516,26 @@ export const LandingPage: React.FC = () => {
 
           {/* ---------- Built for everyone ---------- */}
           <section aria-labelledby="built-title">
-            <Container className="py-16 lg:py-24">
-              <SectionHeading
-                label="Built for everyone"
-                title="Simple enough for every resident, careful with every record"
-                id="built-title"
-              />
-              <ul className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-9">
+            <Container className="py-16 lg:py-24 grid lg:grid-cols-[1fr_1.5fr] gap-10 lg:gap-16 items-start">
+              <div className="lg:sticky lg:top-28">
+                <SectionHeading
+                  label="Built for everyone"
+                  title="Simple enough for every resident, careful with every record"
+                  text="Made for residents of every age and every phone, and for the staff who look after their records."
+                  id="built-title"
+                />
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-x-10 border-t border-hairline">
                 {BUILT_FOR.map((b, i) => {
                   const Icon = b.icon;
                   return (
-                    <Reveal as="li" key={b.title} delay={(i % 3) * 80} y={16} className="flex gap-4">
-                      <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center border-2 border-navy/15 text-navy">
-                        <Icon className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+                    <Reveal as="li" key={b.title} delay={(i % 2) * 70} y={12} className="flex gap-4 py-5 border-b border-hairline">
+                      <span className="w-9 h-9 shrink-0 rounded-lg grid place-items-center bg-navy-tint text-navy">
+                        <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
                       </span>
                       <span>
-                        <b className="block font-display text-h3 font-semibold text-navy">{b.title}</b>
-                        <span className="block text-meta text-muted mt-1.5">{b.text}</span>
+                        <b className="block text-[1.0625rem] font-semibold text-navy">{b.title}</b>
+                        <span className="block text-meta text-muted mt-1">{b.text}</span>
                       </span>
                     </Reveal>
                   );
@@ -458,13 +574,13 @@ export const LandingPage: React.FC = () => {
 
           {/* ---------- FAQ ---------- */}
           <section id="faq" className="scroll-mt-20" aria-labelledby="faq-title">
-            <Container className="py-16 lg:py-24 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16 items-start">
-              <SectionHeading label="Questions" title="Good to know before you start" id="faq-title" />
-              <div className="border-t border-hairline">
+            <Container className="py-16 lg:py-24">
+              <SectionHeading label="Questions" title="Good to know before you start" id="faq-title" center />
+              <div className="mt-10 max-w-[48rem] mx-auto border-t border-hairline">
                 {FAQS.map((f, i) => (
                   <Reveal key={f.q} delay={i * 50} y={10}>
-                    <details className="group border-b border-hairline">
-                      <summary className="flex items-center justify-between gap-4 min-h-14 py-4 cursor-pointer list-none font-semibold text-navy [&::-webkit-details-marker]:hidden">
+                    <details className="faq-item group border-b border-hairline">
+                      <summary className="flex items-center justify-between gap-4 min-h-14 py-4 cursor-pointer list-none text-[1.0625rem] font-semibold text-navy [&::-webkit-details-marker]:hidden">
                         {f.q}
                         <span className="w-8 h-8 shrink-0 rounded-full grid place-items-center bg-mist text-navy transition-[rotate,background-color] duration-200 ease-out-strong group-open:rotate-180 group-hover:bg-navy-tint">
                           <ChevronDown className="w-4 h-4" aria-hidden="true" />
