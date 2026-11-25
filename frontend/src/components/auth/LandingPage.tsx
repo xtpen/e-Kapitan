@@ -1,311 +1,574 @@
-import React, { useCallback, useState } from 'react';
-import { ArrowRight, Bell, Check, CircleDot, FileText, Printer, TriangleAlert } from 'lucide-react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  ArrowRight,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  FileCheck2,
+  Landmark,
+  Languages,
+  Megaphone,
+  MessageSquareText,
+  ScanSearch,
+  ShieldCheck,
+  Smartphone,
+  TriangleAlert,
+  Type,
+  UserCheck,
+} from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button, Card, IconTile, ProgressTimeline, StatusPill, type IconTileTone } from '../ui';
+import { Button, LogoMark, Reveal } from '../ui';
 import { takePendingAuthScreen, type AuthScreen } from '../public/publicNav';
 import { AuthDialog, type Role } from './AuthDialog';
+import { TAGLINE } from '../../config/brand';
+import { HeroCollage } from './landing/HeroCollage';
+import { FeatureTour } from './landing/FeatureTour';
 
 /*
- * Landing page: the first thing everyone sees. No barangay is named here, only the product.
- * Header (Guest mode / Sign in / Sign up) → hero with an example request → services → how it works
- * → closing call to action → footer. Sign in and Sign up open AuthDialog.
+ * Landing page. Palette: white + navy only, with mist (#F5F7FA) for alternating sections and
+ * hairline borders. Green appears only where something is "ready". No barangay is named here.
+ *
+ * Story, top to bottom: tagline + a rotating glimpse of every feature → a scroll-driven tour that
+ * explains each one → what guests can do without an account → who it's built for → how it works →
+ * questions → sign up. Every block uses the two-way <Reveal> (docs/DESIGN.md section 8).
+ *
+ * Wording (docs/DESIGN.md section 7): "Sign up", "Sign in", "Continue as guest". No other phrasings.
  */
 
-const SERVICES: { title: string; text: string; tone: IconTileTone; icon: React.ReactNode }[] = [
-  { title: 'Documents', text: 'Clearance, residency, indigency and other certificates.', tone: 'green', icon: <FileText strokeWidth={1.8} /> },
-  { title: 'Complaints & reports', text: 'Report a concern and follow it with a tracking number.', tone: 'warning', icon: <TriangleAlert strokeWidth={1.8} /> },
-  { title: 'Printing', text: 'Send a file and pick up the printout at the hall.', tone: 'info', icon: <Printer strokeWidth={1.8} /> },
-  { title: 'Court reservation', text: 'See open schedules and request a time slot.', tone: 'green', icon: <CircleDot strokeWidth={1.8} /> },
+type IconC = React.ComponentType<{ className?: string; strokeWidth?: number }>;
+
+const GUEST_ACTIONS: { title: string; text: string; icon: IconC; tab: string; link: string }[] = [
+  { title: 'Report a concern', text: 'File a report about your street or neighborhood and get a tracking number.', icon: TriangleAlert, tab: 'file_report', link: 'Report a concern' },
+  { title: 'Track a request', text: 'Enter any reference number to see where a document, report or booking stands.', icon: ScanSearch, tab: 'report_status', link: 'Track a request' },
+  { title: 'Verify a document', text: 'Check that a printed clearance or certificate is real, using the code at its bottom.', icon: FileCheck2, tab: 'qr_verify', link: 'Verify a document' },
+  { title: 'Read announcements', text: 'Advisories, health drives, events and schedule changes from the barangay hall.', icon: Megaphone, tab: 'guest_announcements', link: 'See announcements' },
+  { title: 'Meet your officials', text: 'Who leads the barangay, their committees and how to reach them.', icon: Landmark, tab: 'officials_directory', link: 'See officials' },
+  { title: 'Ask Kap', text: 'Ka-Barangay AI answers questions about requirements, fees and office hours.', icon: MessageSquareText, tab: 'ai_assistant', link: 'Ask a question' },
+];
+
+const BUILT_FOR: { title: string; text: string; icon: IconC }[] = [
+  { title: 'Large, clear text', text: 'Readable at a glance, with a Large text switch that enlarges everything for senior citizens.', icon: Type },
+  { title: 'Any phone, no app', text: 'Works in the browser of budget Android phones and computers. Nothing to download or update.', icon: Smartphone },
+  { title: 'English and Filipino', text: 'Plain wording throughout, and Ask Kap understands English, Tagalog and Taglish.', icon: Languages },
+  { title: 'Your data stays yours', text: 'Used only for your request, as the Data Privacy Act requires. You only ever see your own requests.', icon: ShieldCheck },
+  { title: 'Verified residents', text: 'Barangay staff check every new account against a valid ID before it opens.', icon: UserCheck },
+  { title: 'Genuine documents', text: 'Every issued document carries a verification code anyone can check online.', icon: FileCheck2 },
 ];
 
 const STEPS = [
-  { title: 'Create your account', text: 'Sign up with your name, mobile number, address and a photo of a valid ID.' },
+  { title: 'Sign up', text: 'Give your name, mobile number, address and a photo of a valid ID. Staff verify your account.' },
   { title: 'Send your request', text: 'Pick a service and fill in a short form. You get a reference number right away.' },
   { title: 'Claim it at the hall', text: 'We text you when it is ready. Bring your reference number and a valid ID.' },
 ];
 
+const FAQS = [
+  {
+    q: 'Do I pay online?',
+    a: 'No. Fees are shown when you make a request and paid at the barangay hall when you claim it. Printing is free for residents, and some certificates are free or can be waived.',
+  },
+  { q: 'Who can sign up?', a: 'Residents of the barangay. Staff check your details and ID before your account opens, and you get a text when it is ready.' },
+  {
+    q: 'Can I use eKapitan without an account?',
+    a: 'Yes. Anyone can report a concern, track a request by its reference number, verify a document, read announcements, see the officials and ask Kap.',
+  },
+  { q: 'How will I know when my request is ready?', a: 'Its status updates in My Requests, and we send a text message to your mobile number.' },
+  {
+    q: 'Is my information safe?',
+    a: 'Your details are used only to act on your request, as required by the Data Privacy Act of 2012. Residents only see their own requests, and you can hide your name from a person you report.',
+  },
+  { q: 'What if I need help using it?', a: 'Turn on Large text from the menu, or visit the barangay hall on weekdays, 8:00 AM to 5:00 PM. Staff can help you.' },
+];
+
 const PROMISES = ['No app to install', 'Works on any phone', 'Staff-verified accounts'];
 
-/** The e-Kapitan mark. The icon file has a wide white margin, so it's cropped in to read at small sizes. */
-const Logo: React.FC<{ size?: number }> = ({ size = 40 }) => (
-  <span
-    aria-hidden="true"
-    className="shrink-0 overflow-hidden rounded-control bg-surface border border-line grid place-items-center"
-    style={{ width: size, height: size }}
-  >
-    <img src="/favicon.jpg" alt="" width={size} height={size} className="scale-[1.55]" />
-  </span>
-);
+const NAV: [string, string][] = [
+  ['Features', 'features'],
+  ['For guests', 'guests'],
+  ['How it works', 'how-it-works'],
+  ['FAQ', 'faq'],
+];
 
-/** Staggered first-view entrance. Decorative, never blocks input, and off under reduced motion. */
-const rise = (delayMs: number): React.CSSProperties => ({ animationDelay: `${delayMs}ms` });
+/** Remembers where you were on the landing page, so a refresh doesn't jump to the top. */
+const SCROLL_KEY = 'ekapitan:landing-scroll';
+const readScroll = () => {
+  try {
+    return Number(sessionStorage.getItem(SCROLL_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+};
+const writeScroll = (y: number | null) => {
+  try {
+    if (y === null) sessionStorage.removeItem(SCROLL_KEY);
+    else sessionStorage.setItem(SCROLL_KEY, String(Math.round(y)));
+  } catch {
+    /* private mode: nothing to remember */
+  }
+};
 
-/** An example of what residents get: one request and its progress. Purely illustrative. */
-const ExampleRequest: React.FC = () => (
-  <div className="relative">
-    <Card padded="lg" className="shadow-float">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-caption font-semibold uppercase tracking-[0.08em] text-muted">Your request</span>
-        <span className="text-label font-semibold text-muted border border-line rounded-full px-2.5 py-0.5">Example</span>
-      </div>
-      <div className="flex flex-wrap items-start justify-between gap-2 mt-3">
-        <div>
-          <h3 className="text-h3-lg font-semibold text-navy leading-tight">Barangay Clearance</h3>
-          <p className="text-meta text-muted">REQ-2026-0819</p>
-        </div>
-        <StatusPill tone="success">Ready for pickup</StatusPill>
-      </div>
-      <ProgressTimeline
-        className="mt-5"
-        stages={[
-          { label: 'Pending', tone: 'warning', reached: true, detail: 'Monday, 9:12 AM' },
-          { label: 'Under review', tone: 'info', reached: true, detail: 'Monday, 2:40 PM' },
-          { label: 'Approved', tone: 'success', reached: true, detail: 'Tuesday, 10:05 AM' },
-          { label: 'Ready for pickup', tone: 'success', reached: true, detail: 'Tuesday, 1:30 PM' },
-        ]}
-      />
-      <p className="mt-5 rounded-control bg-primary-tint text-ink text-meta px-4 py-3">
-        Claim it on weekdays, 1:00 PM to 4:00 PM. Bring your reference number and a valid ID.
-      </p>
-    </Card>
+const useScrollMemory = () => {
+  // Restore before the first paint, so there is no visible jump.
+  useLayoutEffect(() => {
+    const prev = history.scrollRestoration;
+    history.scrollRestoration = 'manual';
+    const y = readScroll();
+    if (y) window.scrollTo(0, y);
+    let t = 0;
+    const save = () => writeScroll(window.scrollY);
+    const onScroll = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(save, 120);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('pagehide', save);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('pagehide', save);
+      history.scrollRestoration = prev;
+    };
+  }, []);
+};
 
-    {/* The text message that comes with it */}
-    <div
-      aria-hidden="true"
-      className="hidden sm:flex absolute -bottom-7 -left-3 lg:-left-10 items-center gap-3 bg-surface border border-line rounded-tile shadow-float pl-3 pr-4 py-3 animate-rise"
-      style={rise(420)}
-    >
-      <span className="w-9 h-9 rounded-full grid place-items-center bg-navy text-white">
-        <Bell className="w-[18px] h-[18px]" strokeWidth={1.8} />
-      </span>
-      <span>
-        <b className="block text-meta font-semibold text-ink leading-tight">Your clearance is ready</b>
-        <span className="text-label text-muted">SMS · just now</span>
-      </span>
-    </div>
+/** Header state: scrolled past the top, and how far down the page you are (0–1). */
+const useScrollProgress = () => {
+  const bar = useRef<HTMLSpanElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+      // Write the transform directly: no React render per scroll frame.
+      if (bar.current) bar.current.style.transform = `scaleX(${p})`;
+      setScrolled(window.scrollY > 8);
+    };
+    const on = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', on, { passive: true });
+    window.addEventListener('resize', on);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', on);
+      window.removeEventListener('resize', on);
+    };
+  }, []);
+  return { bar, scrolled };
+};
+
+const scrollToId = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+/** Section opener: small label, title, optional supporting line. */
+const SectionHeading: React.FC<{ label: string; title: string; text?: string; id: string; center?: boolean }> = ({
+  label,
+  title,
+  text,
+  id,
+  center,
+}) => (
+  <div className={`max-w-[42rem] ${center ? 'mx-auto text-center' : ''}`}>
+    <Reveal as="p" y={10} className="text-caption font-semibold uppercase tracking-[0.1em] text-muted">
+      {label}
+    </Reveal>
+    <Reveal delay={60} y={16}>
+      <h2 id={id} className="mt-3 text-[1.75rem] sm:text-[2.25rem] leading-[1.12] font-semibold text-navy tracking-[-0.015em] text-balance">
+        {title}
+      </h2>
+    </Reveal>
+    {text && (
+      <Reveal as="p" delay={120} y={10} className="mt-4 text-muted text-[1.0625rem] leading-relaxed">
+        {text}
+      </Reveal>
+    )}
   </div>
 );
 
+const Container: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
+  <div className={`max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>
+);
+
+const FooterLink: React.FC<{ onClick: () => void; children: React.ReactNode; disabled?: boolean }> = ({ onClick, children, disabled }) => (
+  <li>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="min-h-10 text-meta text-muted hover:text-navy cursor-pointer transition-colors text-left"
+    >
+      {children}
+    </button>
+  </li>
+);
+
 export const LandingPage: React.FC = () => {
-  const { setIsAuthenticated, switchUserRole } = useBarangay();
+  const { setIsAuthenticated, switchUserRole, setActiveTab } = useBarangay();
   const [busy, setBusy] = useState<Role | null>(null);
   // Arriving from the public site's Sign in / Sign up opens the dialog on that tab.
   const [auth, setAuth] = useState<AuthScreen | null>(takePendingAuthScreen);
   const closeAuth = useCallback(() => setAuth(null), []);
+  const { bar, scrolled } = useScrollProgress();
+  useScrollMemory();
 
-  const enter = (role: Role) => {
+  /** Enter the app as a role; guests can land on a specific public page. Next visit starts at the top. */
+  const go = (role: Role, tab?: string) => {
     setBusy(role);
     setTimeout(() => {
+      writeScroll(null);
       switchUserRole(role);
+      if (tab) setActiveTab(tab);
       setIsAuthenticated(true);
       setBusy(null);
     }, 500);
   };
 
-  const guestLabel = busy === 'guest' ? 'Opening…' : 'Guest mode';
+  const guestLabel = busy === 'guest' ? 'Opening…' : 'Continue as guest';
 
   return (
     <>
-      <div className="min-h-svh flex flex-col bg-canvas text-ink" inert={auth !== null}>
+      <div className="min-h-svh flex flex-col bg-surface text-ink" inert={auth !== null}>
         {/* ---------- Header ---------- */}
-        <header className="sticky top-0 z-30 bg-surface border-b border-line">
-          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-[72px] flex items-center gap-3">
-            <a href="#top" className="flex items-center gap-2.5 min-h-11 rounded-control" aria-label="e-Kapitan, back to top">
-              <Logo />
-              <span className="font-display text-xl font-bold text-navy">e-Kapitan</span>
+        <header
+          className={`sticky top-0 z-30 bg-surface border-b transition-[border-color,box-shadow] duration-200
+            ${scrolled ? 'border-hairline shadow-[0_1px_12px_rgb(18_48_79/0.06)]' : 'border-transparent'}`}
+        >
+          <Container className="h-16 sm:h-[72px] flex items-center gap-2 sm:gap-3">
+            <a href="#top" className="flex items-center gap-2.5 min-h-11 rounded-control mr-auto lg:mr-0" aria-label="eKapitan, back to top">
+              <LogoMark size={36} animate />
+              <span className="font-display text-xl font-bold text-navy">eKapitan</span>
             </a>
-            <span className="flex-1" />
-            <button
-              type="button"
-              onClick={() => enter('guest')}
-              disabled={!!busy}
-              className="hidden sm:inline-flex items-center min-h-11 px-3 rounded-control font-semibold text-navy hover:bg-surface-muted cursor-pointer transition-colors disabled:text-muted"
-            >
-              {guestLabel}
-            </button>
-            <Button variant="secondary" size="sm" onClick={() => setAuth('login')}>
-              Sign in
-            </Button>
-            <span className="hidden sm:block">
-              <Button size="sm" onClick={() => setAuth('register')}>
-                Sign up
-              </Button>
-            </span>
-          </div>
-        </header>
-
-        <main id="top" className="flex-1">
-          {/* ---------- Hero ---------- */}
-          <section className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pt-10 pb-14 sm:pt-16 lg:pt-20 lg:pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
-            <div>
-              <p
-                className="inline-flex items-center gap-2 rounded-full bg-primary-tint text-primary-strong text-caption font-semibold px-3 py-1 animate-rise"
-                style={rise(0)}
-              >
-                <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Barangay services, online
-              </p>
-              <h1
-                className="mt-4 text-[2.25rem] sm:text-[2.625rem] lg:text-hero leading-[1.1] font-bold text-navy tracking-[-0.01em] animate-rise"
-                style={rise(60)}
-              >
-                Skip the line at the barangay hall.
-              </h1>
-              <p className="mt-5 text-h3 font-normal text-muted max-w-[34rem] animate-rise" style={rise(110)}>
-                Request certificates, report concerns, book the court and send print jobs from your phone. Every request gets a
-                reference number you can track.
-              </p>
-
-              <div className="mt-8 grid sm:flex gap-3 animate-rise" style={rise(160)}>
-                <Button onClick={() => setAuth('register')}>Create an account</Button>
-                <Button variant="secondary" onClick={() => setAuth('login')}>
-                  Sign in
-                </Button>
-              </div>
-
-              <p className="mt-5 animate-rise" style={rise(200)}>
-                <span className="text-muted">Just visiting? </span>
+            <nav aria-label="Page" className="hidden lg:flex items-center gap-1 mx-auto">
+              {NAV.map(([label, id]) => (
                 <button
+                  key={id}
                   type="button"
-                  onClick={() => enter('guest')}
-                  disabled={!!busy}
-                  className="group inline-flex items-center gap-1 min-h-11 font-semibold text-primary-strong cursor-pointer disabled:text-muted"
+                  onClick={() => scrollToId(id)}
+                  className="min-h-11 px-3 rounded-control text-meta font-semibold text-muted hover:text-navy hover:bg-mist cursor-pointer transition-colors"
                 >
-                  {busy === 'guest' ? 'Opening…' : 'Continue in guest mode'}
-                  <ArrowRight
-                    className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
-                </button>
-              </p>
-
-              <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-meta text-muted animate-rise" style={rise(240)}>
-                {PROMISES.map(p => (
-                  <li key={p} className="inline-flex items-center gap-2">
-                    <Check className="w-4 h-4 text-primary" strokeWidth={2.5} aria-hidden="true" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="sm:px-6 lg:px-0 animate-rise" style={rise(140)}>
-              <ExampleRequest />
-            </div>
-          </section>
-
-          {/* ---------- Services ---------- */}
-          <section className="bg-surface border-y border-line" aria-labelledby="services-title">
-            <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-14 lg:py-20">
-              <p className="text-caption font-semibold uppercase tracking-[0.08em] text-primary-strong">What you can do</p>
-              <h2 id="services-title" className="mt-2 text-[1.5rem] sm:text-h2 leading-tight font-semibold text-navy max-w-[30rem]">
-                The services you line up for, in one place
-              </h2>
-              <ul className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                {SERVICES.map(s => (
-                  <li key={s.title} className="rounded-card border border-line bg-canvas p-5 sm:p-6">
-                    <IconTile tone={s.tone} className="mb-4">
-                      {s.icon}
-                    </IconTile>
-                    <h3 className="text-h3 font-semibold text-navy">{s.title}</h3>
-                    <p className="text-meta text-muted mt-1.5">{s.text}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          {/* ---------- How it works ---------- */}
-          <section className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-14 lg:py-20" aria-labelledby="steps-title">
-            <p className="text-caption font-semibold uppercase tracking-[0.08em] text-primary-strong">How it works</p>
-            <h2 id="steps-title" className="mt-2 text-[1.5rem] sm:text-h2 leading-tight font-semibold text-navy">
-              Three steps, no long lines
-            </h2>
-            <ol className="mt-8 grid md:grid-cols-3 gap-6 md:gap-8">
-              {STEPS.map((s, i) => (
-                <li key={s.title} className="relative flex md:block gap-4">
-                  <div className="flex md:items-center md:mb-4">
-                    <span
-                      aria-hidden="true"
-                      className="w-10 h-10 shrink-0 rounded-full grid place-items-center bg-navy text-white font-display font-semibold"
-                    >
-                      {i + 1}
-                    </span>
-                    {i < STEPS.length - 1 && <span aria-hidden="true" className="hidden md:block flex-1 ml-4 border-t-2 border-dashed border-line" />}
-                  </div>
-                  <div>
-                    <h3 className="text-h3 font-semibold text-navy">{s.title}</h3>
-                    <p className="text-meta text-muted mt-1">{s.text}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {/* ---------- Closing call to action ---------- */}
-          <section className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 pb-14 lg:pb-20">
-            <div className="bg-navy text-white rounded-banner px-6 py-10 sm:px-10 sm:py-12 grid lg:grid-cols-[1fr_auto] gap-8 items-center">
-              <div>
-                <h2 className="text-[1.5rem] sm:text-h2 leading-tight font-semibold text-white">Ready when you are</h2>
-                <p className="text-on-navy mt-2 max-w-[36rem]">
-                  Sign up in about five minutes. Once staff verify your account, you can send your first request.
-                </p>
-              </div>
-              <div className="grid sm:flex gap-3">
-                <Button variant="accent" onClick={() => setAuth('register')}>
-                  Create an account
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => enter('guest')}
-                  disabled={!!busy}
-                  className="inline-flex items-center justify-center min-h-12 px-6 rounded-control border-2 border-white/80 text-white font-semibold
-                    hover:bg-white/10 cursor-pointer transition-[background-color,transform] duration-150 ease-out-strong active:scale-[0.97]"
-                >
-                  {busy === 'guest' ? 'Opening…' : 'Continue as guest'}
-                </button>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        {/* ---------- Footer ---------- */}
-        <footer className="bg-surface border-t border-line">
-          <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-8 grid gap-6 sm:flex sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2.5">
-              <Logo size={32} />
-              <div>
-                <b className="block font-display font-bold text-navy leading-tight">e-Kapitan</b>
-                <span className="text-caption text-muted">Barangay services, online</span>
-              </div>
-            </div>
-            <nav aria-label="Footer" className="flex flex-wrap gap-x-2 gap-y-1 -mx-3">
-              {[
-                { label: 'Sign in', onClick: () => setAuth('login') },
-                { label: 'Sign up', onClick: () => setAuth('register') },
-                { label: guestLabel, onClick: () => enter('guest') },
-              ].map(l => (
-                <button
-                  key={l.label}
-                  type="button"
-                  onClick={l.onClick}
-                  disabled={!!busy}
-                  className="min-h-11 px-3 rounded-control text-meta font-semibold text-navy hover:bg-surface-muted cursor-pointer transition-colors"
-                >
-                  {l.label}
+                  {label}
                 </button>
               ))}
             </nav>
-          </div>
-          <div className="border-t border-line-soft">
-            <p className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-4 text-caption text-muted">
-              © {new Date().getFullYear()} e-Kapitan
-            </p>
+            <button
+              type="button"
+              onClick={() => go('guest')}
+              disabled={!!busy}
+              className="hidden xl:inline-flex items-center min-h-11 px-3 rounded-control text-meta font-semibold text-navy hover:bg-mist cursor-pointer
+                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.97] disabled:text-muted"
+            >
+              {guestLabel}
+            </button>
+            <Button variant="outline" size="sm" onClick={() => setAuth('login')}>
+              Sign in
+            </Button>
+            <Button variant="brand" size="sm" onClick={() => setAuth('register')}>
+              Sign up
+            </Button>
+          </Container>
+          {/* Reading progress */}
+          <span aria-hidden="true" className="absolute left-0 right-0 -bottom-px h-0.5 overflow-hidden">
+            <span ref={bar} className="block h-full bg-navy origin-left" style={{ transform: 'scaleX(0)' }} />
+          </span>
+        </header>
+
+        <main id="top" className="flex-1">
+          {/* ---------- Hero: the promise + a glimpse of everything ---------- */}
+          <section className="relative" aria-label="Introduction">
+          <Container className="min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-72px)] py-10 sm:py-14 lg:pt-10 lg:pb-20 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] content-center gap-10 lg:gap-12 items-center">
+            <div className="min-w-0">
+              <Reveal y={0} rootMargin="0px">
+                <h1 className="text-[2.5rem] sm:text-[3.25rem] lg:text-[3.375rem] xl:text-[3.75rem] leading-[1.06] lg:whitespace-nowrap font-bold text-navy tracking-[-0.02em]">
+                  <span className="block overflow-hidden pb-1">
+                    <span className="reveal-line">Your barangay,</span>
+                  </span>
+                  <span className="block overflow-hidden pb-1">
+                    <span className="reveal-line text-muted" style={{ '--line-delay': '110ms' } as React.CSSProperties}>
+                      a tap away.
+                    </span>
+                  </span>
+                </h1>
+              </Reveal>
+              <Reveal as="p" delay={180} y={12} rootMargin="0px" className="mt-6 text-[1.125rem] sm:text-[1.25rem] leading-relaxed text-muted max-w-[32rem]">
+                eKapitan brings the barangay hall to your phone. Request certificates, report concerns, book the court, send print jobs
+                and ask questions, then follow every request until it is ready.
+              </Reveal>
+
+              <Reveal delay={260} y={10} rootMargin="0px" className="mt-9 grid sm:flex gap-3">
+                <Button variant="brand" onClick={() => setAuth('register')}>
+                  Sign up
+                </Button>
+                <Button variant="outline" onClick={() => setAuth('login')}>
+                  Sign in
+                </Button>
+              </Reveal>
+
+              <Reveal as="p" delay={320} y={8} rootMargin="0px" className="mt-5 text-meta">
+                <span className="text-muted">Not a resident? </span>
+                <button
+                  type="button"
+                  onClick={() => go('guest')}
+                  disabled={!!busy}
+                  className="group inline-flex items-center gap-1 min-h-11 font-semibold text-navy underline-offset-4 hover:underline cursor-pointer disabled:text-muted"
+                >
+                  {guestLabel}
+                  <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" aria-hidden="true" />
+                </button>
+              </Reveal>
+
+              <ul className="mt-8 pt-6 border-t border-hairline flex flex-wrap gap-x-6 gap-y-2 text-meta text-muted">
+                {PROMISES.map((p, i) => (
+                  <Reveal as="li" key={p} delay={380 + i * 50} y={6} rootMargin="0px" className="inline-flex items-center gap-2">
+                    <Check className="w-4 h-4 text-navy" strokeWidth={2.5} aria-hidden="true" />
+                    {p}
+                  </Reveal>
+                ))}
+              </ul>
+            </div>
+
+            <div className="min-w-0">
+              <HeroCollage />
+            </div>
+          </Container>
+
+          {/* Scroll cue: only where the hero fits one screen */}
+          <button
+            type="button"
+            onClick={() => scrollToId('features')}
+            className="hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-1 min-h-11 px-3 text-label font-semibold text-muted hover:text-navy cursor-pointer transition-colors animate-fade [animation-delay:1200ms]"
+          >
+            Scroll to explore
+            <ChevronDown className="w-4 h-4 nudge" aria-hidden="true" />
+          </button>
+          </section>
+
+          {/* ---------- Feature tour ---------- */}
+          <section id="features" className="scroll-mt-20 border-t border-hairline" aria-labelledby="features-title">
+            <Container className="pt-16 lg:pt-24 pb-6 lg:pb-10">
+              <SectionHeading
+                label="Features"
+                title="Everything the barangay hall does, now on your phone"
+                text="Here is what you can do with an eKapitan account, and what barangay staff see on the other side."
+                id="features-title"
+              />
+              <div className="mt-6 lg:mt-0">
+                <FeatureTour />
+              </div>
+            </Container>
+          </section>
+
+          {/* ---------- For guests ---------- */}
+          <section id="guests" className="bg-mist scroll-mt-20" aria-labelledby="guests-title">
+            <Container className="py-16 lg:py-24">
+              <SectionHeading
+                label="No account needed"
+                title="Not a resident? You can still get things done"
+                text="Visitors, workers and anyone in the barangay can use these right away, without signing up."
+                id="guests-title"
+              />
+              <ul className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+                {GUEST_ACTIONS.map((g, i) => {
+                  const Icon = g.icon;
+                  return (
+                    <Reveal as="li" key={g.title} delay={[0, 70, 120, 160, 190, 210][i]} y={22}>
+                      <button
+                        type="button"
+                        onClick={() => go('guest', g.tab)}
+                        disabled={!!busy}
+                        className="group w-full h-full text-left bg-surface border border-hairline rounded-card p-6 cursor-pointer
+                          transition-[translate,box-shadow,border-color] duration-200 ease-out-strong
+                          hover:-translate-y-1 hover:shadow-float hover:border-navy/25 active:scale-[0.99]"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="w-11 h-11 rounded-tile grid place-items-center bg-navy-tint text-navy mb-5 transition-[background-color,color,rotate] duration-200 ease-out-strong
+                            group-hover:bg-navy group-hover:text-white group-hover:-rotate-3"
+                        >
+                          <Icon className="w-5 h-5" strokeWidth={1.8} />
+                        </span>
+                        <b className="block font-display text-h3 font-semibold text-navy">{g.title}</b>
+                        <span className="block text-meta text-muted mt-2">{g.text}</span>
+                        <span className="mt-4 inline-flex items-center gap-1 text-meta font-semibold text-navy">
+                          {g.link}
+                          <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-1" aria-hidden="true" />
+                        </span>
+                      </button>
+                    </Reveal>
+                  );
+                })}
+              </ul>
+            </Container>
+          </section>
+
+          {/* ---------- Built for everyone ---------- */}
+          <section aria-labelledby="built-title">
+            <Container className="py-16 lg:py-24">
+              <SectionHeading
+                label="Built for everyone"
+                title="Simple enough for every resident, careful with every record"
+                id="built-title"
+              />
+              <ul className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-9">
+                {BUILT_FOR.map((b, i) => {
+                  const Icon = b.icon;
+                  return (
+                    <Reveal as="li" key={b.title} delay={(i % 3) * 80} y={16} className="flex gap-4">
+                      <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center border-2 border-navy/15 text-navy">
+                        <Icon className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+                      </span>
+                      <span>
+                        <b className="block font-display text-h3 font-semibold text-navy">{b.title}</b>
+                        <span className="block text-meta text-muted mt-1.5">{b.text}</span>
+                      </span>
+                    </Reveal>
+                  );
+                })}
+              </ul>
+            </Container>
+          </section>
+
+          {/* ---------- How it works ---------- */}
+          <section id="how-it-works" className="bg-mist scroll-mt-20" aria-labelledby="steps-title">
+            <Container className="py-16 lg:py-24">
+              <SectionHeading label="How it works" title="Three steps, no long lines" id="steps-title" />
+              <ol className="mt-10 grid md:grid-cols-3 gap-8">
+                {STEPS.map((s, i) => (
+                  <Reveal as="li" key={s.title} delay={i * 140} y={16} className="relative group/step">
+                    <div className="flex items-center mb-5">
+                      {/* The number fills navy as the step arrives */}
+                      <span
+                        aria-hidden="true"
+                        className="w-11 h-11 shrink-0 rounded-full grid place-items-center border-2 border-navy text-navy bg-surface font-display font-semibold
+                          transition-colors duration-500 ease-out-strong group-data-[shown=true]/step:bg-navy group-data-[shown=true]/step:text-white"
+                        style={{ transitionDelay: `${i * 140 + 200}ms` }}
+                      >
+                        {i + 1}
+                      </span>
+                      {/* Connector draws toward the next step; it un-draws when you scroll back past it */}
+                      {i < STEPS.length - 1 && <span aria-hidden="true" className="hidden md:block flex-1 h-px ml-4 bg-navy/25 reveal-draw" />}
+                    </div>
+                    <h3 className="text-h3 font-semibold text-navy">{s.title}</h3>
+                    <p className="text-meta text-muted mt-2 max-w-[20rem]">{s.text}</p>
+                  </Reveal>
+                ))}
+              </ol>
+            </Container>
+          </section>
+
+          {/* ---------- FAQ ---------- */}
+          <section id="faq" className="scroll-mt-20" aria-labelledby="faq-title">
+            <Container className="py-16 lg:py-24 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16 items-start">
+              <SectionHeading label="Questions" title="Good to know before you start" id="faq-title" />
+              <div className="border-t border-hairline">
+                {FAQS.map((f, i) => (
+                  <Reveal key={f.q} delay={i * 50} y={10}>
+                    <details className="group border-b border-hairline">
+                      <summary className="flex items-center justify-between gap-4 min-h-14 py-4 cursor-pointer list-none font-semibold text-navy [&::-webkit-details-marker]:hidden">
+                        {f.q}
+                        <span className="w-8 h-8 shrink-0 rounded-full grid place-items-center bg-mist text-navy transition-[rotate,background-color] duration-200 ease-out-strong group-open:rotate-180 group-hover:bg-navy-tint">
+                          <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                        </span>
+                      </summary>
+                      <p className="text-meta text-muted pb-5 pr-12 leading-relaxed">{f.a}</p>
+                    </details>
+                  </Reveal>
+                ))}
+              </div>
+            </Container>
+          </section>
+
+          {/* ---------- Closing call to action ---------- */}
+          <Container className="pb-16 lg:pb-24">
+            <Reveal y={28} className="bg-navy text-white rounded-banner px-6 py-12 sm:px-12 sm:py-14 text-center">
+              <h2 className="text-[1.625rem] sm:text-[2rem] leading-tight font-semibold text-white tracking-[-0.01em]">{TAGLINE}</h2>
+              <p className="text-on-navy mt-3 max-w-[32rem] mx-auto">
+                Signing up takes about five minutes. Once staff verify your account, you can send your first request.
+              </p>
+              <div className="mt-8 grid sm:flex justify-center gap-3 max-w-[22rem] sm:max-w-none mx-auto">
+                <Button variant="inverse" onClick={() => setAuth('register')}>
+                  Sign up
+                </Button>
+                <Button variant="inverse-outline" onClick={() => go('guest')} disabled={!!busy}>
+                  {guestLabel}
+                </Button>
+              </div>
+            </Reveal>
+          </Container>
+        </main>
+
+        {/* ---------- Footer ---------- */}
+        <footer className="border-t border-hairline">
+          <Container className="py-12 grid gap-x-6 gap-y-10 grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+            <Reveal y={12} className="col-span-2 lg:col-span-1 max-w-[22rem]">
+              <div className="flex items-center gap-2.5">
+                <LogoMark size={32} />
+                <span className="font-display text-lg font-bold text-navy">eKapitan</span>
+              </div>
+              <p className="mt-4 font-semibold text-navy">{TAGLINE}</p>
+              <p className="mt-1 text-meta text-muted">
+                Request documents, report concerns and book barangay facilities online, then pick everything up at the hall.
+              </p>
+            </Reveal>
+            <Reveal delay={60} y={12}>
+              <nav aria-labelledby="footer-start">
+                <h2 id="footer-start" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
+                  Get started
+                </h2>
+                <ul className="mt-3 grid">
+                  <FooterLink onClick={() => setAuth('register')}>Sign up</FooterLink>
+                  <FooterLink onClick={() => setAuth('login')}>Sign in</FooterLink>
+                  <FooterLink onClick={() => go('guest')} disabled={!!busy}>
+                    {guestLabel}
+                  </FooterLink>
+                </ul>
+              </nav>
+            </Reveal>
+            <Reveal delay={110} y={12}>
+              <nav aria-labelledby="footer-guest">
+                <h2 id="footer-guest" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
+                  No account needed
+                </h2>
+                <ul className="mt-3 grid">
+                  {GUEST_ACTIONS.slice(0, 4).map(g => (
+                    <FooterLink key={g.tab} onClick={() => go('guest', g.tab)} disabled={!!busy}>
+                      {g.title}
+                    </FooterLink>
+                  ))}
+                </ul>
+              </nav>
+            </Reveal>
+            <Reveal delay={150} y={12}>
+              <nav aria-labelledby="footer-page">
+                <h2 id="footer-page" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
+                  On this page
+                </h2>
+                <ul className="mt-3 grid">
+                  {NAV.map(([label, id]) => (
+                    <FooterLink key={id} onClick={() => scrollToId(id)}>
+                      {label}
+                    </FooterLink>
+                  ))}
+                </ul>
+              </nav>
+            </Reveal>
+          </Container>
+          <div className="border-t border-hairline">
+            <Container className="py-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-caption text-muted">© {new Date().getFullYear()} eKapitan. Barangay services for the community.</p>
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="group inline-flex items-center gap-1.5 min-h-11 text-caption font-semibold text-muted hover:text-navy cursor-pointer transition-colors"
+              >
+                <ArrowUp className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:-translate-y-0.5" aria-hidden="true" /> Back to top
+              </button>
+            </Container>
           </div>
         </footer>
       </div>
 
-      <AuthDialog screen={auth} onScreenChange={setAuth} onClose={closeAuth} onEnter={enter} busy={busy} />
+      <AuthDialog screen={auth} onScreenChange={setAuth} onClose={closeAuth} onEnter={go} busy={busy} />
     </>
   );
 };

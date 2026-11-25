@@ -1,4 +1,4 @@
-# e-Kapitan: Prototype Presentation Guide (Proposal Defense)
+# eKapitan: Prototype Presentation Guide (Proposal Defense)
 
 The best way to present a system with multiple user types to a thesis panel is through a **"Scenario-Driven"** approach. Instead of randomly clicking through buttons, you should tell a story that connects all three users: the **Citizen**, the **Staff**, and the **Official**.
 
@@ -10,7 +10,7 @@ Here is a step-by-step script and flow for your live demonstration.
 **Goal:** Set the stage and explain *how* you will demonstrate the system.
 
 1. **System Overview:** 
-   * *"Respected panelists, we present e-Kapitan, our Citizen Service & Digital Local Governance Portal."*
+   * *"Respected panelists, we present eKapitan, our Citizen Service & Digital Local Governance Portal."*
 2. **Explain the Interface:** 
    * Point out the **Header** and the **Role Switcher** at the top. 
    * *"To effectively demonstrate the system's capabilities, we have built a Role Switcher into our prototype. This allows us to show you the exact views of our three target users without needing to constantly log in and out during this presentation."*

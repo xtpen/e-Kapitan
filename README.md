@@ -1,60 +1,164 @@
-# e-Kapitan
+# eKapitan
 
-Barangay information management and citizen service platform for **Barangay Sto. Angel, San Pablo City, Laguna** (thesis project, Laguna College).
+**Your barangay, a tap away.** eKapitan is a web platform that lets residents request barangay documents, report concerns, book the court and send print jobs from their phone, and gives barangay staff one place to process it all.
 
-Residents request documents, book the court, send print jobs and file reports online. Guests use a public website to report concerns and track requests. Barangay staff process everything from an admin portal. See [`docs/PRODUCT.md`](docs/PRODUCT.md) for who it's for and the product rules.
+It is a thesis project (Laguna College, San Pablo City) built for a single-barangay pilot in **Barangay Sto. Angel, San Pablo City, Laguna**. The current build is a **working prototype**: the full interface runs in the browser on sample data, and the backend is used only for the AI assistant.
 
-## Run it locally
+> New to the project? Read [`docs/PRODUCT.md`](docs/PRODUCT.md) (who it's for and the product rules), then [`docs/DESIGN.md`](docs/DESIGN.md) before touching any screen.
 
-You need Node.js 20 or newer.
+---
+
+## What's in it
+
+| Who | What they can do |
+|---|---|
+| **Everyone** (landing page) | Learn what eKapitan does, sign in, sign up, or continue as a guest. |
+| **Guests** (public website) | Report a concern and track it, track any request by reference number, read announcements, see the barangay officials, verify that a printed barangay document is genuine, ask Ka-Barangay AI. |
+| **Residents** | Request documents (clearance, residency, indigency, …), file complaints and reports, send print jobs (free), reserve the court, follow every request in one list, get notifications, manage their profile. |
+| **Administrators** | Overview dashboard, process document requests, complaints, printing and court reservations, manage residents and personnel. |
+| **Staff / Officials** (legacy) | The original operations, queue, blotter, treasury and executive screens. These still use the old design and are being folded into the Admin portal. |
+
+Built for senior citizens on budget Android phones: 16px body text, a **Large text** switch that scales the whole app, touch targets of at least 44px, and colors chosen for WCAG 2.1 AA contrast.
+
+## Quick start
+
+**You need:** [Node.js](https://nodejs.org) 20 or newer (npm comes with it).
 
 ```bash
-npm run install:all     # installs frontend and backend packages
-npm run dev:backend     # API on http://localhost:3000 (Ka-Barangay AI)
-npm run dev:frontend    # app on http://localhost:5173 (proxies /api to the backend)
+git clone https://github.com/xtpen/e-Kapitan.git
+cd e-Kapitan
+npm run install:all
 ```
 
-The AI assistant needs a Gemini key: copy `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY`. Without it, Kap falls back to a fixed answer.
+Then start the two servers, each in its own terminal:
 
-Other scripts: `npm run typecheck`, `npm run build` (frontend + backend), `npm start` (serves the built app from the backend).
+```bash
+npm run dev:backend     # API on http://localhost:3000
+npm run dev:frontend    # app on http://localhost:5173
+```
 
-### Demo logins (prototype only, passwords aren't checked)
+Open **http://localhost:5173**. The frontend forwards every `/api` request to the backend, so keep both running.
 
-| Type in "Email or mobile" | Opens |
+### Ka-Barangay AI (optional)
+
+The AI assistant works without any setup: it answers from a built-in knowledge base. To get Gemini answers instead, create `backend/.env` from the example and add your key:
+
+```bash
+cp backend/.env.example backend/.env    # on Windows PowerShell: Copy-Item backend/.env.example backend/.env
+```
+
+```env
+GEMINI_API_KEY="your-key-here"
+```
+
+Restart the backend after changing `.env`. Never commit `.env`; it is already in `.gitignore`.
+
+## Demo sign-in
+
+Passwords are not checked in the prototype. Type anything with 1+ characters.
+
+| In "Email or mobile number", enter… | You get |
 |---|---|
-| any email or `09…` mobile | Resident portal |
-| an email containing `admin` | Admin portal (redesigned) |
-| an email containing `staff` / `captain` or `official` | Old Staff / Official screens |
-| "Continue as guest" | Public website |
+| any email, or an 11-digit mobile number starting with `09` | **Resident** portal (signed in as Maria) |
+| an email containing `admin` (e.g. `admin@demo.test`) | **Admin** portal |
+| an email containing `staff` | Legacy **Staff** screens |
+| an email containing `captain` or `official` | Legacy **Official** screens |
+| **Continue as guest** | Public website, no sign-in |
 
-## Project layout
+"Forgot password?" accepts any 6-digit code. Signing up shows the "waiting for verification" message; it does not sign you in.
+
+Everything you create (requests, reports, bookings) lives in browser memory and **resets when you reload the page**.
+
+## Scripts
+
+Run these from the project root.
+
+| Command | What it does |
+|---|---|
+| `npm run install:all` | Installs frontend and backend packages. |
+| `npm run dev:frontend` | Starts the app with hot reload on port 5173. |
+| `npm run dev:backend` | Starts the API on port 3000. |
+| `npm run typecheck` | Type-checks the frontend. Should report 0 errors. |
+| `npm run build` | Production build of the frontend (`frontend/dist`) and backend (`backend/dist`). |
+| `npm start` | Runs the built backend, which also serves the built app. Run `npm run build` first. |
+
+### Run the production build
+
+```bash
+npm run build
+npm start               # app and API together on http://localhost:3000
+```
+
+One server serves everything: the app, its files (cached for a year, since their names change on every build) and the `/api` routes. Set `PORT` to use another port; hosts such as Cloud Run set it for you. To try only the built frontend, use `npm --prefix frontend run preview` (http://localhost:4173).
+
+## Tech stack
+
+| Part | Uses |
+|---|---|
+| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS v4, lucide-react icons, Motion (animations) |
+| Backend | Node.js, Express, Google Gen AI SDK (Gemini), dotenv |
+| Design | Custom design system (tokens in `frontend/src/index.css`, primitives in `components/ui`), Inter + Poppins |
+
+## How it's put together
+
+- **One app, five roles.** `App.tsx` picks a layout for the signed-in role: the public website for guests, `AppShell` for residents and admins, and the old header layout for the legacy roles. Navigation is by tab state, not URLs, so the address bar doesn't change between screens.
+- **State lives in the browser.** `context/BarangayContext.tsx` holds all records and actions, seeded from `data/mockData.ts`. There is no database yet.
+- **The backend is small.** `backend/server.ts` serves `/api/health` and `/api/ai-assistant` (Gemini with a built-in fallback). Once built, the same server also serves the app.
+- **Screens load on demand.** Each area (public, resident, admin, legacy) is its own download, so a guest on a phone never downloads admin code.
+
+## Project structure
 
 ```
-docs/                     Design system, product brief, open questions, thesis context, demo script
-frontend/                 React 19 + Vite + Tailwind CSS v4
-  src/
-    App.tsx               Picks the shell for the signed-in role and routes tabs to screens
-    config/barangay.ts    Barangay name, city, office hours (change them here only)
-    context/              BarangayContext: app state and actions (mock data, no real backend yet)
-    data/                 mockData.ts (sample records) and reference.ts (puroks, concern types)
-    types.ts              Shared data types
-    index.css             Design tokens (colors, type scale, radii), see docs/DESIGN.md
-    components/
-      ui/                 Design-system primitives (Button, Card, Field, DataTable, …)
-      layout/             Shells and app chrome: AppShell, PublicShell, toasts, page skeleton
-      shared/             Used by more than one role: Officials, Ka-Barangay AI, Verify, certificate
-      auth/               Login and registration
-      public/             Guest website pages
-      resident/           Resident portal screens
-      admin/              Admin portal screens
-      staff/, official/   Legacy screens for the old Staff and Official roles (old design)
-backend/                  Express server: /api/ai-assistant (Gemini) and serving the built app
+e-Kapitan/
+├── docs/                     Product brief, design system, open questions, thesis context, demo script
+├── frontend/
+│   ├── public/               favicon.svg (the eKapitan mark; same shape as ui/Logo.tsx)
+│   ├── src/
+│   │   ├── App.tsx           Role → layout, tab → screen, lazy-loaded screens
+│   │   ├── config/           barangay.ts: barangay name, city, province (change them only here)
+│   │   ├── context/          BarangayContext: app state and actions
+│   │   ├── data/             mockData.ts (sample records), reference.ts (puroks, concern types)
+│   │   ├── types.ts          Shared data types
+│   │   ├── index.css         Design tokens, motion curves, mobile base styles
+│   │   └── components/
+│   │       ├── ui/           Design-system primitives: Button, Card, Field, DataTable, Calendar, …
+│   │       ├── layout/       AppShell, PublicShell, toasts, page skeleton, legacy header
+│   │       ├── auth/         Landing page and the Sign in / Sign up dialog
+│   │       ├── public/       Guest website pages
+│   │       ├── resident/     Resident portal screens
+│   │       ├── admin/        Admin portal screens
+│   │       ├── shared/       Used by several roles: Officials, Ka-Barangay AI, Verify, certificate
+│   │       └── staff/, official/   Legacy screens (old design)
+│   └── vite.config.ts        Dev proxy to the backend, code-splitting groups
+├── backend/
+│   ├── server.ts             Express API and AI knowledge base
+│   └── .env.example          Copy to .env for the Gemini key
+└── package.json              Root scripts for both apps
 ```
 
-## Working on the UI
+## Working on it
 
-Read [`docs/DESIGN.md`](docs/DESIGN.md) before changing any screen, and use the primitives in `components/ui`.
+- **Design first.** Every screen follows [`docs/DESIGN.md`](docs/DESIGN.md): use the token classes (`bg-navy`, `text-muted`, …) and the primitives in `components/ui`. Don't add colors, fonts or one-off components.
+- **Adding a screen:** build it in the right `components/<area>/` folder, then register it in `App.tsx` with `lazyNamed(() => import('./components/<area>/<File>'), '<Export>')`, not a normal import, and add a `case` for its tab id. Startup files (shells, nav configs, context) stay as normal imports.
+- **Barangay details** (name, city, province) live only in `frontend/src/config/barangay.ts`. Puroks and concern types are in `frontend/src/data/reference.ts`.
+- **Before a pull request:** run `npm run typecheck` and `npm --prefix frontend run build`, and check your screen at phone width (390px). One screen or feature per branch; pull requests go into `main`.
+- **Unsure or waiting on the barangay?** Add it to [`docs/REDESIGN_NOTES.md`](docs/REDESIGN_NOTES.md).
 
-**Adding a screen:** register it in `App.tsx` with `lazyNamed(() => import('./components/<area>/<File>'), '<Export>')`, not a normal import. Screens load on demand in one chunk per area (`manualChunks` in `frontend/vite.config.ts`), so guests never download admin or staff code. Keep startup files (shells, nav configs, context) as normal imports. Open questions and placeholders waiting on the barangay are tracked in [`docs/REDESIGN_NOTES.md`](docs/REDESIGN_NOTES.md).
+## Known issues
 
-Other docs: [`docs/project-context.md`](docs/project-context.md) (thesis background) and [`docs/presentation-guide.md`](docs/presentation-guide.md) (demo script).
+- **The AI knowledge base describes a different barangay.** The built-in text in `backend/server.ts` (used when there is no Gemini key, and given to Gemini as context) names "Barangay San Jose, Pasig City" and its hotlines. Replace it with Sto. Angel's real details.
+- **Some sample data still says "Barangay 4A"** (older mock records, verification codes `VER-B4A-…`, legacy screens).
+- **No real accounts or database.** Sign-in is simulated and nothing is saved between reloads. SMS notifications are not built.
+- **[`docs/presentation-guide.md`](docs/presentation-guide.md) describes the old "Role Switcher"**, which no longer exists. Use the demo sign-ins above instead.
+
+The full list of open questions is in [`docs/REDESIGN_NOTES.md`](docs/REDESIGN_NOTES.md).
+
+## Documentation
+
+| Document | Read it for |
+|---|---|
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Users, purpose, product rules |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Design system: tokens, components, layouts, motion, accessibility, redesign status |
+| [`docs/REDESIGN_NOTES.md`](docs/REDESIGN_NOTES.md) | Open questions, placeholders and follow-ups |
+| [`docs/project-context.md`](docs/project-context.md) | Thesis background and scope |
+| [`docs/presentation-guide.md`](docs/presentation-guide.md) | Demo script for the defense (partly outdated) |

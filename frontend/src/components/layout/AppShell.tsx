@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, LogOut, Menu, Type, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button, initialsOf } from '../ui';
+import { Button, LogoMark, initialsOf } from '../ui';
 import { BARANGAY } from '../../config/barangay';
 
 /*
@@ -31,7 +31,7 @@ export interface AppShellProps {
   /** Tab opened by the notification bell. */
   notificationsTab?: string;
   unreadCount?: number;
-  /** Phone header text, e.g. { title: 'e-Kapitan Admin', subtitle: 'Administrator portal' }. */
+  /** Phone header text, e.g. { title: 'eKapitan Admin', subtitle: 'Administrator portal' }. */
   mobileBrand?: { title: string; subtitle: string };
   children: React.ReactNode;
 }
@@ -42,14 +42,9 @@ export const OPEN_MENU = '__menu';
 const isActive = (item: NavItem, activeTab: string) =>
   item.id === activeTab || (item.alsoActiveFor?.includes(activeTab) ?? false);
 
+/** The eKapitan mark (ui/Logo). Inverse = white tile for the navy phone header. */
 const LogoDisc: React.FC<{ size?: 'lg' | 'sm'; inverse?: boolean }> = ({ size = 'lg', inverse }) => (
-  <div
-    aria-hidden="true"
-    className={`${size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'} rounded-full grid place-items-center shrink-0 font-display font-bold
-      ${inverse ? 'bg-surface text-navy' : 'bg-navy text-gold'}`}
-  >
-    SA
-  </div>
+  <LogoMark size={size === 'lg' ? 44 : 40} tone={inverse ? 'white' : 'navy'} />
 );
 
 const SidebarNav: React.FC<{ groups: NavGroup[]; activeTab: string; onSelect: (id: string) => void }> = ({
@@ -143,7 +138,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
         >
           <LogoDisc />
           <span>
-            <b className="block font-display text-xl leading-tight font-bold text-navy">e-Kapitan</b>
+            <b className="block font-display text-xl leading-tight font-bold text-navy">eKapitan</b>
             <span className="text-caption text-muted">Barangay {BARANGAY}, San Pablo City</span>
           </span>
         </button>
@@ -209,7 +204,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
       <header className="md:hidden sticky top-0 z-40 h-[68px] bg-navy text-white flex items-center gap-2.5 px-4">
         <LogoDisc size="sm" inverse />
         <div className="flex-1 min-w-0">
-          <b className="block leading-tight">{mobileBrand?.title ?? 'e-Kapitan'}</b>
+          <b className="block leading-tight">{mobileBrand?.title ?? 'eKapitan'}</b>
           <div className="text-label truncate">{mobileBrand?.subtitle ?? `Brgy. ${BARANGAY}, San Pablo City`}</div>
         </div>
         {notificationsTab && (
@@ -325,7 +320,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
             <div className="absolute inset-0 bg-navy/50" onClick={() => setConfirmSignOut(false)} />
             <div className="relative w-full max-w-sm bg-surface border border-line rounded-card shadow-float p-6 sm:p-8">
               <h2 id="signout-title" className="text-h3-lg font-semibold text-navy">Sign out?</h2>
-              <p className="text-meta text-muted mt-2">You will need to log in again to use barangay services.</p>
+              <p className="text-meta text-muted mt-2">You will need to sign in again to use barangay services.</p>
               <div className="grid grid-cols-2 gap-2.5 mt-6">
                 <Button variant="secondary" onClick={() => setConfirmSignOut(false)} autoFocus>
                   Cancel

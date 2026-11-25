@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CircleDot, FileText, Landmark, MessageSquareText, Printer, TriangleAlert } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { Official } from '../../types';
-import { Button, Card, Field, IconTile, Input, StatusPill, TextLink, type IconTileTone, initialsOf } from '../ui';
+import { Button, Card, Field, IconTile, Input, Reveal, StatusPill, TextLink, type IconTileTone, initialsOf } from '../ui';
 import { BARANGAY } from '../../config/barangay';
 import { announcementTone, longAnnouncementDate, sortAnnouncements } from './announcements';
 import { scrollToSection, setPendingAuthScreen, setPendingReference, takePendingSection } from './publicNav';
@@ -132,7 +132,7 @@ export const PublicHomepage: React.FC = () => {
           <h1 className="text-h2 leading-tight font-bold text-navy">Barangay services, now online</h1>
           <p className="text-meta text-muted mt-2 mb-3.5">Request certificates, file reports and book the court from your phone.</p>
           <Button fullWidth onClick={toLogin}>
-            Request a Document
+            Request a document
           </Button>
         </section>
 
@@ -178,7 +178,7 @@ export const PublicHomepage: React.FC = () => {
           className="fixed right-4 bottom-[84px] z-30 h-13 px-[18px] rounded-full bg-navy text-white font-semibold shadow-float inline-flex items-center gap-2 cursor-pointer"
         >
           <MessageSquareText className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
-          Chat with Kap
+          Ask Kap
         </button>
       </div>
 
@@ -236,8 +236,9 @@ export const PublicHomepage: React.FC = () => {
         {/* Services, overlapping the hero */}
         <section id="services" aria-label="Our services" className="max-w-[1200px] mx-auto px-6 lg:px-10 -mt-18 scroll-mt-28">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
-            {services.map(s => (
-              <Card key={s.title} className="shadow-float flex flex-col items-start">
+            {services.map((s, i) => (
+              <Reveal key={s.title} delay={[0, 70, 120, 160, 190, 210][i]} y={20} rootMargin="0px">
+              <Card className="shadow-float flex flex-col items-start h-full">
                 <IconTile tone={s.tone} className="mb-3.5">
                   {s.icon}
                 </IconTile>
@@ -247,6 +248,7 @@ export const PublicHomepage: React.FC = () => {
                   {s.link}
                 </TextLink>
               </Card>
+              </Reveal>
             ))}
           </div>
           <p className="text-meta text-muted mt-4">
@@ -259,20 +261,22 @@ export const PublicHomepage: React.FC = () => {
           <section className="max-w-[1200px] mx-auto px-6 lg:px-10 pt-16 lg:pt-18" aria-label="Latest announcements">
             {sectionHead('News', 'Latest announcements', 'View all', () => setActiveTab('guest_announcements'))}
             <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 items-start">
+              <Reveal y={20}>
               <Card padded="lg">
                 <StatusPill tone={announcementTone(featured)}>{featured.category}</StatusPill>
                 <h3 className="text-[1.375rem] lg:text-h2 leading-tight font-semibold text-navy mt-3.5 mb-2">{featured.title}</h3>
                 <p className="text-meta text-muted line-clamp-4 whitespace-pre-line">{featured.content}</p>
                 <p className="text-meta text-muted mt-4">{longAnnouncementDate(featured.date)}</p>
               </Card>
+              </Reveal>
               <ul className="grid gap-5">
-                {others.slice(0, 3).map(a => (
-                  <li key={a.id}>
+                {others.slice(0, 3).map((a, i) => (
+                  <Reveal as="li" key={a.id} delay={80 + i * 60} y={16}>
                     <Card>
                       <span className="text-meta text-muted">{longAnnouncementDate(a.date)}</span>
                       <h3 className="text-h3 font-semibold text-navy">{a.title}</h3>
                     </Card>
-                  </li>
+                  </Reveal>
                 ))}
               </ul>
             </div>
@@ -284,8 +288,8 @@ export const PublicHomepage: React.FC = () => {
           <section className="max-w-[1200px] mx-auto px-6 lg:px-10 pt-16 lg:pt-18" aria-label="Barangay officials">
             {sectionHead('Your leaders', 'Barangay officials', 'Meet all officials', () => setActiveTab('officials_directory'))}
             <ul className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-              {leaders.map(o => (
-                <li key={o.id}>
+              {leaders.map((o, i) => (
+                <Reveal as="li" key={o.id} delay={[0, 70, 120, 160][i] ?? 160} y={18}>
                   <Card className="text-center h-full">
                     <div
                       aria-hidden="true"
@@ -296,7 +300,7 @@ export const PublicHomepage: React.FC = () => {
                     <h3 className="text-h3 font-semibold text-navy">{o.name}</h3>
                     <p className="text-meta text-muted">{roleLine(o)}</p>
                   </Card>
-                </li>
+                </Reveal>
               ))}
             </ul>
           </section>

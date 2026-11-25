@@ -1,4 +1,4 @@
-# e-Kapitan — Project Context
+# eKapitan — Project Context
 
 > Source: thesis proposal "The Effectiveness of e-Kapitan in Improving Barangay Information Management, Service Delivery, and Administrative Decision-Making" (ITE P403 – Thesis Writing I, Laguna College, San Pablo City, October 2026). Everything below comes from the paper unless marked **[Suggested]**, which means it is an implementation inference, not something the paper specifies.
 
@@ -6,7 +6,7 @@
 
 ## 1. What it is
 
-**e-Kapitan** is a **web-based intelligent barangay information management and decision support system**. It centralizes resident and household data, digitizes frontline barangay services, automates routine tasks, and gives officials data-driven and predictive insights for planning.
+**eKapitan** is a **web-based intelligent barangay information management and decision support system**. It centralizes resident and household data, digitizes frontline barangay services, automates routine tasks, and gives officials data-driven and predictive insights for planning.
 
 - **Delivery:** web app only (desktop and mobile browsers). No native Android/iOS apps, no offline mode, requires internet.
 - **Deployment site:** Barangay Sto. Angel, San Pablo City, Laguna (single-barangay implementation and evaluation). The barangay has non-residents (people who are in the barangay but not registered residents), which is why Guest Mode exists. (The original paper named Barangay 4A near Sampaloc Lake as the site; the site has since changed to Sto. Angel.)
@@ -24,7 +24,7 @@ Barangay offices still rely on manual, paper-based, fragmented processes: logboo
 - Reports not promptly assigned to responsible officials, especially when they're absent
 - No forecasting for recurring seasonal concerns (e.g., dengue, medical assistance requests)
 
-**Gap claimed:** existing systems (LGUSS-BIMS, BALANGAY, Webyu, iPlan Gov, general government chatbots) each cover only some functions. e-Kapitan integrates them in one barangay-level platform.
+**Gap claimed:** existing systems (LGUSS-BIMS, BALANGAY, Webyu, iPlan Gov, general government chatbots) each cover only some functions. eKapitan integrates them in one barangay-level platform.
 
 ## 3. Users and roles
 

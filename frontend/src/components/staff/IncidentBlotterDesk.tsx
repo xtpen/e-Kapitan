@@ -94,31 +94,31 @@ export const IncidentBlotterDesk: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 ${largeTextMode ? 'text-lg' : 'text-base'}`}>
+    <div className={`space-y-6 ${largeTextMode ?'text-lg':'text-base'}`}>
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-surface rounded-card p-6 border border-line flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-rose-700 text-xs font-bold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-danger-fg text-xs font-bold uppercase tracking-wider mb-1">
             <ShieldAlert className="w-4 h-4" />
             <span>Peace & Order Desk • Katarungang Pambarangay</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-heading">
+          <h2 className="text-xl sm:text-2xl font-bold text-ink font-heading">
             Incident Blotter & Mediation Desk
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-muted mt-1">
             Log community concerns, dispatch Barangay Tanod patrols, schedule Lupon Tagapamayapa hearings, and record amicable settlements.
           </p>
         </div>
 
         {/* Search */}
         <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <Search className="w-4 h-4 text-muted absolute left-3 top-3" />
           <input
             type="text"
             placeholder="Search blotter reference..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white focus:outline-rose-600"
+            className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface focus:outline-danger-fg"
           />
         </div>
       </div>
@@ -129,11 +129,11 @@ export const IncidentBlotterDesk: React.FC = () => {
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              filterStatus === s
-                ? 'bg-rose-700 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-            }`}
+            className={`px-3.5 py-1.5 rounded-control text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+ filterStatus === s
+ ?'bg-danger-fg text-white'
+ :'bg-surface text-ink hover:bg-surface-muted border border-line'
+ }`}
           >
             {s === 'All' ? 'All Incidents' : s.replace('_', ' ').toUpperCase()}
           </button>
@@ -150,28 +150,28 @@ export const IncidentBlotterDesk: React.FC = () => {
               <div
                 key={inc.id}
                 onClick={() => setSelectedIncId(inc.id)}
-                className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-rose-600 bg-rose-50/70 shadow-xs ring-1 ring-rose-600'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-control border transition-all cursor-pointer ${
+ isSelected
+ ?'border-danger-fg bg-danger-bg/70 ring-1 ring-danger-fg'
+ :'border-line bg-surface hover:border-field-line'
+ }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono font-bold text-slate-800">{inc.referenceNumber}</span>
-                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                    inc.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' :
-                    inc.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                    inc.status === 'hearing_scheduled' ? 'bg-purple-100 text-purple-800' :
-                    'bg-amber-100 text-amber-800'
-                  }`}>
+                  <span className="text-xs font-bold text-ink">{inc.referenceNumber}</span>
+                  <span className={`text-label font-bold uppercase px-2 py-0.5 rounded-full ${
+ inc.status ==='resolved'?'bg-primary-tint text-primary-strong':
+ inc.status ==='in_progress'?'bg-info-bg text-navy':
+ inc.status ==='hearing_scheduled'?'bg-info-bg text-navy':
+'bg-warning-bg text-warning-fg'
+ }`}>
                     {inc.status.replace('_', ' ')}
                   </span>
                 </div>
 
-                <h4 className="text-sm font-bold text-slate-900 mt-1">{inc.title}</h4>
-                <p className="text-xs text-slate-600 line-clamp-1 mt-0.5">{inc.location} • {inc.purok}</p>
+                <h4 className="text-sm font-bold text-ink mt-1">{inc.title}</h4>
+                <p className="text-xs text-muted line-clamp-1 mt-0.5">{inc.location} • {inc.purok}</p>
 
-                <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-400">
+                <div className="mt-2 pt-2 border-t border-line/60 flex items-center justify-between text-label text-muted">
                   <span>Category: {inc.category}</span>
                   <span>{inc.submittedAt}</span>
                 </div>
@@ -180,7 +180,7 @@ export const IncidentBlotterDesk: React.FC = () => {
           })}
 
           {filteredIncidents.length === 0 && (
-            <div className="p-8 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
+            <div className="p-8 text-center text-muted text-xs bg-surface rounded-control border border-line">
               No blotter cases match filter.
             </div>
           )}
@@ -188,17 +188,17 @@ export const IncidentBlotterDesk: React.FC = () => {
 
         {/* Right Active Incident Case Detail */}
         {activeIncident ? (
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
+          <div className="lg:col-span-7 bg-surface rounded-card border border-line p-6 space-y-6">
             {/* Header Details */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-4 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-4 border-b border-line">
               <div>
-                <span className="text-xs font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                <span className="text-xs font-bold text-danger-fg bg-danger-bg px-2 py-0.5 rounded border border-danger-bg">
                   {activeIncident.referenceNumber}
                 </span>
-                <h3 className="text-xl font-bold text-slate-900 font-heading mt-1">
+                <h3 className="text-xl font-bold text-ink font-heading mt-1">
                   {activeIncident.title}
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   Category: <strong>{activeIncident.category}</strong>
                 </p>
               </div>
@@ -206,13 +206,13 @@ export const IncidentBlotterDesk: React.FC = () => {
               {activeIncident.status !== 'resolved' ? (
                 <button
                   onClick={() => setShowResolveModal(true)}
-                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  className="px-4 py-2 bg-primary-strong hover:bg-primary-strong text-white rounded-control text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Mark Case as Resolved</span>
+                  <span>Mark as resolved</span>
                 </button>
               ) : (
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1">
+                <span className="text-xs font-bold text-primary-strong bg-primary-tint px-3 py-1.5 rounded-control border border-primary-tint-line flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" /> Case Closed
                 </span>
               )}
@@ -220,60 +220,60 @@ export const IncidentBlotterDesk: React.FC = () => {
 
             {/* Case Facts Grid */}
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Complainant / Reporter</span>
-                <span className="font-bold text-slate-900 mt-0.5 block">{activeIncident.reporterName}</span>
+              <div className="p-3 bg-surface-muted rounded-control border border-line">
+                <span className="text-muted block text-label uppercase font-bold">Complainant / Reporter</span>
+                <span className="font-bold text-ink mt-0.5 block">{activeIncident.reporterName}</span>
                 {activeIncident.isAnonymous && (
-                  <span className="text-[10px] text-amber-700 font-semibold">(Anonymous submission)</span>
+                  <span className="text-label text-warning-fg font-semibold">(Anonymous submission)</span>
                 )}
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Investigator</span>
-                <span className="font-bold text-slate-900 mt-0.5 block">{activeIncident.assignedTo || 'Tanod Patrol Desk'}</span>
-                <span className="text-[10px] text-slate-500">{activeIncident.assignedRole || 'Peace & Order Team'}</span>
+              <div className="p-3 bg-surface-muted rounded-control border border-line">
+                <span className="text-muted block text-label uppercase font-bold">Assigned Investigator</span>
+                <span className="font-bold text-ink mt-0.5 block">{activeIncident.assignedTo || 'Tanod Patrol Desk'}</span>
+                <span className="text-label text-muted">{activeIncident.assignedRole || 'Peace & Order Team'}</span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Location & Purok</span>
-                <span className="font-semibold text-slate-800 mt-0.5 block">{activeIncident.location}</span>
-                <span className="text-[10px] text-slate-500">{activeIncident.purok}</span>
+              <div className="p-3 bg-surface-muted rounded-control border border-line">
+                <span className="text-muted block text-label uppercase font-bold">Location & Purok</span>
+                <span className="font-semibold text-ink mt-0.5 block">{activeIncident.location}</span>
+                <span className="text-label text-muted">{activeIncident.purok}</span>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Incident Date & Time</span>
-                <span className="font-semibold text-slate-800 mt-0.5 block">{activeIncident.incidentDateTime}</span>
-                <span className="text-[10px] text-slate-500">Reported on {activeIncident.submittedAt}</span>
+              <div className="p-3 bg-surface-muted rounded-control border border-line">
+                <span className="text-muted block text-label uppercase font-bold">Incident Date & Time</span>
+                <span className="font-semibold text-ink mt-0.5 block">{activeIncident.incidentDateTime}</span>
+                <span className="text-label text-muted">Reported on {activeIncident.submittedAt}</span>
               </div>
             </div>
 
             {/* Statement of Incident */}
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Detailed Incident Narrative</span>
-              <p className="text-slate-800 leading-relaxed">{activeIncident.description}</p>
+            <div className="p-4 rounded-control bg-surface-muted border border-line text-xs">
+              <span className="text-label uppercase font-bold text-muted block mb-1">Detailed Incident Narrative</span>
+              <p className="text-ink leading-relaxed">{activeIncident.description}</p>
             </div>
 
             {/* Investigation Timeline */}
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">
+              <h4 className="text-xs font-bold text-ink uppercase tracking-wider mb-3">
                 Blotter Action Log & Timeline:
               </h4>
 
               <div className="space-y-3">
                 {activeIncident.statusHistory.map((h, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs">
-                    <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-danger-bg text-danger-fg flex items-center justify-center font-bold text-label shrink-0 mt-0.5">
                       {idx + 1}
                     </div>
-                    <div className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div className="flex-1 bg-surface-muted p-3 rounded-control border border-line">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 uppercase text-[11px]">
+                        <span className="font-bold text-ink uppercase text-label">
                           {h.status.replace('_', ' ')}
                         </span>
-                        <span className="text-[10px] text-slate-400">{h.updatedAt}</span>
+                        <span className="text-label text-muted">{h.updatedAt}</span>
                       </div>
-                      <p className="text-slate-600 mt-1">{h.note}</p>
-                      <span className="text-[10px] text-slate-400 block mt-1">Logged by: {h.updatedBy}</span>
+                      <p className="text-muted mt-1">{h.note}</p>
+                      <span className="text-label text-muted block mt-1">Logged by: {h.updatedBy}</span>
                     </div>
                   </div>
                 ))}
@@ -282,39 +282,39 @@ export const IncidentBlotterDesk: React.FC = () => {
 
             {/* AI Assistant Assignment Recommendation */}
             {aiRecommendation && (
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-100 relative overflow-hidden">
+              <div className=" bg-info-bg p-4 rounded-control border border-line relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <Sparkles className="w-16 h-16 text-indigo-600" />
+                  <Sparkles className="w-16 h-16 text-info-fg" />
                 </div>
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
+                  <div className="flex items-center gap-2 text-info-fg text-xs font-bold uppercase tracking-wider mb-2">
                     <Sparkles className="w-4 h-4" />
                     <span>AI Task Assignment Recommendation</span>
                   </div>
                   
                   <div className="space-y-3">
-                    <div className="flex items-start justify-between bg-white/60 p-3 rounded-lg border border-indigo-50">
+                    <div className="flex items-start justify-between bg-white/60 p-3 rounded-lg border border-line">
                       <div>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">Primary Match (Role/Load)</p>
-                        <p className="text-sm font-bold text-slate-800">{aiRecommendation.recommended?.name}</p>
-                        <p className="text-[10px] text-slate-600">{aiRecommendation.recommended?.position} - {aiRecommendation.recommended?.committee}</p>
+                        <p className="text-label text-muted font-bold uppercase">Primary Match (Role/Load)</p>
+                        <p className="text-sm font-bold text-ink">{aiRecommendation.recommended?.name}</p>
+                        <p className="text-label text-muted">{aiRecommendation.recommended?.position} - {aiRecommendation.recommended?.committee}</p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${aiRecommendation.isAbsent ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                      <span className={`text-label font-bold px-2 py-0.5 rounded-full ${aiRecommendation.isAbsent ?'bg-warning-bg text-warning-fg':'bg-primary-tint text-primary-strong'}`}>
                         {aiRecommendation.isAbsent ? 'ON LEAVE' : 'AVAILABLE'}
                       </span>
                     </div>
 
                     {aiRecommendation.isAbsent && aiRecommendation.substitute && (
-                      <div className="flex items-start justify-between bg-white/60 p-3 rounded-lg border border-purple-100 shadow-xs border-l-4 border-l-purple-500">
+                      <div className="flex items-start justify-between bg-white/60 p-3 rounded-lg border border-line border-l-4 border-l-navy">
                         <div>
                           <div className="flex items-center gap-1.5 mb-0.5">
-                            <p className="text-[10px] text-purple-600 font-bold uppercase">Substitute Suggested</p>
-                            <ArrowRight className="w-3 h-3 text-purple-400" />
+                            <p className="text-label text-info-fg font-bold uppercase">Substitute Suggested</p>
+                            <ArrowRight className="w-3 h-3 text-info-fg" />
                           </div>
-                          <p className="text-sm font-bold text-slate-800">{aiRecommendation.substitute.name}</p>
-                          <p className="text-[10px] text-slate-600">{aiRecommendation.substitute.position} - {aiRecommendation.substitute.committee}</p>
+                          <p className="text-sm font-bold text-ink">{aiRecommendation.substitute.name}</p>
+                          <p className="text-label text-muted">{aiRecommendation.substitute.position} - {aiRecommendation.substitute.committee}</p>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        <span className="text-label font-bold px-2 py-0.5 rounded-full bg-primary-tint text-primary-strong">
                           AVAILABLE
                         </span>
                       </div>
@@ -322,12 +322,12 @@ export const IncidentBlotterDesk: React.FC = () => {
                   </div>
 
                   <div className="mt-4 flex justify-end gap-2">
-                    <button onClick={() => setActionNote('Rejected AI recommendation. ')} className="px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors">
+                    <button onClick={() => setActionNote('Rejected AI recommendation. ')} className="px-3 py-1.5 text-label font-bold text-muted hover:bg-line/50 rounded-lg transition-colors">
                       Reject
                     </button>
-                    <button onClick={handleConfirmAIAssignment} className="px-4 py-1.5 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5">
+                    <button onClick={handleConfirmAIAssignment} className="px-4 py-1.5 text-label font-bold text-white bg-navy hover:bg-navy rounded-lg transition-colors flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4" />
-                      Confirm Assignment
+                      Assign
                     </button>
                   </div>
                 </div>
@@ -336,8 +336,8 @@ export const IncidentBlotterDesk: React.FC = () => {
 
             {/* Action Inputs */}
             {activeIncident.status !== 'resolved' && (
-              <div className="pt-2 border-t border-slate-200 space-y-3">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <div className="pt-2 border-t border-line space-y-3">
+                <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
                   Log Investigation Action or Escalate Case:
                 </h4>
 
@@ -347,50 +347,50 @@ export const IncidentBlotterDesk: React.FC = () => {
                     placeholder="Enter dispatch notes, mediation schedule, or inspection findings..."
                     value={actionNote}
                     onChange={(e) => setActionNote(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:bg-white"
+                    className="w-full px-3.5 py-2.5 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface"
                   />
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => handleUpdateStatus('assigned')}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold"
+                    className="px-3 py-1.5 bg-navy hover:bg-navy text-white rounded-lg text-xs font-semibold"
                   >
-                    Assign Tanod Patrol
+                    Assign tanod patrol
                   </button>
 
                   <button
                     onClick={() => handleUpdateStatus('in_progress')}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+                    className="px-3 py-1.5 bg-navy hover:bg-navy text-white rounded-lg text-xs font-semibold"
                   >
-                    Mark In Progress
+                    Mark in progress
                   </button>
 
                   <button
                     onClick={() => handleUpdateStatus('hearing_scheduled')}
-                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold"
+                    className="px-3 py-1.5 bg-navy hover:bg-navy text-white rounded-lg text-xs font-semibold"
                   >
-                    Schedule Lupon Hearing
+                    Schedule hearing
                   </button>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <p className="text-sm font-semibold text-slate-700">Select a case from the blotter list.</p>
+          <div className="lg:col-span-7 bg-surface rounded-card border border-line p-12 text-center">
+            <p className="text-sm font-semibold text-ink">Select a case from the blotter list.</p>
           </div>
         )}
       </div>
 
       {/* Case Resolution Modal */}
       {showResolveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-xl space-y-4 animate-in zoom-in-95">
-            <h3 className="text-base font-bold text-slate-900 font-heading">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 ">
+          <div className="bg-surface rounded-card max-w-md w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95">
+            <h3 className="text-base font-bold text-ink font-heading">
               Resolve Blotter Case & Record Agreement
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               Record the final amicable settlement terms or corrective action taken by the barangay desk.
             </p>
 
@@ -399,21 +399,21 @@ export const IncidentBlotterDesk: React.FC = () => {
               value={resolutionSummary}
               onChange={(e) => setResolutionSummary(e.target.value)}
               placeholder="e.g. Both parties signed amicable agreement at Lupon Tagapamayapa; agreed to curfew compliance."
-              className="w-full p-3 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-emerald-600"
+              className="w-full p-3 border border-line rounded-control text-xs sm:text-sm focus:outline-primary"
             />
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowResolveModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                className="px-4 py-2 text-xs font-semibold text-muted hover:bg-surface-muted rounded-control"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmResolution}
-                className="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
+                className="px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-strong text-white rounded-control "
               >
-                Close & Archive Case
+                Close case
               </button>
             </div>
           </div>

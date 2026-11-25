@@ -48,7 +48,7 @@ export const residentNavGroups: NavGroup[] = [
     title: 'More',
     items: [
       { id: 'tracking', label: 'My Requests', icon: icon(ListChecks) },
-      { id: 'ai_assistant', label: 'Ka-Barangay AI', icon: icon(MessageSquareText) },
+      { id: 'ai_assistant', label: 'Ask Kap', icon: icon(MessageSquareText) },
       { id: 'appointments', label: 'Appointments', icon: icon(CalendarDays) },
       { id: 'qr_verify', label: 'Verify a Document', icon: icon(FileCheck2) },
       { id: 'announcements', label: 'Advisories', icon: icon(Megaphone) },

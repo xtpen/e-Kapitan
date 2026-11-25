@@ -52,7 +52,7 @@ const RichText: React.FC<{ text: string }> = ({ text }) => (
 );
 
 /**
- * Ka-Barangay AI ("Ask Kap" on the public site). No mockup; built from DESIGN.md patterns.
+ * Ask Kap: the Ka-Barangay AI assistant, for guests and residents. No mockup; built from DESIGN.md patterns.
  * Answers come from /api/ai-assistant, with a fixed offline reply if it can't be reached.
  */
 export const KaBarangayAI: React.FC = () => {
@@ -130,8 +130,8 @@ export const KaBarangayAI: React.FC = () => {
   return (
     <div className="max-w-[1200px]">
       <PageHeader
-        title={isGuest ? 'Ask Kap' : 'Ka-Barangay AI'}
-        description="Quick answers on requirements, fees and office hours. English, Tagalog or Taglish."
+        title="Ask Kap"
+        description="Ka-Barangay AI answers questions on requirements, fees and office hours. English, Tagalog or Taglish."
       />
 
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start">

@@ -162,7 +162,7 @@ export const ProfileView: React.FC = () => {
           <Card padded="lg">
             <form noValidate onSubmit={changePassword}>
               <h2 className="text-h3-lg font-semibold text-navy">Change password</h2>
-              {pwSaved && <Saved>Password changed. Use the new one next time you log in.</Saved>}
+              {pwSaved && <Saved>Password changed. Use the new one next time you sign in.</Saved>}
               <Field label="Current password" error={pwErrors.current}>
                 {p => (
                   <PasswordInput {...p} autoComplete="current-password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} />
@@ -245,8 +245,8 @@ export const ProfileView: React.FC = () => {
               </Button>
             ) : (
               <div role="alert">
-                <p className="font-semibold">Sign out of e-Kapitan?</p>
-                <p className="text-meta text-muted mt-0.5">You will need to log in again to use barangay services.</p>
+                <p className="font-semibold">Sign out of eKapitan?</p>
+                <p className="text-meta text-muted mt-0.5">You will need to sign in again to use barangay services.</p>
                 <div className="grid grid-cols-2 gap-2.5 mt-4">
                   <Button variant="secondary" onClick={() => setConfirmSignOut(false)}>
                     Cancel
