@@ -70,6 +70,20 @@
   --shadow-float: 0 8px 24px rgb(18 48 79 / 0.10);
 }
 
+/* Form panels that just opened (Add / Edit): slide in + a short navy glow that fades. */
+@keyframes attention-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes attention-ring {
+  0% { box-shadow: 0 0 0 0 rgb(18 48 79 / 0); }
+  25% { box-shadow: 0 0 0 5px rgb(18 48 79 / 0.35); }
+  100% { box-shadow: 0 0 0 0 rgb(18 48 79 / 0); }
+}
+.attention-panel {
+  animation: attention-in 240ms ease-out, attention-ring 1.4s ease-out 160ms;
+}
+
 @layer base {
   html.large-text {
     font-size: 112.5%;

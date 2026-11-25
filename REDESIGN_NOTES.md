@@ -98,6 +98,21 @@ Legend: **Decide** = the team needs to choose · **Confirm** = we guessed or too
 - [ ] **Note: no ID preview yet.** The detail panel shows where the uploaded valid ID will appear; it needs file storage (Supabase Storage) to work.
 - [ ] **Note:** the old Staff role's "Document Queue" screen still exists for the Staff login; the Admin screen replaces it in the new shell.
 
+## Admin · Officials, Chatbot Knowledge, Reports, Audit Logs
+
+- [ ] **Review: team sign-off on all four** (no mockups; Admin list + detail pattern).
+- [ ] **Officials: consent for the public directory.** PRODUCT.md says the public directory shows only consented fields. There's one "Public contact" field with a note to use office contacts; a per-field consent setting needs the database.
+- [ ] **Chatbot Knowledge: fix sample answers** that still mention "Barangay 4A" and sample fees. The AI uses these words directly.
+- [ ] **Reports: counts only.** Forecasts from PRODUCT.md (staffing, health drives) aren't built; they need real history. Reports cover all records; a date-range filter needs real dates from the database.
+- [ ] **Audit Logs: exporting** the log is itself not logged yet (needs the server). Consider limiting export to administrators.
+- [ ] **Note:** the old Official/Staff screens (Executive dashboard, Audit Trail, Manage Officials) still exist for those old demo logins; the Admin pages replace them in the new shell.
+
+## Admin · Services
+
+- [ ] **Confirm: real fees, requirements and processing times** for each document with the barangay (current values are sample data).
+- [ ] **Note:** services are never deleted, only **hidden** from residents, so old requests keep their document name. New services use the general certificate wording until a template is written for them (see the Certificate section).
+- [ ] **Note:** printing and court reservations are not "services" here; they have their own screens and are free.
+
 ## Admin · Personnel
 
 - [ ] **Review: team sign-off on the look and the roles.** Roles are presets of access areas: Administrator (everything), Records staff (documents, printing, residents), Front desk (documents, complaints, printing, court), Peace and order (complaints), Health worker (residents), View only (reports). Single areas can be added or removed per person. Do these match the barangay's real jobs?

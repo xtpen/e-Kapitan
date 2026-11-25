@@ -36,7 +36,6 @@ import { residentBottomNav, residentNavGroups } from './components/citizen/resid
 import { useResidentActivity } from './components/citizen/useResidentActivity';
 import { AppShell } from './components/layout/AppShell';
 import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
-import { AdminPlaceholder } from './components/admin/AdminPlaceholder';
 import { AdminOverview } from './components/admin/AdminOverview';
 import { AdminDocumentRequests } from './components/admin/AdminDocumentRequests';
 import { AdminComplaints } from './components/admin/AdminComplaints';
@@ -44,6 +43,11 @@ import { AdminPrintingRequests } from './components/admin/AdminPrintingRequests'
 import { AdminCourtReservations } from './components/admin/AdminCourtReservations';
 import { AdminResidents } from './components/admin/AdminResidents';
 import { AdminPersonnel } from './components/admin/AdminPersonnel';
+import { AdminServices } from './components/admin/AdminServices';
+import { AdminOfficials } from './components/admin/AdminOfficials';
+import { AdminChatbotKnowledge } from './components/admin/AdminChatbotKnowledge';
+import { AdminReports } from './components/admin/AdminReports';
+import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
 
 // Staff Components
 import { StaffDashboard } from './components/staff/StaffDashboard';
@@ -252,15 +256,15 @@ const MainAppContent: React.FC = () => {
       case 'admin_personnel':
         return <AdminPersonnel />;
       case 'admin_services':
-        return <AdminPlaceholder title="Services" description="Documents and services residents can request, with fees and requirements." />;
+        return <AdminServices />;
       case 'admin_officials':
-        return <ManageOfficials />;
+        return <AdminOfficials />;
       case 'admin_chatbot':
-        return <AdminPlaceholder title="Chatbot Knowledge" description="Answers Ka-Barangay AI is allowed to give." />;
+        return <AdminChatbotKnowledge />;
       case 'admin_reports':
-        return <ExecutiveDashboard />;
+        return <AdminReports />;
       case 'admin_audit':
-        return <AuditTrailViewer />;
+        return <AdminAuditLogs />;
 
       // Guest Views (added explicitly here for clarity, though qr_verify/ai_assistant fall through to Citizen if no exact match, we should handle them explicitly here if we want to ensure separation)
       case 'guest_home':

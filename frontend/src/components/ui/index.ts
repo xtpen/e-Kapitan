@@ -19,6 +19,7 @@ export { Calendar, toISODate } from './Calendar';
 export type { CalendarProps, DayState } from './Calendar';
 export { TimeSlot } from './TimeSlot';
 export type { TimeSlotProps } from './TimeSlot';
+export { AttentionPanel } from './AttentionPanel';
 export { BarChart } from './BarChart';
 export type { BarDatum } from './BarChart';
 export { FilterChips } from './FilterChips';

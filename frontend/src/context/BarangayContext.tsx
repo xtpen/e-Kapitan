@@ -109,12 +109,15 @@ interface BarangayContextType {
   
   registerResident: (data: Omit<Resident, 'id' | 'residentNumber' | 'registeredDate'>) => Resident;
   updateResident: (id: string, updates: Partial<Resident>) => void;
+  addService: (data: Omit<ServiceItem, 'id'>) => ServiceItem;
+  updateService: (id: string, updates: Partial<ServiceItem>) => void;
   recordResidentAccess: (id: string) => void;
   resolveDuplicateFlag: (flagId: string, resolution: 'merge' | 'keep_separate' | 'false_positive', notes: string) => void;
   
   updatePriorityConfig: (id: string, updates: Partial<PriorityCriteriaConfig>) => void;
   addKnowledgeItem: (item: Omit<KnowledgeBaseItem, 'id' | 'lastUpdated'>) => void;
   updateKnowledgeItem: (id: string, updates: Partial<KnowledgeBaseItem>) => void;
+  removeKnowledgeItem: (id: string) => void;
   
   bookAppointment: (data: Omit<Appointment, 'id' | 'referenceNumber'>) => Appointment;
 
@@ -219,7 +222,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [largeTextMode, setLargeTextMode] = useState<boolean>(false);
 
   // Data states
-  const [services] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [residents, setResidents] = useState<Resident[]>(INITIAL_RESIDENTS);
   const [households] = useState<Household[]>(INITIAL_HOUSEHOLDS);
   const [duplicateFlags, setDuplicateFlags] = useState<DuplicateRecordFlag[]>(INITIAL_DUPLICATE_FLAGS);
@@ -631,6 +634,21 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return newResident;
   };
 
+  const addService = (data: Omit<ServiceItem, 'id'>): ServiceItem => {
+    const item: ServiceItem = { ...data, id: 'svc-' + Date.now() };
+    setServices((prev) => [...prev, item]);
+    logAudit('Added Service', 'Configuration', `${item.title} (fee ${item.fee}). By ${currentUser.name}`);
+    addToast('Service added', `${item.title} ${item.availableOnline ? 'can now be requested online' : 'is saved but hidden from residents'}.`, 'success');
+    return item;
+  };
+
+  const updateService = (id: string, updates: Partial<ServiceItem>) => {
+    const before = services.find((s) => s.id === id);
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    logAudit('Updated Service', 'Configuration', `${before?.title ?? id}: ${Object.keys(updates).join(', ')} changed. By ${currentUser.name}`);
+    addToast('Service saved', `${before?.title ?? 'The service'} was updated.`, 'success');
+  };
+
   /** Staff edit of a resident record (audit-logged). */
   const updateResident = (id: string, updates: Partial<Resident>) => {
     const r = residents.find((x) => x.id === id);
@@ -693,6 +711,13 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
     logAudit('Updated AI Knowledge Item', 'Configuration', `Edited FAQ item ${id}`);
     addToast('Knowledge Base Entry Updated', 'Changes saved successfully.', 'success');
+  };
+
+  const removeKnowledgeItem = (id: string) => {
+    const item = knowledgeBase.find((k) => k.id === id);
+    setKnowledgeBase((prev) => prev.filter((k) => k.id !== id));
+    logAudit('Removed AI Knowledge Item', 'Configuration', `"${item?.question ?? id}" removed by ${currentUser.name}`);
+    addToast('Answer removed', 'Ka-Barangay AI will no longer use it.', 'success');
   };
 
   const bookAppointment = (data: Omit<Appointment, 'id' | 'referenceNumber'>): Appointment => {
@@ -930,10 +955,13 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         registerResident,
         resolveDuplicateFlag,
         updateResident,
+        addService,
+        updateService,
         recordResidentAccess,
         updatePriorityConfig,
         addKnowledgeItem,
         updateKnowledgeItem,
+        removeKnowledgeItem,
         bookAppointment,
         printRequests,
         createPrintRequest,
