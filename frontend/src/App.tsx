@@ -3,92 +3,91 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { BarangayProvider, useBarangay } from './context/BarangayContext';
-import { Header } from './components/common/Header';
-import { ToastContainer } from './components/common/ToastContainer';
-import { OfficialDocumentTemplate } from './components/common/OfficialDocumentTemplate';
-import { PageSkeleton } from './components/common/PageSkeleton';
-import { LandingLogin } from './components/auth/LandingLogin';
-
-// Citizen Components
-import { CitizenHome } from './components/citizen/CitizenHome';
-import { ServicesDirectory } from './components/citizen/ServicesDirectory';
-import { DocumentRequestWizard } from './components/citizen/DocumentRequestWizard';
-import { MyRequestsTracker } from './components/citizen/MyRequestsTracker';
-import { ComplaintsView } from './components/citizen/ComplaintsView';
-import { AICitizenAssistant } from './components/citizen/AICitizenAssistant';
-import { DocumentVerification } from './components/citizen/DocumentVerification';
-import { AppointmentsView } from './components/citizen/AppointmentsView';
-import { GuestPortal } from './components/citizen/GuestPortal';
-import { GuestReportIncident } from './components/citizen/GuestReportIncident';
-import { GuestReportStatus } from './components/citizen/GuestReportStatus';
-import { GuestSettings } from './components/citizen/GuestSettings';
-import { GuestHelp } from './components/citizen/GuestHelp';
-import { OfficialsDirectory } from './components/citizen/OfficialsDirectory';
-import { PrintingView } from './components/citizen/PrintingView';
-import { CourtReservationView } from './components/citizen/CourtReservationView';
-import { ProfileView } from './components/citizen/ProfileView';
-import { NotificationsView } from './components/citizen/NotificationsView';
-import { residentBottomNav, residentNavGroups } from './components/citizen/residentNav';
-import { useResidentActivity } from './components/citizen/useResidentActivity';
-import { AppShell } from './components/layout/AppShell';
-import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
-import { AdminOverview } from './components/admin/AdminOverview';
-import { AdminDocumentRequests } from './components/admin/AdminDocumentRequests';
-import { AdminComplaints } from './components/admin/AdminComplaints';
-import { AdminPrintingRequests } from './components/admin/AdminPrintingRequests';
-import { AdminCourtReservations } from './components/admin/AdminCourtReservations';
-import { AdminResidents } from './components/admin/AdminResidents';
-import { AdminPersonnel } from './components/admin/AdminPersonnel';
-import { AdminServices } from './components/admin/AdminServices';
-import { AdminOfficials } from './components/admin/AdminOfficials';
-import { AdminChatbotKnowledge } from './components/admin/AdminChatbotKnowledge';
-import { AdminReports } from './components/admin/AdminReports';
-import { AdminAuditLogs } from './components/admin/AdminAuditLogs';
-
-// Staff Components
-import { StaffDashboard } from './components/staff/StaffDashboard';
-import { DocumentProcessingQueue } from './components/staff/DocumentProcessingQueue';
-import { SmartQueueManagement } from './components/staff/SmartQueueManagement';
-import { ResidentRecordsDirectory } from './components/staff/ResidentRecordsDirectory';
-import { IncidentBlotterDesk } from './components/staff/IncidentBlotterDesk';
-import { CashierRevenueDesk } from './components/staff/CashierRevenueDesk';
-
-// Official Components
-import { ExecutiveDashboard } from './components/official/ExecutiveDashboard';
-import { AuditTrailViewer } from './components/official/AuditTrailViewer';
-import { OfficialAnnouncementsManager } from './components/official/OfficialAnnouncementsManager';
-import { ManageOfficials } from './components/official/ManageOfficials';
-
-import { 
-  Building2, 
-  ShieldCheck, 
-  HeartHandshake, 
-  HelpCircle, 
-  PhoneCall, 
-  Sparkles,
-  Printer,
-  FileText,
-  Clock,
-  Users,
-  AlertTriangle,
-  DollarSign,
-  Lock,
-  Megaphone,
-  CheckCircle2,
-  Home,
-  QrCode,
-  LayoutDashboard,
-  Calendar,
-  Users2,
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ArrowLeft,
   ClipboardList,
+  DollarSign,
+  FileText,
+  LayoutDashboard,
+  Megaphone,
   PieChart,
-  FileSignature,
-  FileCheck2
+  ShieldCheck,
+  Users,
+  Users2,
 } from 'lucide-react';
+import { BarangayProvider, useBarangay } from './context/BarangayContext';
+// Loaded at startup: data, login, the two shells and app chrome.
+import { AppShell } from './components/layout/AppShell';
+import { PublicShell } from './components/layout/PublicShell';
+import { ToastContainer } from './components/layout/ToastContainer';
+import { PageSkeleton } from './components/layout/PageSkeleton';
+import { LandingPage } from './components/auth/LandingPage';
+import { residentBottomNav, residentNavGroups } from './components/resident/residentNav';
+import { useResidentActivity } from './components/resident/useResidentActivity';
+import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
+
+/*
+ * Screens load on demand, one chunk per area (see manualChunks in vite.config.ts), so a guest
+ * on a phone never downloads admin or staff code. PageSkeleton shows while a chunk loads.
+ */
+const lazyNamed = <M extends Record<K, React.ComponentType<any>>, K extends keyof M>(load: () => Promise<M>, name: K) =>
+  lazy(() => load().then(m => ({ default: m[name] })));
+
+const Header = lazyNamed(() => import('./components/layout/Header'), 'Header');
+
+// Shared by several roles
+const OfficialDocumentTemplate = lazyNamed(() => import('./components/shared/OfficialDocumentTemplate'), 'OfficialDocumentTemplate');
+const OfficialsDirectory = lazyNamed(() => import('./components/shared/OfficialsDirectory'), 'OfficialsDirectory');
+const KaBarangayAI = lazyNamed(() => import('./components/shared/KaBarangayAI'), 'KaBarangayAI');
+const DocumentVerification = lazyNamed(() => import('./components/shared/DocumentVerification'), 'DocumentVerification');
+
+// Public site (guests)
+const PublicHomepage = lazyNamed(() => import('./components/public/PublicHomepage'), 'PublicHomepage');
+const PublicAnnouncements = lazyNamed(() => import('./components/public/PublicAnnouncements'), 'PublicAnnouncements');
+const ReportConcern = lazyNamed(() => import('./components/public/ReportConcern'), 'ReportConcern');
+const TrackRequest = lazyNamed(() => import('./components/public/TrackRequest'), 'TrackRequest');
+const HowItWorks = lazyNamed(() => import('./components/public/HowItWorks'), 'HowItWorks');
+
+// Resident portal
+const ResidentDashboard = lazyNamed(() => import('./components/resident/ResidentDashboard'), 'ResidentDashboard');
+const ServicesDirectory = lazyNamed(() => import('./components/resident/ServicesDirectory'), 'ServicesDirectory');
+const DocumentRequestWizard = lazyNamed(() => import('./components/resident/DocumentRequestWizard'), 'DocumentRequestWizard');
+const MyRequestsTracker = lazyNamed(() => import('./components/resident/MyRequestsTracker'), 'MyRequestsTracker');
+const ComplaintsView = lazyNamed(() => import('./components/resident/ComplaintsView'), 'ComplaintsView');
+const AppointmentsView = lazyNamed(() => import('./components/resident/AppointmentsView'), 'AppointmentsView');
+const PrintingView = lazyNamed(() => import('./components/resident/PrintingView'), 'PrintingView');
+const CourtReservationView = lazyNamed(() => import('./components/resident/CourtReservationView'), 'CourtReservationView');
+const ProfileView = lazyNamed(() => import('./components/resident/ProfileView'), 'ProfileView');
+const NotificationsView = lazyNamed(() => import('./components/resident/NotificationsView'), 'NotificationsView');
+
+// Admin portal
+const AdminOverview = lazyNamed(() => import('./components/admin/AdminOverview'), 'AdminOverview');
+const AdminDocumentRequests = lazyNamed(() => import('./components/admin/AdminDocumentRequests'), 'AdminDocumentRequests');
+const AdminComplaints = lazyNamed(() => import('./components/admin/AdminComplaints'), 'AdminComplaints');
+const AdminPrintingRequests = lazyNamed(() => import('./components/admin/AdminPrintingRequests'), 'AdminPrintingRequests');
+const AdminCourtReservations = lazyNamed(() => import('./components/admin/AdminCourtReservations'), 'AdminCourtReservations');
+const AdminResidents = lazyNamed(() => import('./components/admin/AdminResidents'), 'AdminResidents');
+const AdminPersonnel = lazyNamed(() => import('./components/admin/AdminPersonnel'), 'AdminPersonnel');
+const AdminServices = lazyNamed(() => import('./components/admin/AdminServices'), 'AdminServices');
+const AdminOfficials = lazyNamed(() => import('./components/admin/AdminOfficials'), 'AdminOfficials');
+const AdminChatbotKnowledge = lazyNamed(() => import('./components/admin/AdminChatbotKnowledge'), 'AdminChatbotKnowledge');
+const AdminReports = lazyNamed(() => import('./components/admin/AdminReports'), 'AdminReports');
+const AdminAuditLogs = lazyNamed(() => import('./components/admin/AdminAuditLogs'), 'AdminAuditLogs');
+
+// Legacy Staff and Official roles (old design)
+const StaffDashboard = lazyNamed(() => import('./components/staff/StaffDashboard'), 'StaffDashboard');
+const DocumentProcessingQueue = lazyNamed(() => import('./components/staff/DocumentProcessingQueue'), 'DocumentProcessingQueue');
+const SmartQueueManagement = lazyNamed(() => import('./components/staff/SmartQueueManagement'), 'SmartQueueManagement');
+const ResidentRecordsDirectory = lazyNamed(() => import('./components/staff/ResidentRecordsDirectory'), 'ResidentRecordsDirectory');
+const IncidentBlotterDesk = lazyNamed(() => import('./components/staff/IncidentBlotterDesk'), 'IncidentBlotterDesk');
+const CashierRevenueDesk = lazyNamed(() => import('./components/staff/CashierRevenueDesk'), 'CashierRevenueDesk');
+const ExecutiveDashboard = lazyNamed(() => import('./components/official/ExecutiveDashboard'), 'ExecutiveDashboard');
+const AuditTrailViewer = lazyNamed(() => import('./components/official/AuditTrailViewer'), 'AuditTrailViewer');
+const OfficialAnnouncementsManager = lazyNamed(() => import('./components/official/OfficialAnnouncementsManager'), 'OfficialAnnouncementsManager');
+const ManageOfficials = lazyNamed(() => import('./components/official/ManageOfficials'), 'ManageOfficials');
+
 
 const MainAppContent: React.FC = () => {
   const { 
@@ -120,19 +119,7 @@ const MainAppContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, [activeTab, currentRole]);
 
-  // Define tab navigation for each role
-  const citizenTabs = [
-    { id: 'home', label: 'Overview', icon: <Home className="w-5 h-5" /> },
-    { id: 'services', label: 'Services', icon: <FileText className="w-5 h-5" /> },
-    { id: 'tracking', label: 'My Applications', icon: <Clock className="w-5 h-5" /> },
-    { id: 'complaints', label: 'Report Incident', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'appointments', label: 'Book Appointment', icon: <Calendar className="w-5 h-5" /> },
-    { id: 'qr_verify', label: 'Verify QR', icon: <QrCode className="w-5 h-5" /> },
-    { id: 'ai_assistant', label: 'AI Assistant', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'announcements', label: 'Advisories', icon: <Megaphone className="w-5 h-5" /> },
-    { id: 'officials_directory', label: 'Officials Directory', icon: <Users2 className="w-5 h-5" /> },
-  ];
-
+  // Old header + tab bar, used only by the legacy Staff and Official roles.
   const staffTabs = [
     { id: 'dashboard', label: 'Operations Desk', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'staff_documents', label: 'Document Queue', icon: <FileText className="w-5 h-5" /> },
@@ -151,20 +138,7 @@ const MainAppContent: React.FC = () => {
     { id: 'manage_officials', label: 'Manage Officials', icon: <Users2 className="w-5 h-5" /> },
   ];
 
-  const guestTabs = [
-    { id: 'guest_home', label: 'Guest Portal', icon: <Home className="w-5 h-5" /> },
-    { id: 'file_report', label: 'File Report', icon: <AlertTriangle className="w-5 h-5" /> },
-    { id: 'report_status', label: 'Report Status', icon: <FileCheck2 className="w-5 h-5" /> },
-    { id: 'qr_verify', label: 'Verify Document', icon: <QrCode className="w-5 h-5" /> },
-    { id: 'ai_assistant', label: 'Ka-Barangay AI', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'officials_directory', label: 'Officials Directory', icon: <Users2 className="w-5 h-5" /> },
-  ];
-
-  const currentTabs = 
-    currentRole === 'citizen' ? citizenTabs :
-    currentRole === 'staff' ? staffTabs : 
-    currentRole === 'official' ? officialTabs : 
-    currentRole === 'guest' ? guestTabs : [];
+  const currentTabs = currentRole === 'staff' ? staffTabs : currentRole === 'official' ? officialTabs : [];
 
   const renderCurrentView = () => {
     if (isPageLoading) {
@@ -174,7 +148,7 @@ const MainAppContent: React.FC = () => {
     switch (activeTab) {
       // Citizen Views
       case 'home':
-        return <CitizenHome />;
+        return <ResidentDashboard />;
       case 'services':
         return (
           <ServicesDirectory 
@@ -191,7 +165,7 @@ const MainAppContent: React.FC = () => {
       case 'complaints':
         return <ComplaintsView />;
       case 'ai_assistant':
-        return <AICitizenAssistant />;
+        return <KaBarangayAI />;
       case 'qr_verify':
         return <DocumentVerification />;
       case 'appointments':
@@ -268,23 +242,23 @@ const MainAppContent: React.FC = () => {
 
       // Guest Views (added explicitly here for clarity, though qr_verify/ai_assistant fall through to Citizen if no exact match, we should handle them explicitly here if we want to ensure separation)
       case 'guest_home':
-        return <GuestPortal />;
+        return <PublicHomepage />;
+      case 'guest_announcements':
+        return <PublicAnnouncements />;
       case 'file_report':
-        return <GuestReportIncident />;
+        return <ReportConcern />;
       case 'report_status':
-        return <GuestReportStatus />;
-      case 'guest_settings':
-        return <GuestSettings />;
+        return <TrackRequest />;
       case 'guest_help':
-        return <GuestHelp />;
+        return <HowItWorks />;
 
       default:
         return currentRole === 'citizen' 
-          ? <CitizenHome /> 
+          ? <ResidentDashboard /> 
           : currentRole === 'staff' 
           ? <StaffDashboard /> 
           : currentRole === 'guest'
-          ? <GuestPortal />
+          ? <PublicHomepage />
           : <ExecutiveDashboard />;
     }
   };
@@ -300,14 +274,27 @@ const MainAppContent: React.FC = () => {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
       >
-        {renderCurrentView()}
+        {/* The skeleton also covers the moment a screen's code is still downloading. */}
+        <Suspense fallback={<PageSkeleton />}>{renderCurrentView()}</Suspense>
       </motion.div>
     </AnimatePresence>
   );
 
   const printModal = selectedDocumentForPrint && (
-    <OfficialDocumentTemplate document={selectedDocumentForPrint} onClose={() => setSelectedDocumentForPrint(null)} />
+    <Suspense fallback={null}>
+      <OfficialDocumentTemplate document={selectedDocumentForPrint} onClose={() => setSelectedDocumentForPrint(null)} />
+    </Suspense>
   );
+
+  // Public website for guests. Mockups: "Public homepage" (desktop + mobile).
+  if (currentRole === 'guest') {
+    return (
+      <>
+        <ToastContainer />
+        <PublicShell>{pageTransition}</PublicShell>
+      </>
+    );
+  }
 
   // Redesigned shell (DESIGN.md). Residents first; other roles move over as they are redesigned.
   if (currentRole === 'admin') {
@@ -350,8 +337,10 @@ const MainAppContent: React.FC = () => {
       {/* Toast Notifications */}
       <ToastContainer />
 
-      {/* Global Civic Header */}
-      <Header />
+      {/* Global Civic Header (legacy roles only, so it loads with their screens) */}
+      <Suspense fallback={<div className="h-16 sm:h-20 bg-white border-b border-slate-200" />}>
+        <Header />
+      </Suspense>
 
       {/* Bottom Navigation Bar */}
       {currentTabs.length > 0 && (
@@ -424,7 +413,7 @@ const MainAppContent: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-x-hidden pb-24 md:pb-8 relative">
         {!currentTabs.some(tab => tab.id === activeTab) && (
           <button 
-            onClick={() => setActiveTab(currentRole === 'guest' ? 'guest_home' : currentRole === 'staff' ? 'staff_dashboard' : currentRole === 'official' ? 'official_dashboard' : 'home')}
+            onClick={() => setActiveTab(currentRole === 'staff' ? 'staff_dashboard' : currentRole === 'official' ? 'official_dashboard' : 'home')}
             className="flex items-center gap-2 text-slate-500 hover:text-emerald-700 mb-6 font-bold text-sm transition-colors w-fit cursor-pointer group"
           >
             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
@@ -433,26 +422,11 @@ const MainAppContent: React.FC = () => {
             Back
           </button>
         )}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${activeTab}-${currentRole}-${isPageLoading ? 'skeleton' : 'loaded'}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            {renderCurrentView()}
-          </motion.div>
-        </AnimatePresence>
+        {pageTransition}
       </main>
 
       {/* Printable Official Certificate Modal Overlay */}
-      {selectedDocumentForPrint && (
-        <OfficialDocumentTemplate
-          document={selectedDocumentForPrint}
-          onClose={() => setSelectedDocumentForPrint(null)}
-        />
-      )}
+      {printModal}
 
       {/* Clean Civic Footer */}
       <footer className="no-print bg-white border-t border-slate-200 mt-auto py-6 text-center text-slate-500 text-xs">
@@ -476,7 +450,7 @@ const MainAppWrapper: React.FC = () => {
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="min-h-screen bg-canvas"
         >
-          <LandingLogin />
+          <LandingPage />
         </motion.div>
       ) : (
         <motion.div
