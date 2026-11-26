@@ -347,6 +347,32 @@ export const INITIAL_DUPLICATE_FLAGS: DuplicateRecordFlag[] = [
 
 export const INITIAL_DOCUMENT_REQUESTS: DocumentRequest[] = [
   {
+    // Returned to the resident for a correction (shows the "Fix and resend" flow).
+    id: 'req-011',
+    referenceNumber: 'REQ-2026-0831',
+    documentType: 'certificate_of_residency',
+    documentTitle: 'Certificate of Residency',
+    residentId: 'res-001',
+    residentName: 'Maria Corazon Santos',
+    purok: 'Purok 2 - Riverside',
+    contactNumber: '0917-555-0123',
+    purpose: 'School',
+    status: 'returned',
+    submittedAt: '2026-09-11 02:10 PM',
+    updatedAt: '2026-09-12 09:40 AM',
+    fee: 30,
+    isFreeDueToExemption: false,
+    processingMethod: 'pickup',
+    assignedStaffId: 'staff-elena',
+    assignedStaffName: 'Elena Ramos (Records)',
+    staffNotes: 'The ID photo is blurry and the purpose is unclear. Please upload a clearer photo of your ID and say which school it is for.',
+    verificationCode: 'VER-B4A-78935-12',
+    requirementsSubmitted: [
+      { name: 'Valid Government ID', submitted: true, verified: false },
+      { name: 'Proof of residency', submitted: true, verified: true },
+    ],
+  },
+  {
     id: 'req-001',
     referenceNumber: 'REQ-2026-0819',
     documentType: 'barangay_clearance',

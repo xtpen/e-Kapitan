@@ -2,6 +2,7 @@ import React, { useId, useState } from 'react';
 import { CheckCircle2, Printer } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { PaperSize, PrintColor, PrintRequest, PrintSides } from '../../types';
+import { useT } from '../../i18n';
 import { Button, Field, FileUpload, Input, StatusPill, dateTimeValue, formatShortDateTime, printStatus } from '../ui';
 import { Choice, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
 
@@ -13,6 +14,8 @@ const SIDES_LABEL: Record<PrintSides, string> = { one_sided: 'One side', two_sid
 const PAPER_SIZES: PaperSize[] = ['A4', 'Letter', 'Legal'];
 /** Everyday names residents use at the store. */
 const PAPER_HINT: Record<PaperSize, string> = { A4: 'Most common', Letter: 'Short bond', Legal: 'Long bond' };
+
+type T = ReturnType<typeof useT>;
 
 /** Best-effort page count for PDFs (counts page objects). Returns null if it can't tell. */
 const countPdfPages = async (file: File): Promise<number | null> => {
@@ -26,11 +29,11 @@ const countPdfPages = async (file: File): Promise<number | null> => {
   }
 };
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const pagesText = (n: number, t: T) => (n === 1 ? t('{n} page', { n }) : t('{n} pages', { n }));
 
-const describe = (p: Pick<PrintRequest, 'pages' | 'paperSize' | 'color' | 'copies' | 'sides'>) =>
-  `${plural(p.pages, 'page', 'pages')} · ${p.paperSize} · ${COLOR_LABEL[p.color].toLowerCase()}` +
-  (p.copies > 1 ? ` · ${p.copies} copies` : '');
+const describe = (p: Pick<PrintRequest, 'pages' | 'paperSize' | 'color' | 'copies' | 'sides'>, t: T) =>
+  `${pagesText(p.pages, t)} · ${p.paperSize} · ${t(COLOR_LABEL[p.color]).toLowerCase()}` +
+  (p.copies > 1 ? ` · ${t('{n} copies', { n: p.copies })}` : '');
 
 type Errors = Partial<Record<'file' | 'pages' | 'copies', string>>;
 
@@ -68,6 +71,7 @@ function Options<T extends string>({
  */
 export const PrintingView: React.FC = () => {
   const { printRequests, createPrintRequest, currentUser } = useBarangay();
+  const t = useT();
 
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState('');
@@ -102,11 +106,11 @@ export const PrintingView: React.FC = () => {
 
   const validate = (): Errors => {
     const e: Errors = {};
-    if (!file) e.file = 'Choose the file you want printed.';
-    else if (!FILE_EXT.test(file.name)) e.file = 'Upload a PDF or Word file.';
-    else if (file.size > MAX_FILE_BYTES) e.file = 'Upload a file that is 10 MB or smaller.';
-    if (!pageCount || pageCount > 500) e.pages = 'Enter the number of pages, from 1 to 500.';
-    if (!copyCount || copyCount > 50) e.copies = 'Enter how many copies, from 1 to 50.';
+    if (!file) e.file = t('Choose the file you want printed.');
+    else if (!FILE_EXT.test(file.name)) e.file = t('Upload a PDF or Word file.');
+    else if (file.size > MAX_FILE_BYTES) e.file = t('Upload a file that is 10 MB or smaller.');
+    if (!pageCount || pageCount > 500) e.pages = t('Enter the number of pages, from 1 to 500.');
+    if (!copyCount || copyCount > 50) e.copies = t('Enter how many copies, from 1 to 50.');
     return e;
   };
 
@@ -134,7 +138,7 @@ export const PrintingView: React.FC = () => {
 
   return (
     <Page>
-      <PageTitle title="Printing" sub="Free. Pick up at the hall." />
+      <PageTitle title={t('Printing')} sub={t('Free. Pick up at the hall.')} />
 
       {justSent && (
         <Section tone="success">
@@ -143,76 +147,77 @@ export const PrintingView: React.FC = () => {
               <CheckCircle2 />
             </IconCircle>
             <p className="min-w-0">
-              <b className="block font-semibold text-ink">Sent! We'll let you know when it's ready.</b>
-              <span className="block text-meta text-muted">Tracking number {justSent.referenceNumber}</span>
+              <b className="block font-semibold text-ink">{t("Sent! We'll let you know when it's ready.")}</b>
+              <span className="block text-meta text-muted">{t('Tracking number {ref}', { ref: justSent.referenceNumber })}</span>
             </p>
           </div>
         </Section>
       )}
 
-      <Section title="Your file">
-        <Field label="File" error={errors.file} help="PDF or Word, up to 10 MB." className="[&>label]:sr-only">
+      <Section title={t('Your file')}>
+        <Field label={t('File')} error={errors.file} help={t('PDF or Word, up to 10 MB.')} className="[&>label]:sr-only">
           {p => <FileUpload {...p} accept=".pdf,.doc,.docx" files={file ? [file] : []} onChange={fs => onFile(fs[0] ?? null)} />}
         </Field>
         <div className="grid grid-cols-2 gap-x-3 sm:gap-x-5">
-          <Field label="Pages" error={errors.pages} help={autoCounted ? `We counted ${autoCounted}.` : undefined}>
+          <Field label={t('Pages')} error={errors.pages} help={autoCounted ? t('We counted {n}.', { n: autoCounted }) : undefined}>
             {p => <Input {...p} type="number" inputMode="numeric" min={1} max={500} value={pages} onChange={e => setPages(e.target.value)} />}
           </Field>
-          <Field label="Copies" error={errors.copies}>
+          <Field label={t('Copies')} error={errors.copies}>
             {p => <Input {...p} type="number" inputMode="numeric" min={1} max={50} value={copies} onChange={e => setCopies(e.target.value)} />}
           </Field>
         </div>
       </Section>
 
-      <Section title="Print options">
+      <Section title={t('Print options')}>
         <Options<PaperSize>
-          label="Paper size"
+          label={t('Paper size')}
           value={paperSize}
           onChange={setPaperSize}
           cols="grid-cols-1 sm:grid-cols-3"
-          options={PAPER_SIZES.map(s => ({ value: s, label: s, sub: PAPER_HINT[s] }))}
+          options={PAPER_SIZES.map(s => ({ value: s, label: s, sub: t(PAPER_HINT[s]) }))}
         />
         <Options<PrintColor>
-          label="Color"
+          label={t('Color')}
           value={color}
           onChange={setColor}
           cols="grid-cols-2"
-          options={(Object.keys(COLOR_LABEL) as PrintColor[]).map(c => ({ value: c, label: COLOR_LABEL[c] }))}
+          options={(Object.keys(COLOR_LABEL) as PrintColor[]).map(c => ({ value: c, label: t(COLOR_LABEL[c]) }))}
         />
         <Options<PrintSides>
-          label="Print on"
+          label={t('Print on')}
           value={sides}
           onChange={setSides}
           cols="grid-cols-2"
-          options={(Object.keys(SIDES_LABEL) as PrintSides[]).map(s => ({ value: s, label: SIDES_LABEL[s] }))}
+          options={(Object.keys(SIDES_LABEL) as PrintSides[]).map(s => ({ value: s, label: t(SIDES_LABEL[s]) }))}
         />
 
         <div className="mt-5 pt-4 border-t border-line-soft">
           {hasErrors ? (
             <p role="alert" className="font-semibold text-danger-fg">
-              Please fix the fields marked above.
+              {t('Please fix the fields marked above.')}
             </p>
           ) : (
             <p aria-live="polite" className="text-muted">
               {ready ? (
                 <>
-                  <b className="font-semibold text-ink">{plural(totalPages, 'page', 'pages')}, free.</b> Pick up weekdays, 1:00 PM to 4:00 PM.
+                  <b className="font-semibold text-ink">{t('{pages}, free.', { pages: pagesText(totalPages, t) })}</b>{' '}
+                  {t('Pick up weekdays, 1:00 PM to 4:00 PM.')}
                 </>
               ) : (
-                'Add your file and the number of pages.'
+                t('Add your file and the number of pages.')
               )}
             </p>
           )}
           <FormActions>
             <Button variant="brand" onClick={submit} icon={<Printer className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />}>
-              Send to print
+              {t('Send to print')}
             </Button>
           </FormActions>
         </div>
       </Section>
 
       {mine.length > 0 && (
-        <Section title="My prints" flush>
+        <Section title={t('My prints')} flush>
           <List>
             {mine.map(p => (
               <ListRow
@@ -225,7 +230,7 @@ export const PrintingView: React.FC = () => {
                 title={<span className="block truncate">{p.fileName}</span>}
                 sub={
                   <>
-                    {describe(p)} · {formatShortDateTime(p.submittedAt)}
+                    {describe(p, t)} · {formatShortDateTime(p.submittedAt)}
                     {p.status === 'rejected' && p.rejectionReason && <span className="block text-danger-fg">{p.rejectionReason}</span>}
                   </>
                 }

@@ -4,12 +4,15 @@ import {
   ArrowUp,
   Check,
   ChevronDown,
+  ChevronRight,
+  CircleHelp,
+  ListOrdered,
+  Sparkles,
+  Users,
   FileCheck2,
   Landmark,
   Languages,
   Megaphone,
-  Menu,
-  X,
   MessageSquareText,
   ScanSearch,
   ShieldCheck,
@@ -26,6 +29,8 @@ import { AuthDialog, type Role } from './AuthDialog';
 import { TAGLINE } from '../../config/brand';
 import { HeroCollage } from './landing/HeroCollage';
 import { FeatureTour } from './landing/FeatureTour';
+import { LegalSheet } from '../legal/LegalSheet';
+import { LEGAL_DOCS, type LegalDocId } from '../legal/legalDocs';
 
 /*
  * Landing page. Palette: white + navy only, with mist (#F5F7FA) for alternating sections and
@@ -90,6 +95,20 @@ const NAV: [string, string][] = [
   ['How it works', 'how-it-works'],
   ['FAQ', 'faq'],
 ];
+
+/** Icons for the page links in the phone menu. */
+const NAV_ICONS: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidden'?: boolean | 'true' }>> = {
+  features: Sparkles,
+  guests: Users,
+  'how-it-works': ListOrdered,
+  faq: CircleHelp,
+};
+
+/** One item in the phone menu: rises a little as it fades in. */
+const menuItemMotion = {
+  hidden: { opacity: 0, y: 12 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.23, 1, 0.32, 1] as [number, number, number, number] } },
+};
 
 /** Remembers where you were on the landing page, so a refresh doesn't jump to the top. */
 const SCROLL_KEY = 'ekapitan:landing-scroll';
@@ -260,6 +279,7 @@ export const LandingPage: React.FC = () => {
   const [busy, setBusy] = useState<Role | null>(null);
   // Arriving from the public site's Sign in / Sign up opens the dialog on that tab.
   const [auth, setAuth] = useState<AuthScreen | null>(takePendingAuthScreen);
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
   const closeAuth = useCallback(() => setAuth(null), []);
   const { bar, scrolled } = useScrollProgress();
   useScrollMemory();
@@ -281,13 +301,17 @@ export const LandingPage: React.FC = () => {
   const firstMenuItem = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
-    firstMenuItem.current?.focus();
+    firstMenuItem.current?.focus({ preventScroll: true });
+    const html = document.documentElement;
+    const prevOverflow = html.style.overflow;
+    html.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
     const wide = window.matchMedia('(min-width: 1024px)');
     const onWide = () => wide.matches && setMenuOpen(false);
     window.addEventListener('keydown', onKey);
     wide.addEventListener('change', onWide);
     return () => {
+      html.style.overflow = prevOverflow;
       window.removeEventListener('keydown', onKey);
       wide.removeEventListener('change', onWide);
     };
@@ -312,11 +336,16 @@ export const LandingPage: React.FC = () => {
       <div className="min-h-svh flex flex-col bg-surface text-ink" inert={auth !== null}>
         {/* ---------- Header ---------- */}
         <header
-          className={`sticky top-0 z-30 bg-surface border-b transition-[border-color,box-shadow] duration-200
-            ${scrolled ? 'border-hairline shadow-[0_1px_12px_rgb(18_48_79/0.06)]' : 'border-transparent'}`}
+          className={`sticky top-0 z-40 bg-surface border-b transition-[border-color,box-shadow] duration-200
+            ${scrolled || menuOpen ? 'border-hairline shadow-[0_1px_12px_rgb(18_48_79/0.06)]' : 'border-transparent'}`}
         >
           <Container className="h-16 sm:h-[72px] flex items-center gap-2 sm:gap-3">
-            <a href="#top" className="flex items-center gap-2.5 min-h-11 rounded-control mr-auto lg:mr-0" aria-label="eKapitan, back to top">
+            <a
+              href="#top"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 min-h-11 rounded-control mr-auto lg:mr-0"
+              aria-label="eKapitan, back to top"
+            >
               <LogoMark size={36} animate />
               <span className="font-display text-xl font-bold text-navy-ink">eKapitan</span>
             </a>
@@ -337,105 +366,166 @@ export const LandingPage: React.FC = () => {
                 Sign in
               </Button>
             </span>
-            {/* Sign up only joins the header once the hero's own Sign up has scrolled out of view */}
+            {/* Tablets and up: Sign up fades in once the hero's own Sign up has scrolled away.
+                Its space is always kept, so nothing beside it moves. Phones get the bottom bar instead. */}
             <span
               inert={heroCtaInView}
-              className={`grid transition-[grid-template-columns,opacity,margin] duration-300 ease-out-strong
-                ${heroCtaInView ? 'grid-cols-[0fr] opacity-0 -ml-2 sm:-ml-3' : 'grid-cols-[1fr] opacity-100'}`}
+              className={`hidden sm:block transition-[opacity,scale,translate] duration-300 ease-out-strong
+                ${heroCtaInView ? 'opacity-0 scale-90 translate-y-1 pointer-events-none' : 'opacity-100 scale-100 translate-y-0'}`}
             >
-              <span className="min-w-0 overflow-clip [overflow-clip-margin:6px]">
-                <Button variant="brand" size="sm" className="whitespace-nowrap" onClick={() => setAuth('register')}>
-                  Sign up
-                </Button>
-              </span>
+              <Button variant="brand" size="sm" className="whitespace-nowrap" onClick={() => setAuth('register')}>
+                Sign up
+              </Button>
             </span>
+            {/* Menu button: three lines that fold into an X */}
             <button
               type="button"
               onClick={() => setMenuOpen(o => !o)}
               aria-expanded={menuOpen}
               aria-controls="landing-menu"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              className="lg:hidden -mr-2 w-11 h-11 grid place-items-center rounded-control text-navy-ink hover:bg-mist cursor-pointer
-                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.94]"
+              className="lg:hidden -mr-2 w-11 h-11 grid place-items-center rounded-full text-navy-ink hover:bg-mist cursor-pointer
+                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.92]"
             >
-              {menuOpen ? <X className="w-6 h-6" strokeWidth={2} aria-hidden="true" /> : <Menu className="w-6 h-6" strokeWidth={2} aria-hidden="true" />}
+              <span aria-hidden="true" className="relative block w-[22px] h-4">
+                {[0, 1, 2].map(i => (
+                  <span
+                    key={i}
+                    className="absolute left-0 right-0 h-[2.5px] rounded-full bg-current transition-[transform,opacity] duration-300 ease-out-strong motion-reduce:transition-none"
+                    style={{
+                      top: i * 6.75,
+                      transform: menuOpen
+                        ? i === 0
+                          ? 'translateY(6.75px) rotate(45deg)'
+                          : i === 2
+                            ? 'translateY(-6.75px) rotate(-45deg)'
+                            : 'scaleX(0)'
+                        : 'none',
+                      opacity: menuOpen && i === 1 ? 0 : 1,
+                    }}
+                  />
+                ))}
+              </span>
             </button>
           </Container>
 
-          {/* Phones and tablets: the page links, Sign in and guest mode drop down under the header */}
-          <AnimatePresence>
-            {menuOpen && (
-              <>
-                <motion.div
-                  key="scrim"
-                  aria-hidden="true"
-                  onClick={() => setMenuOpen(false)}
-                  className="lg:hidden fixed inset-x-0 bottom-0 top-16 sm:top-[72px] bg-scrim/25"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1, transition: { duration: 0.2 } }}
-                  exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                />
-                <motion.nav
-                  key="menu"
-                  id="landing-menu"
-                  aria-label="Menu"
-                  className="lg:hidden absolute inset-x-0 top-full bg-surface border-b border-hairline shadow-float"
-                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateY(-8px)' }}
-                  animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.22, ease: [0.23, 1, 0.32, 1] } }}
-                  exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                >
-                  <Container className="pt-2 pb-5">
-                    <ul>
-                      {NAV.map(([label, id], i) => (
-                        <li key={id} className="border-b border-hairline">
-                          <button
-                            ref={i === 0 ? firstMenuItem : undefined}
-                            type="button"
-                            onClick={() => {
-                              setMenuOpen(false);
-                              requestAnimationFrame(() => scrollToId(id));
-                            }}
-                            className="w-full min-h-13 py-3 flex items-center justify-between text-left text-[1.0625rem] font-semibold text-navy-ink cursor-pointer"
-                          >
-                            {label}
-                            <ArrowRight className="w-4 h-4 text-muted" aria-hidden="true" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                      <span className="contents sm:hidden">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setAuth('login');
-                          }}
-                        >
-                          Sign in
-                        </Button>
-                      </span>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          go('guest');
-                        }}
-                        disabled={!!busy}
-                      >
-                        {guestLabel}
-                      </Button>
-                    </div>
-                  </Container>
-                </motion.nav>
-              </>
-            )}
-          </AnimatePresence>
           {/* Reading progress */}
-          <span aria-hidden="true" className="absolute left-0 right-0 -bottom-px h-0.5 overflow-hidden">
+          <span aria-hidden="true" className={`absolute left-0 right-0 -bottom-px h-0.5 overflow-hidden transition-opacity ${menuOpen ? 'opacity-0' : ''}`}>
             <span ref={bar} className="block h-full bg-navy origin-left" style={{ transform: 'scaleX(0)' }} />
           </span>
         </header>
+
+        {/* Phones and tablets: full-screen menu under the header. Links rise in one after another;
+            the account actions sit at the bottom, where a thumb reaches. */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              key="menu"
+              id="landing-menu"
+              className="lg:hidden fixed inset-x-0 top-16 sm:top-[72px] bottom-0 z-30 bg-surface flex flex-col"
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, clipPath: 'inset(0 0 100% 0)' }}
+              animate={{ opacity: 1, clipPath: 'inset(0 0 0% 0)', transition: { duration: 0.34, ease: [0.32, 0.72, 0, 1] } }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, clipPath: 'inset(0 0 100% 0)', transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } }}
+            >
+              <motion.nav
+                aria-label="Menu"
+                className="flex-1 overflow-y-auto px-4 sm:px-6 pt-5"
+                initial="hidden"
+                animate="shown"
+                variants={{ shown: { transition: { staggerChildren: 0.045, delayChildren: 0.08 } } }}
+              >
+                <motion.p variants={menuItemMotion} className="text-label font-semibold uppercase tracking-[0.1em] text-muted mb-2">
+                  On this page
+                </motion.p>
+                <ul className="grid gap-1">
+                  {NAV.map(([label, id], i) => {
+                    const Icon = NAV_ICONS[id];
+                    return (
+                      <motion.li key={id} variants={menuItemMotion}>
+                        <button
+                          ref={i === 0 ? firstMenuItem : undefined}
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            window.setTimeout(() => scrollToId(id), 260);
+                          }}
+                          className="w-full min-h-14 px-2 -mx-2 flex items-center gap-4 rounded-tile text-left cursor-pointer
+                            hover:bg-mist active:bg-mist active:scale-[0.99] transition-[background-color,scale] duration-150"
+                        >
+                          <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-navy-tint text-navy-ink">
+                            <Icon className="w-5 h-5" strokeWidth={1.9} aria-hidden="true" />
+                          </span>
+                          <span className="flex-1 text-[1.1875rem] font-semibold text-ink">{label}</span>
+                          <ChevronRight className="w-5 h-5 text-muted" aria-hidden="true" />
+                        </button>
+                      </motion.li>
+                    );
+                  })}
+                </ul>
+              </motion.nav>
+              <motion.div
+                className="px-4 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-hairline grid gap-2.5"
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.3, delay: 0.18, ease: [0.23, 1, 0.32, 1] } }}
+              >
+                <Button
+                  variant="brand"
+                  fullWidth
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAuth('register');
+                  }}
+                >
+                  Sign up
+                </Button>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAuth('login');
+                  }}
+                >
+                  Sign in
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    go('guest');
+                  }}
+                  disabled={!!busy}
+                  className="min-h-11 font-semibold text-navy-ink underline-offset-4 hover:underline cursor-pointer disabled:text-muted"
+                >
+                  {guestLabel}
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Phones: once the hero's buttons are gone, the two main actions wait at the bottom */}
+        <AnimatePresence>
+          {!heroCtaInView && !menuOpen && (
+            <motion.div
+              key="cta-bar"
+              className="sm:hidden fixed inset-x-0 bottom-0 z-30 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]
+                bg-surface border-t border-hairline shadow-[0_-6px_20px_rgb(18_48_79/0.08)]"
+              initial={reduceMotion ? { opacity: 0 } : { y: '110%' }}
+              animate={reduceMotion ? { opacity: 1 } : { y: 0, transition: { type: 'spring', stiffness: 420, damping: 38 } }}
+              exit={reduceMotion ? { opacity: 0 } : { y: '110%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+            >
+              <div className="grid grid-cols-[1fr_auto] gap-2.5">
+                <Button variant="brand" onClick={() => setAuth('register')}>
+                  Sign up
+                </Button>
+                <Button variant="outline" onClick={() => setAuth('login')}>
+                  Sign in
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <main id="top" className="flex-1">
           {/* ---------- Hero: the promise + a glimpse of everything ---------- */}
@@ -561,7 +651,7 @@ export const LandingPage: React.FC = () => {
                         </span>
                         <span className="min-w-0 flex-1">
                           <b className="block font-display text-h3 font-semibold text-navy-ink">{g.title}</b>
-                          <span className="block text-meta text-muted mt-1">{g.text}</span>
+                          <span className="block text-meta text-muted mt-1 line-clamp-2 sm:line-clamp-none">{g.text}</span>
                         </span>
                         <span
                           aria-hidden="true"
@@ -712,8 +802,22 @@ export const LandingPage: React.FC = () => {
             </Reveal>
           </Container>
           <div className="border-t border-hairline">
-            <Container className="py-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-caption text-muted">© {new Date().getFullYear()} eKapitan. Barangay services for the community.</p>
+            <Container className="pt-5 pb-28 sm:pb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                <p className="text-caption text-muted">© {new Date().getFullYear()} eKapitan. Barangay services for the community.</p>
+                <nav aria-label="Legal" className="flex flex-wrap gap-x-4">
+                  {(['privacy_policy', 'terms', 'privacy_notice'] as LegalDocId[]).map(id => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setLegal(id)}
+                      className="min-h-11 text-caption font-semibold text-muted hover:text-navy-ink underline-offset-4 hover:underline cursor-pointer transition-colors"
+                    >
+                      {LEGAL_DOCS[id].title}
+                    </button>
+                  ))}
+                </nav>
+              </div>
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -727,6 +831,7 @@ export const LandingPage: React.FC = () => {
       </div>
 
       <AuthDialog screen={auth} onScreenChange={setAuth} onClose={closeAuth} onEnter={go} busy={busy} />
+      <LegalSheet id={legal} onClose={() => setLegal(null)} />
     </>
   );
 };

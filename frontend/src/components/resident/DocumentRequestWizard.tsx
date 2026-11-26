@@ -5,6 +5,7 @@ import type { DocumentRequest, DocumentType } from '../../types';
 import { Button, Checkbox, Field, FileUpload, Input, Select, Switch, formatPeso, todayISO } from '../ui';
 import { FormActions, IconCircle, Page, PageTitle, Section } from './kit';
 import { PUROKS } from '../../data/reference';
+import { useT } from '../../i18n';
 
 interface DocumentRequestWizardProps {
   initialServiceId?: string;
@@ -34,17 +35,19 @@ const WAIVERS = [
 const MAX_ID_BYTES = 5 * 1024 * 1024;
 const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
+type T = ReturnType<typeof useT>;
+
 const formatPickUpDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 const plainTitle = (t: string) => t.replace(/\s*\(RA\s*\d+\)/i, '');
-const readyIn = (t: string) => {
+const readyIn = (t: string, tr: T) => {
   const s = t
     .replace(/\s*\(.*?\)\s*/g, ' ')
     .replace(/\s+upon validation/i, '')
     .split(/\s+or\s+/i)[0]
     .trim();
-  return /^same day$/i.test(s) ? 'Ready same day' : `Ready in ${s}`;
+  return /^same day$/i.test(s) ? tr('Ready same day') : tr('Ready in {time}', { time: s });
 };
 const freeNote = (t: string) => t.replace(/\s+under Republic Act\s*\d+/i, '').replace(/\s*\(RA\s*\d+\)/i, '');
 
@@ -64,6 +67,7 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
  */
 export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ initialServiceId }) => {
   const { services, currentUser, createDocumentRequest, setActiveTab } = useBarangay();
+  const t = useT();
   const service = services.find(s => s.id === initialServiceId);
 
   const [step, setStep] = useState<Step>(0);
@@ -108,33 +112,33 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
 
   const feeText =
     service.fee === 0
-      ? 'Free'
+      ? t('Free')
       : canWaive && wantsWaiver
-        ? `Free (${waiverLabel.toLowerCase()})`
-        : `${formatPeso(fee)}, pay at the hall`;
+        ? t('Free ({reason})', { reason: t(waiverLabel).toLowerCase() })
+        : t('{fee}, pay at the hall', { fee: formatPeso(fee) });
 
   /* ---------- Validation, one step at a time (same rules as before) ---------- */
   const validateStep = (s: Step): Errors => {
     const e: Errors = {};
     if (s === 0) {
-      if (!name.trim()) e.name = 'Enter your full name.';
+      if (!name.trim()) e.name = t('Enter your full name.');
       const digits = mobile.replace(/[\s-]/g, '');
-      if (!digits) e.mobile = 'Enter your mobile number.';
-      else if (!/^09\d{9}$/.test(digits)) e.mobile = 'Enter an 11-digit number that starts with 09.';
+      if (!digits) e.mobile = t('Enter your mobile number.');
+      else if (!/^09\d{9}$/.test(digits)) e.mobile = t('Enter an 11-digit number that starts with 09.');
     }
     if (s === 1) {
-      if (purpose === 'Other' && !otherPurpose.trim()) e.otherPurpose = 'Tell us what the document is for.';
-      if (!claimDate) e.claimDate = 'Choose the day you want to pick it up.';
-      else if (claimDate < todayISO()) e.claimDate = 'Choose today or a later date.';
+      if (purpose === 'Other' && !otherPurpose.trim()) e.otherPurpose = t('Tell us what the document is for.');
+      if (!claimDate) e.claimDate = t('Choose the day you want to pick it up.');
+      else if (claimDate < todayISO()) e.claimDate = t('Choose today or a later date.');
       else {
         const day = new Date(`${claimDate}T00:00:00`).getDay();
-        if (day === 0 || day === 6) e.claimDate = 'Choose a weekday (Monday to Friday).';
+        if (day === 0 || day === 6) e.claimDate = t('Choose a weekday (Monday to Friday).');
       }
     }
     if (s === 2) {
-      if (!validId) e.validId = 'Upload a photo or scan of a valid ID.';
-      else if (!ID_TYPES.includes(validId.type)) e.validId = 'Upload a JPG, PNG or PDF file.';
-      else if (validId.size > MAX_ID_BYTES) e.validId = 'Upload a file that is 5 MB or smaller.';
+      if (!validId) e.validId = t('Upload a photo or scan of a valid ID.');
+      else if (!ID_TYPES.includes(validId.type)) e.validId = t('Upload a JPG, PNG or PDF file.');
+      else if (validId.size > MAX_ID_BYTES) e.validId = t('Upload a file that is 5 MB or smaller.');
     }
     return e;
   };
@@ -162,7 +166,7 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
       }
     }
     if (!consent) {
-      setErrors({ consent: 'Tick the box to agree before you send.' });
+      setErrors({ consent: t('Tick the box to agree before you send.') });
       return;
     }
     const req = createDocumentRequest({
@@ -195,20 +199,20 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
               <CheckCircle2 />
             </IconCircle>
             <div className="min-w-0">
-              <h1 className="font-display text-[1.625rem] font-bold text-ink leading-tight">Sent!</h1>
-              <p className="text-muted">We'll text you when it's ready.</p>
+              <h1 className="font-display text-[1.625rem] font-bold text-ink leading-tight">{t('Sent!')}</h1>
+              <p className="text-muted">{t("We'll text you when it's ready.")}</p>
             </div>
           </div>
           <dl className="mt-3">
-            <Row label="Tracking number">{submitted.referenceNumber}</Row>
-            <Row label="Pick up on">{formatPickUpDate(claimDate)}, 1:00 PM to 4:00 PM</Row>
-            <Row label="Bring">{fee > 0 ? `Your ID and ${formatPeso(fee)}` : 'Your ID'}</Row>
+            <Row label={t('Tracking number')}>{submitted.referenceNumber}</Row>
+            <Row label={t('Pick up on')}>{t('{date}, 1:00 PM to 4:00 PM', { date: formatPickUpDate(claimDate) })}</Row>
+            <Row label={t('Bring')}>{fee > 0 ? t('Your ID and {fee}', { fee: formatPeso(fee) }) : t('Your ID')}</Row>
           </dl>
           <FormActions>
             <Button variant="secondary" onClick={() => setActiveTab('home')}>
-              Done
+              {t('Done')}
             </Button>
-            <Button variant="brand" onClick={() => setActiveTab('tracking')}>See my requests</Button>
+            <Button variant="brand" onClick={() => setActiveTab('tracking')}>{t('See my requests')}</Button>
           </FormActions>
         </Section>
       </Page>
@@ -220,13 +224,13 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
 
   return (
     <Page>
-      <PageTitle title={title} sub={`${service.fee === 0 ? 'Free' : formatPeso(service.fee)} · ${readyIn(service.processingTime)}`} />
+      <PageTitle title={title} sub={`${service.fee === 0 ? t('Free') : formatPeso(service.fee)} · ${readyIn(service.processingTime, t)}`} />
 
-      <Section title={STEPS[step]}>
+      <Section title={t(STEPS[step])}>
         <div ref={formRef} tabIndex={-1} className="outline-none">
           <form
             noValidate
-            aria-label={STEPS[step]}
+            aria-label={t(STEPS[step])}
             onSubmit={e => {
               e.preventDefault();
               if (step === 3) submit();
@@ -235,16 +239,16 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
           >
             {hasErrors && (
               <p role="alert" className="mb-3 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
-                Please fix the fields marked below.
+                {t('Please fix the fields marked below.')}
               </p>
             )}
 
             {step === 0 && (
               <>
-                <Field label="Full name" error={errors.name} className={first}>
+                <Field label={t('Full name')} error={errors.name} className={first}>
                   {p => <Input {...p} value={name} onChange={e => setName(e.target.value)} autoComplete="name" />}
                 </Field>
-                <Field label="Mobile number" error={errors.mobile} help="We text you when it's ready.">
+                <Field label={t('Mobile number')} error={errors.mobile} help={t("We text you when it's ready.")}>
                   {p => (
                     <Input
                       {...p}
@@ -257,7 +261,7 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
                     />
                   )}
                 </Field>
-                <Field label="Purok">
+                <Field label={t('Purok')}>
                   {p => (
                     <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
                       {PUROKS.map(x => (
@@ -271,39 +275,41 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
 
             {step === 1 && (
               <>
-                <Field label="What is it for?" className={first}>
+                <Field label={t('What is it for?')} className={first}>
                   {p => (
                     <Select {...p} value={purpose} onChange={e => setPurpose(e.target.value)}>
                       {PURPOSES.map(x => (
-                        <option key={x}>{x}</option>
+                        <option key={x} value={x}>
+                          {t(x)}
+                        </option>
                       ))}
                     </Select>
                   )}
                 </Field>
                 {purpose === 'Other' && (
-                  <Field label="Tell us what it is for" error={errors.otherPurpose}>
+                  <Field label={t('Tell us what it is for')} error={errors.otherPurpose}>
                     {p => <Input {...p} value={otherPurpose} onChange={e => setOtherPurpose(e.target.value)} />}
                   </Field>
                 )}
-                <Field label="Pick-up day" error={errors.claimDate} help="Weekdays, 1:00 PM to 4:00 PM.">
+                <Field label={t('Pick-up day')} error={errors.claimDate} help={t('Weekdays, 1:00 PM to 4:00 PM.')}>
                   {p => <Input {...p} type="date" min={todayISO()} value={claimDate} onChange={e => setClaimDate(e.target.value)} />}
                 </Field>
 
                 {canWaive && (
                   <div className="mt-3">
                     <Switch
-                      label="I may get it free"
-                      description={`${freeNote(service.eligibleCriteria)}. Staff check at the hall.`}
+                      label={t('I may get it free')}
+                      description={`${freeNote(service.eligibleCriteria)}. ${t('Staff check at the hall.')}`}
                       checked={wantsWaiver}
                       onChange={setWantsWaiver}
                     />
                     {wantsWaiver && (
-                      <Field label="Which one are you?" className="[&>label]:mt-1">
+                      <Field label={t('Which one are you?')} className="[&>label]:mt-1">
                         {p => (
                           <Select {...p} value={waiverReason} onChange={e => setWaiverReason(e.target.value)}>
                             {WAIVERS.map(w => (
                               <option key={w.value} value={w.value}>
-                                {w.label}
+                                {t(w.label)}
                               </option>
                             ))}
                           </Select>
@@ -316,12 +322,12 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
             )}
 
             {step === 2 && (
-              <Field label="Photo of a valid ID" error={errors.validId} help="JPG, PNG or PDF, up to 5 MB. Bring the same ID." className={first}>
+              <Field label={t('Photo of a valid ID')} error={errors.validId} help={t('JPG, PNG or PDF, up to 5 MB. Bring the same ID.')} className={first}>
                 {p => (
                   <FileUpload
                     {...p}
                     accept=".jpg,.jpeg,.png,.pdf"
-                    hint="Take a photo or choose a file"
+                    hint={t('Take a photo or choose a file')}
                     files={validId ? [validId] : []}
                     onChange={fs => setValidId(fs[0] ?? null)}
                   />
@@ -332,19 +338,19 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
             {step === 3 && (
               <>
                 <dl>
-                  <Row label="Document">{title}</Row>
-                  <Row label="Name">{name}</Row>
-                  <Row label="Mobile">{mobile}</Row>
-                  <Row label="Purok">{purok}</Row>
-                  <Row label="For">{finalPurpose}</Row>
-                  <Row label="Pick up on">{formatPickUpDate(claimDate)}</Row>
-                  <Row label="ID">{validId?.name ?? ''}</Row>
-                  <Row label="Cost">{feeText}</Row>
+                  <Row label={t('Document')}>{title}</Row>
+                  <Row label={t('Name')}>{name}</Row>
+                  <Row label={t('Mobile')}>{mobile}</Row>
+                  <Row label={t('Purok')}>{purok}</Row>
+                  <Row label={t('For')}>{purpose === 'Other' ? finalPurpose : t(finalPurpose)}</Row>
+                  <Row label={t('Pick up on')}>{formatPickUpDate(claimDate)}</Row>
+                  <Row label={t('ID')}>{validId?.name ?? ''}</Row>
+                  <Row label={t('Cost')}>{feeText}</Row>
                 </dl>
 
                 <details className="group mt-1">
                   <summary className="inline-flex items-center gap-1.5 min-h-11 font-semibold text-meta text-navy-ink cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:underline underline-offset-4">
-                    What to bring
+                    {t('What to bring')}
                     <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" strokeWidth={2} aria-hidden="true" />
                   </summary>
                   <ul className="mb-1 text-meta text-ink list-disc pl-5 space-y-1">
@@ -356,8 +362,8 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
 
                 <Checkbox
                   className="mt-2"
-                  label="I agree to share these details with the hall"
-                  description="Only hall staff can see them."
+                  label={t('I agree to share these details with the hall')}
+                  description={t('Only hall staff can see them.')}
                   checked={consent}
                   onChange={e => {
                     setConsent(e.target.checked);
@@ -370,9 +376,9 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
 
             <FormActions>
               <Button variant="secondary" onClick={back}>
-                Back
+                {t('Back')}
               </Button>
-              <Button variant="brand" type="submit">{step === 3 ? 'Send request' : 'Continue'}</Button>
+              <Button variant="brand" type="submit">{step === 3 ? t('Send request') : t('Continue')}</Button>
             </FormActions>
           </form>
         </div>

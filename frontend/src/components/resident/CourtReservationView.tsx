@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
+import { useLanguage, useT } from '../../i18n';
 import type { CourtReservation } from '../../types';
 import { Button, Calendar, Field, Input, StatusPill, courtStatus, toISODate, type DayState } from '../ui';
 import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
@@ -9,8 +10,10 @@ import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageT
 const BOOKING_WINDOW_DAYS = 60;
 
 const parseISO = (iso: string) => new Date(`${iso}T00:00:00`);
-const longDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-const shortDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const longDate = (iso: string, locale = 'en-US') =>
+  parseISO(iso).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
+const shortDate = (iso: string, locale = 'en-US') =>
+  parseISO(iso).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 const slotStartHour = (slotId: string) => Number(slotId.split('-')[0]);
 const isPhone = () => window.matchMedia('(max-width: 1023px)').matches;
 const scrollToSection = (headingId: string) =>
@@ -19,6 +22,8 @@ const scrollToSection = (headingId: string) =>
 /** Resident · Book the court. Pick a day, pick a time, say what it's for, send. */
 export const CourtReservationView: React.FC = () => {
   const { courtSlots, courtReservations, courtClosures, createCourtReservation, currentUser } = useBarangay();
+  const t = useT();
+  const locale = useLanguage() === 'fil' ? 'fil-PH' : 'en-US';
 
   const today = toISODate(new Date());
   const lastDay = useMemo(() => {
@@ -99,8 +104,8 @@ export const CourtReservationView: React.FC = () => {
     e.preventDefault();
     if (!date) return;
     const errs: typeof errors = {};
-    if (!slotId) errs.slot = 'Pick a time.';
-    if (activity.trim().length < 3) errs.activity = 'Tell us what it is for, like basketball practice.';
+    if (!slotId) errs.slot = t('Pick a time.');
+    if (activity.trim().length < 3) errs.activity = t('Tell us what it is for, like basketball practice.');
     setErrors(errs);
     if (Object.keys(errs).length || !slotId) return;
     const created = createCourtReservation({ date, slotId, activity: activity.trim() });
@@ -120,21 +125,21 @@ export const CourtReservationView: React.FC = () => {
       title={r.activity}
       sub={
         <>
-          {shortDate(r.date)}, {slotLabel(r.slotId)}
+          {shortDate(r.date, locale)}, {slotLabel(r.slotId)}
           {r.status === 'declined' && r.notes && <span className="block break-words">{r.notes}</span>}
         </>
       }
-      trailing={<StatusPill tone={courtStatus[r.status].tone}>{courtStatus[r.status].label}</StatusPill>}
+      trailing={<StatusPill tone={courtStatus[r.status].tone}>{t(courtStatus[r.status].label)}</StatusPill>}
       onClick={tappable ? () => showDate(r.date) : undefined}
     />
   );
 
   return (
     <Page wide>
-      <PageTitle title="Book the court" />
+      <PageTitle title={t('Book the court')} />
 
       <div className="grid gap-4 items-start lg:grid-cols-2">
-        <Section title="Pick a day" id="court-day-title" className="scroll-mt-24">
+        <Section title={t('Pick a day')} id="court-day-title" className="scroll-mt-24">
           <Calendar
             month={month}
             onMonthChange={setMonth}
@@ -146,14 +151,14 @@ export const CourtReservationView: React.FC = () => {
           />
         </Section>
 
-        <Section title={date ? longDate(date) : 'Pick a time'} id="court-time-title" className="scroll-mt-24">
+        <Section title={date ? longDate(date, locale) : t('Pick a time')} id="court-time-title" className="scroll-mt-24">
           {!date ? (
-            <p className="text-muted">Pick a green day first.</p>
+            <p className="text-muted">{t('Pick a green day first.')}</p>
           ) : (
             <form noValidate onSubmit={submit}>
               <div
                 role="radiogroup"
-                aria-label="Time"
+                aria-label={t('Time')}
                 aria-describedby={errors.slot ? 'court-slot-error' : undefined}
                 className="grid sm:grid-cols-2 lg:grid-cols-1 gap-2"
               >
@@ -163,7 +168,7 @@ export const CourtReservationView: React.FC = () => {
                     <Choice
                       key={s.id}
                       label={s.label}
-                      sub={open ? undefined : isTaken(date, s.id) ? 'Booked' : 'Closed'}
+                      sub={open ? undefined : isTaken(date, s.id) ? t('Booked') : t('Closed')}
                       disabled={!open}
                       selected={slotId === s.id}
                       onSelect={() => {
@@ -174,20 +179,20 @@ export const CourtReservationView: React.FC = () => {
                   );
                 })}
               </div>
-              {openSlots === 0 && <p className="text-meta text-muted mt-2">No times left on this day.</p>}
+              {openSlots === 0 && <p className="text-meta text-muted mt-2">{t('No times left on this day.')}</p>}
               {errors.slot && (
                 <p id="court-slot-error" className="text-meta text-danger-fg mt-2">
                   {errors.slot}
                 </p>
               )}
 
-              <Field label="What is it for?" error={errors.activity}>
-                {p => <Input {...p} placeholder="Example: Basketball practice" value={activity} onChange={e => setActivity(e.target.value)} />}
+              <Field label={t('What is it for?')} error={errors.activity}>
+                {p => <Input {...p} placeholder={t('Example: Basketball practice')} value={activity} onChange={e => setActivity(e.target.value)} />}
               </Field>
 
               <FormActions>
                 <Button type="submit" variant="brand" disabled={openSlots === 0}>
-                  Send request
+                  {t('Send request')}
                 </Button>
               </FormActions>
             </form>
@@ -202,27 +207,27 @@ export const CourtReservationView: React.FC = () => {
               <CheckCircle2 />
             </IconCircle>
             <p className="text-ink">
-              <b className="font-semibold">Request sent.</b> Tracking number{' '}
-              <b className="font-semibold whitespace-nowrap">{justSent.referenceNumber}</b>. We'll tell you when it's approved.
+              <b className="font-semibold">{t('Request sent.')}</b> {t('Tracking number')}{' '}
+              <b className="font-semibold whitespace-nowrap">{justSent.referenceNumber}</b>. {t("We'll tell you when it's approved.")}
             </p>
           </div>
         </Section>
       )}
 
-      <Section title="My bookings" flush>
+      <Section title={t('My bookings')} flush>
         {mine.length === 0 ? (
-          <EmptyState icon={<CalendarDays />} title="No bookings yet" />
+          <EmptyState icon={<CalendarDays />} title={t('No bookings yet')} />
         ) : (
           <>
             {upcoming.length === 0 ? (
-              <p className="px-4 sm:px-5 pb-4 text-meta text-muted">Nothing coming up.</p>
+              <p className="px-4 sm:px-5 pb-4 text-meta text-muted">{t('Nothing coming up.')}</p>
             ) : (
               <List>{upcoming.map(r => bookingRow(r, true))}</List>
             )}
             {past.length > 0 && (
               <details className="border-t border-line-soft">
                 <summary className="min-h-12 flex items-center px-4 sm:px-5 cursor-pointer font-semibold text-meta text-navy-ink">
-                  Past bookings ({past.length})
+                  {t('Past bookings ({n})', { n: past.length })}
                 </summary>
                 <List className="border-t border-line-soft">{past.map(r => bookingRow(r, false))}</List>
               </details>

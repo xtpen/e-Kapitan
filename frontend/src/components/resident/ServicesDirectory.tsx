@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FileText, Search } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { ServiceItem } from '../../types';
+import { useT } from '../../i18n';
 import { Button, Input } from '../ui';
 import { EmptyState, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
 
@@ -9,16 +10,18 @@ interface ServicesDirectoryProps {
   onSelectService?: (service: ServiceItem) => void;
 }
 
+type T = ReturnType<typeof useT>;
+
 /* Plain-language helpers (the service data is written for staff). */
 const peso = (n: number) => `₱${n.toLocaleString('en-PH')}`;
 const plainTitle = (t: string) => t.replace(/\s*\(RA\s*\d+\)/i, '');
-const readyIn = (t: string) => {
+const readyIn = (t: string, tr: T) => {
   const s = t
     .replace(/\s*\(.*?\)\s*/g, ' ')
     .replace(/\s+upon validation/i, '')
     .split(/\s+or\s+/i)[0]
     .trim();
-  return /^same day$/i.test(s) ? 'Ready same day' : `Ready in ${s}`;
+  return /^same day$/i.test(s) ? tr('Ready same day') : tr('Ready in {time}', { time: s });
 };
 
 /**
@@ -27,6 +30,7 @@ const readyIn = (t: string) => {
  */
 export const ServicesDirectory: React.FC<ServicesDirectoryProps> = ({ onSelectService }) => {
   const { services, setActiveTab } = useBarangay();
+  const t = useT();
   const [query, setQuery] = useState('');
 
   const available = useMemo(() => services.filter(s => s.availableOnline), [services]);
@@ -41,17 +45,17 @@ export const ServicesDirectory: React.FC<ServicesDirectoryProps> = ({ onSelectSe
 
   return (
     <Page>
-      <PageTitle title="Documents" sub="Request online. Pick up at the hall." />
+      <PageTitle title={t('Documents')} sub={t('Request online. Pick up at the hall.')} />
 
       <div className="relative">
         <label htmlFor="doc-search" className="sr-only">
-          Search documents
+          {t('Search documents')}
         </label>
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted pointer-events-none" strokeWidth={1.8} aria-hidden="true" />
         <Input
           id="doc-search"
           type="search"
-          placeholder="Search documents"
+          placeholder={t('Search documents')}
           value={query}
           onChange={e => setQuery(e.target.value)}
           className="pl-11!"
@@ -60,16 +64,16 @@ export const ServicesDirectory: React.FC<ServicesDirectoryProps> = ({ onSelectSe
 
       <Section flush>
         <p className="sr-only" aria-live="polite">
-          {shown.length === 1 ? '1 document' : `${shown.length} documents`}
+          {shown.length === 1 ? t('1 document') : t('{count} documents', { count: shown.length })}
         </p>
         {shown.length === 0 ? (
           <EmptyState
             icon={<Search />}
-            title="No documents found"
-            sub="Try another word."
+            title={t('No documents found')}
+            sub={t('Try another word.')}
             action={
               <Button variant="secondary" size="sm" onClick={() => setQuery('')}>
-                Clear search
+                {t('Clear search')}
               </Button>
             }
           />
@@ -84,7 +88,7 @@ export const ServicesDirectory: React.FC<ServicesDirectoryProps> = ({ onSelectSe
                   </IconCircle>
                 }
                 title={plainTitle(service.title)}
-                sub={`${service.fee === 0 ? 'Free' : peso(service.fee)} · ${readyIn(service.processingTime)}`}
+                sub={`${service.fee === 0 ? t('Free') : peso(service.fee)} · ${readyIn(service.processingTime, t)}`}
                 onClick={() => start(service)}
               />
             ))}

@@ -49,11 +49,11 @@
   --color-gold: #F2B84B;
 
   /* Surfaces and lines */
-  --color-canvas: #F6F3EB;
+  --color-canvas: #F2F4F7;
   --color-surface: #FFFFFF;
-  --color-surface-muted: #F1EFE8;
-  --color-line: #E3DDCC;
-  --color-line-soft: #EEE9DB;
+  --color-surface-muted: #EEF1F5;
+  --color-line: #E1E6ED;
+  --color-line-soft: #EBEEF3;
   --color-field-line: #8A93A0;
 
   /* Cool neutrals for the landing page (white + navy only; docs/DESIGN.md section 3.1). */
@@ -70,7 +70,7 @@
   --color-danger-bg: #FBE0DD;
   --color-danger-tile: #F7E1DC;
   --color-danger-fg: #8B2418;
-  --color-neutral-bg: #F1EFE8;
+  --color-neutral-bg: #EEF1F5;
   --color-neutral-fg: #5C5C5C;
 
   /* Radius and elevation */
@@ -189,9 +189,78 @@ html.dark.high-contrast {
   --color-field-line: #8B939D;
 }
 
-/* Extra large text (Settings → Text size). Large text (112.5%) is html.large-text below. */
-html.large-text.xlarge-text {
-  font-size: 125%;
+/* Small text (Settings → Text size). Large text (112.5%) is html.large-text below. */
+html.small-text {
+  font-size: 87.5%;
+}
+
+/* Bold text (Settings → Display). One step heavier everywhere. */
+html.bold-text body { font-weight: 500; }
+html.bold-text .font-normal { font-weight: 500; }
+html.bold-text .font-medium { font-weight: 600; }
+html.bold-text .font-semibold { font-weight: 700; }
+html.bold-text .font-bold { font-weight: 800; }
+
+/*
+ * Language change (PreferencesContext → startViewTransition): the cards, page title, top bar
+ * and bottom bar on screen get a view-transition name for the moment, so each one stretches
+ * or shrinks to its new size and place while its words swap inside it.
+ */
+::view-transition-group(*) {
+  animation-duration: 440ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 260ms;
+  /* Keep the words their natural size while the box around them morphs. */
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+::view-transition-image-pair(*) {
+  overflow: clip;
+}
+::view-transition-new(*) {
+  animation-delay: 60ms;
+}
+
+/* Toast time-left bar (layout/ToastContainer.tsx). */
+@keyframes toast-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/*
+ * Theme changes (dark mode, stronger colors, text size) cross-fade instead of snapping.
+ * PreferencesContext adds .theme-anim to <html> for ~450ms around the change. Only colors
+ * transition, so layout and other motion are untouched. Skipped under reduced motion.
+ */
+html.theme-anim,
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+  transition:
+    background-color 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    fill 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    font-weight 460ms cubic-bezier(0.32, 0.72, 0, 1),
+    translate 220ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 150ms cubic-bezier(0.23, 1, 0.32, 1) !important;
+}
+/*
+ * Text size morphs: only the root font size glides, and everything measured in rem (text, cards,
+ * gaps, buttons) follows it frame by frame, so the page grows or shrinks as one piece.
+ * Children must not transition font-size themselves, or they would lag behind the root.
+ */
+html.theme-anim {
+  transition:
+    font-size 480ms cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 420ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 420ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Reduce motion (Settings → Accessibility), on top of the device's own setting. */

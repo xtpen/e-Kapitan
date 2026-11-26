@@ -1,71 +1,168 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Bell, ClipboardList, FileCheck2, Landmark, LogOut, Megaphone, MessageCircle, Moon, Settings, Type } from 'lucide-react';
+import { Bell, ChevronRight, Compass, FileLock2, LifeBuoy, LockKeyhole, LogOut, Palette, ScrollText, ShieldCheck, UserRound } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import { usePreferences } from '../../context/PreferencesContext';
-import { Button, StatusPill, Switch, initialsOf } from '../ui';
+import { Button, StatusPill, initialsOf } from '../ui';
 import { IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
+import { useResidentActivity } from './useResidentActivity';
+import { useT } from '../../i18n';
 
 /*
- * Account: you at the top (opens your profile), then plain lists: your things, quick display
- * switches, help and info, and Sign out at the end.
+ * Account: about you, not a wall of switches.
+ *   You (who you are, verified or not) · Your requests at a glance · Your account (profile,
+ *   password & security) · Settings (two links into the Settings page, each showing what is
+ *   set now) · Help · Legal (privacy policy, terms, data privacy notice) · Sign out.
+ * Barangay pages (announcements, officials, check a document) and Ask Kap live on Services.
  */
 
 export const AccountView: React.FC = () => {
-  const { currentUser, setActiveTab, largeTextMode, setLargeTextMode, setIsAuthenticated } = useBarangay();
-  const { setPref, resolvedTheme } = usePreferences();
+  const { currentUser, residents, setActiveTab, setIsAuthenticated } = useBarangay();
+  const { prefs, setPref, resolvedTheme } = usePreferences();
+  const { rows, activeCount, readyCount } = useResidentActivity();
   const reduceMotion = useReducedMotion();
   const [confirm, setConfirm] = useState(false);
+  const t = useT();
+
+  const resident = residents.find(r => r.id === currentUser.residentId);
+  const verified = !resident || resident.status === 'active';
+  const where = resident?.address ?? '';
+
+  const sizeName = { small: t('Small text'), normal: t('Normal text'), large: t('Large text') }[prefs.textSize];
+  const displaySummary = [prefs.language === 'fil' ? 'Filipino' : 'English', resolvedTheme === 'dark' ? t('Dark') : t('Light'), sizeName].join(' · ');
+  const channels = [prefs.notifySms && t('text message'), prefs.notifyEmail && t('email')].filter(Boolean) as string[];
+  const notifySummary = channels.length ? t('In the app and by {ways}', { ways: channels.join(t(' and ')) }) : t('In the app only');
+
+  const counts = [
+    { label: t('Ongoing'), n: Math.max(0, activeCount - readyCount) },
+    { label: t('Ready to pick up'), n: readyCount, strong: readyCount > 0 },
+    { label: t('Done'), n: rows.length - activeCount },
+  ];
 
   return (
     <Page>
-      <PageTitle title="Account" />
+      <PageTitle title={t('Account')} />
 
+      {/* You */}
       <Section flush>
-        <ListRow
-          icon={
-            <span aria-hidden="true" className="w-14 h-14 shrink-0 rounded-full bg-navy text-white grid place-items-center font-display font-bold text-lg">
-              {initialsOf(currentUser.name)}
-            </span>
-          }
-          title={<span className="text-[1.0625rem]">{currentUser.name}</span>}
-          sub="See your profile"
-          trailing={<StatusPill tone="success">Verified</StatusPill>}
+        <button
+          type="button"
           onClick={() => setActiveTab('profile')}
-          className="min-h-20"
-        />
-      </Section>
+          className="w-full flex items-center gap-4 p-4 sm:p-5 text-left cursor-pointer hover:bg-surface-muted active:bg-surface-muted transition-colors duration-150"
+        >
+          <span aria-hidden="true" className="w-16 h-16 shrink-0 rounded-full bg-navy text-white grid place-items-center font-display font-bold text-xl">
+            {initialsOf(currentUser.name)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[1.1875rem] font-semibold text-ink leading-tight break-words">{currentUser.name}</span>
+            {where && <span className="block text-meta text-muted leading-snug mt-0.5 truncate">{where}</span>}
+            <span className="block mt-1.5">
+              {verified ? <StatusPill tone="success">{t('Verified resident')}</StatusPill> : <StatusPill tone="warning">{t('Not verified yet')}</StatusPill>}
+            </span>
+          </span>
+          <ChevronRight className="w-5 h-5 shrink-0 text-muted" aria-hidden="true" />
+          <span className="sr-only">{t('Open your profile')}</span>
+        </button>
 
-      <Section flush title="Yours" id="acc-yours">
-        <List>
-          <ListRow icon={<IconCircle tone="navy"><ClipboardList /></IconCircle>} title="My requests" onClick={() => setActiveTab('tracking')} />
-          <ListRow icon={<IconCircle tone="red"><Bell /></IconCircle>} title="Notifications" onClick={() => setActiveTab('notifications')} />
-        </List>
-      </Section>
-
-      <Section flush title="Display" id="acc-display">
-        <div className="px-4 sm:px-5 divide-y divide-line-soft">
-          <Switch icon={<Moon />} label="Dark mode" checked={resolvedTheme === 'dark'} onChange={v => setPref('theme', v ? 'dark' : 'light')} />
-          <Switch icon={<Type />} label="Large text" checked={largeTextMode} onChange={v => setLargeTextMode(v)} />
+        {/* Your requests at a glance */}
+        <div className="grid grid-cols-3 border-t border-line-soft divide-x divide-line-soft">
+          {counts.map(c => (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => setActiveTab('tracking')}
+              className="min-h-16 px-2 py-3 grid content-center justify-items-center gap-0.5 cursor-pointer hover:bg-surface-muted active:bg-surface-muted transition-colors duration-150"
+            >
+              <span className={`font-display text-[1.375rem] font-bold leading-none tabular-nums ${c.strong ? 'text-success-fg' : 'text-ink'}`}>{c.n}</span>
+              <span className="text-caption text-muted text-center leading-tight">{c.label}</span>
+            </button>
+          ))}
         </div>
-        <List className="border-t border-line-soft">
-          <ListRow icon={<IconCircle tone="gray"><Settings /></IconCircle>} title="All settings" onClick={() => setActiveTab('settings')} />
+      </Section>
+
+      <Section flush title={t('Your account')} id="acc-account" tour="acc-account">
+        <List>
+          <ListRow
+            icon={<IconCircle tone="navy"><UserRound /></IconCircle>}
+            title={t('Your profile')}
+            sub={t('Personal details, mobile number and email')}
+            onClick={() => setActiveTab('profile')}
+          />
+          <ListRow
+            icon={<IconCircle tone="green"><LockKeyhole /></IconCircle>}
+            title={t('Password & security')}
+            sub={t('Password, signed-in devices and privacy')}
+            onClick={() => setActiveTab('account_security')}
+          />
         </List>
       </Section>
 
-      <Section flush title="Help and info" id="acc-help">
+      <Section flush title={t('Settings')} id="acc-prefs" tour="acc-prefs">
         <List>
-          <ListRow icon={<IconCircle tone="navy"><MessageCircle /></IconCircle>} title="Ask Kap" sub="Questions about papers, fees and hours" onClick={() => setActiveTab('ai_assistant')} />
-          <ListRow icon={<IconCircle tone="amber"><Megaphone /></IconCircle>} title="Announcements" onClick={() => setActiveTab('announcements')} />
-          <ListRow icon={<IconCircle tone="blue"><Landmark /></IconCircle>} title="Officials" onClick={() => setActiveTab('officials_directory')} />
-          <ListRow icon={<IconCircle tone="gray"><FileCheck2 /></IconCircle>} title="Check a document" onClick={() => setActiveTab('qr_verify')} />
+          <ListRow
+            icon={<IconCircle tone="blue"><Palette /></IconCircle>}
+            title={t('Display & language')}
+            sub={displaySummary}
+            onClick={() => setActiveTab('settings')}
+          />
+          <ListRow
+            icon={<IconCircle tone="amber"><Bell /></IconCircle>}
+            title={t('Notifications')}
+            sub={notifySummary}
+            onClick={() => setActiveTab('notify_settings')}
+          />
+        </List>
+      </Section>
+
+      <Section flush title={t('Help')} id="acc-help">
+        <List>
+          <ListRow
+            icon={<IconCircle tone="amber"><LifeBuoy /></IconCircle>}
+            title={t('Help & questions')}
+            sub={t('Common questions and how to reach the barangay')}
+            onClick={() => setActiveTab('help')}
+          />
+          <ListRow
+            icon={<IconCircle tone="gray"><Compass /></IconCircle>}
+            title={t('Show the tour again')}
+            sub={t('A one-minute walk through the app')}
+            onClick={() => {
+              setPref('tour', true);
+              setPref('toursSeen', []);
+              setActiveTab('home'); // the tour starts on Home
+            }}
+          />
+        </List>
+      </Section>
+
+      <Section flush title={t('Legal')} id="acc-legal">
+        <List>
+          <ListRow
+            icon={<IconCircle tone="gray"><ShieldCheck /></IconCircle>}
+            title={t('Privacy Policy')}
+            sub={t('How we collect, use and protect your information')}
+            onClick={() => setActiveTab('privacy_policy')}
+          />
+          <ListRow
+            icon={<IconCircle tone="gray"><ScrollText /></IconCircle>}
+            title={t('Terms and Conditions')}
+            sub={t('The rules for using eKapitan')}
+            onClick={() => setActiveTab('terms')}
+          />
+          <ListRow
+            icon={<IconCircle tone="gray"><FileLock2 /></IconCircle>}
+            title={t('Data Privacy Notice')}
+            sub={t('A short notice on what we collect and why')}
+            onClick={() => setActiveTab('privacy_notice')}
+          />
         </List>
       </Section>
 
       <Button variant="secondary" fullWidth onClick={() => setConfirm(true)}>
-        <LogOut className="w-5 h-5" aria-hidden="true" /> Sign out
+        <LogOut className="w-5 h-5" aria-hidden="true" /> {t('Sign out')}
       </Button>
+      <p className="text-center text-caption text-muted">eKapitan · {t('version')} 1.0</p>
 
       {createPortal(
         <AnimatePresence>
@@ -80,17 +177,17 @@ export const AccountView: React.FC = () => {
               />
               <motion.div
                 className="relative w-full sm:max-w-sm bg-surface rounded-t-banner sm:rounded-card shadow-float p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
-                initial={reduceMotion ? { opacity: 0 } : { transform: 'translateY(32px)', opacity: 0 }}
-                animate={{ transform: 'translateY(0px)', opacity: 1, transition: { duration: 0.26, ease: [0.23, 1, 0.32, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                initial={reduceMotion ? { opacity: 0 } : { y: '100%' }}
+                animate={reduceMotion ? { opacity: 1 } : { y: 0, transition: { type: 'spring', stiffness: 420, damping: 40 } }}
+                exit={reduceMotion ? { opacity: 0 } : { y: '100%', transition: { duration: 0.2 } }}
               >
                 <h2 id="acc-signout" className="text-h3-lg font-semibold text-ink">
-                  Sign out?
+                  {t('Sign out?')}
                 </h2>
-                <p className="text-muted mt-1.5">You can sign in again any time.</p>
+                <p className="text-muted mt-1.5">{t('You can sign in again any time.')}</p>
                 <div className="grid grid-cols-2 gap-2.5 mt-6">
                   <Button variant="secondary" onClick={() => setConfirm(false)} autoFocus>
-                    Cancel
+                    {t('Cancel')}
                   </Button>
                   <Button
                     variant="danger"
@@ -99,7 +196,7 @@ export const AccountView: React.FC = () => {
                       setIsAuthenticated(false);
                     }}
                   >
-                    Sign out
+                    {t('Sign out')}
                   </Button>
                 </div>
               </motion.div>

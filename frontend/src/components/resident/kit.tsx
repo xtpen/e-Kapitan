@@ -1,5 +1,8 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ChevronRight, X } from 'lucide-react';
+import { useT } from '../../i18n';
 
 /*
  * Resident portal building blocks. Every resident page is made of these, so spacing,
@@ -68,15 +71,17 @@ export const Section: React.FC<{
   tone?: 'default' | 'success' | 'warning';
   className?: string;
   id?: string;
+  /** Marks the section for the guided tour (data-tour). */
+  tour?: string;
   children: React.ReactNode;
-}> = ({ title, action, flush, tone = 'default', className = '', id, children }) => {
+}> = ({ title, action, flush, tone = 'default', className = '', id, tour, children }) => {
   const tones = {
-    default: 'bg-surface border-line',
+    default: 'bg-surface border-line shadow-[0_1px_2px_rgb(16_24_40/0.05)]',
     success: 'bg-success-bg border-primary-tint-line',
     warning: 'bg-warning-bg border-transparent',
   };
   return (
-    <section aria-labelledby={title && id ? id : undefined} className={`rounded-card border ${tones[tone]} ${flush ? 'overflow-hidden' : 'p-4 sm:p-5'} ${className}`}>
+    <section data-tour={tour} aria-labelledby={title && id ? id : undefined} className={`rounded-[18px] border ${tones[tone]} ${flush ? 'overflow-hidden' : 'p-4 sm:p-5'} ${className}`}>
       {title && (
         <div className={`flex items-center justify-between gap-3 ${flush ? 'px-4 sm:px-5 pt-4 pb-1' : 'mb-2'}`}>
           <h2 id={id} className="text-[1.0625rem] font-semibold text-ink leading-tight">
@@ -140,6 +145,9 @@ export const List: React.FC<{ children: React.ReactNode; className?: string }> =
 /**
  * One option in a group of choices (paper size, kind of problem, time slot). Render inside
  * <div role="radiogroup" aria-label="…" className="grid grid-cols-2 gap-2">.
+ *
+ * `group`: a name shared by the options of one group. The selected outline then slides from the
+ * old choice to the new one (and its dot follows), instead of one switching off and another on.
  */
 export const Choice: React.FC<{
   selected: boolean;
@@ -148,35 +156,134 @@ export const Choice: React.FC<{
   sub?: React.ReactNode;
   icon?: React.ReactNode;
   disabled?: boolean;
-}> = ({ selected, onSelect, label, sub, icon, disabled }) => (
+  group?: string;
+  /** Icon and circle on top, words below: for three-across rows, so long words never collide. */
+  tile?: boolean;
+}> = ({ selected, onSelect, label, sub, icon, disabled, group, tile }) => (
   <button
     type="button"
     role="radio"
     aria-checked={selected}
     disabled={disabled}
     onClick={onSelect}
-    className={`w-full min-h-12 flex items-center gap-3 px-3.5 py-2.5 rounded-control border-[1.5px] text-left cursor-pointer
+    className={`relative isolate w-full min-h-12 rounded-control border-[1.5px] text-left cursor-pointer grid items-center gap-x-3 px-3.5 py-2.5
+      ${icon ? 'grid-cols-[auto_1fr_auto] [grid-template-areas:"icon_label_radio"]' : 'grid-cols-[1fr_auto] [grid-template-areas:"label_radio"]'}
+      ${tile ? 'sm:grid-cols-[1fr_auto] sm:gap-y-2 sm:py-3 sm:[grid-template-areas:"icon_radio""label_label"]' : ''}
       transition-[border-color,background-color] duration-150 disabled:cursor-not-allowed disabled:opacity-50
-      ${selected ? 'border-navy-ink bg-navy-tint' : 'border-line bg-surface hover:border-field-line'}`}
+      ${group ? 'border-line bg-surface hover:border-field-line' : selected ? 'border-navy-ink bg-navy-tint' : 'border-line bg-surface hover:border-field-line'}`}
   >
-    {icon && <span className={`shrink-0 [&_svg]:w-5 [&_svg]:h-5 ${selected ? 'text-navy-ink' : 'text-muted'}`}>{icon}</span>}
-    <span className="min-w-0 flex-1">
-      <span className={`block font-semibold leading-snug ${selected ? 'text-navy-ink' : 'text-ink'}`}>{label}</span>
+    {group && selected && (
+      <motion.span
+        aria-hidden="true"
+        layoutId={`choice-${group}`}
+        transition={CHOICE_SPRING}
+        className="absolute -inset-[1.5px] -z-10 rounded-control border-[1.5px] border-navy-ink bg-navy-tint"
+      />
+    )}
+    {icon && <span className={`[grid-area:icon] [&_svg]:w-5 [&_svg]:h-5 transition-colors duration-200 ${selected ? 'text-navy-ink' : 'text-muted'}`}>{icon}</span>}
+    <span className="[grid-area:label] min-w-0">
+      <span className={`block font-semibold leading-snug transition-colors duration-200 ${selected ? 'text-navy-ink' : 'text-ink'}`}>{label}</span>
       {sub && <span className="block text-caption text-muted">{sub}</span>}
     </span>
     <span
       aria-hidden="true"
-      className={`shrink-0 w-5 h-5 rounded-full border-2 grid place-items-center ${selected ? 'border-navy-ink' : 'border-field-line'}`}
+      className={`[grid-area:radio] justify-self-end w-5 h-5 rounded-full border-2 grid place-items-center transition-colors duration-200 ${selected ? 'border-navy-ink' : 'border-field-line'}`}
     >
-      {selected && <span className="w-2.5 h-2.5 rounded-full bg-navy-ink" />}
+      {selected &&
+        (group ? (
+          <motion.span layoutId={`choice-dot-${group}`} transition={CHOICE_SPRING} className="w-2.5 h-2.5 rounded-full bg-navy-ink" />
+        ) : (
+          <span className="w-2.5 h-2.5 rounded-full bg-navy-ink" />
+        ))}
     </span>
   </button>
 );
+
+/** Firm, quick spring with no wobble: the selection glides and settles. */
+const CHOICE_SPRING = { type: 'spring', stiffness: 520, damping: 42, mass: 0.9 } as const;
 
 /** Bottom of a form: full-width buttons on phones (main one on top), right-aligned on wider screens. */
 export const FormActions: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 [&>button]:w-full sm:[&>button]:w-auto">{children}</div>
 );
+
+/**
+ * Bottom sheet on phones (drag the handle or the sheet down to close), centred dialog on wider
+ * screens. Escape and the backdrop close it. Content scrolls inside; `footer` stays pinned.
+ */
+export const Sheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ open, onClose, title, footer, children }) => {
+  const reduce = useReducedMotion();
+  const t = useT();
+  const titleId = React.useId();
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    return () => {
+      html.style.overflow = prev;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <div key="sheet" className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-6" data-no-gesture>
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-0 bg-scrim/50"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.22 } }}
+            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+          />
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            className="relative w-full sm:max-w-[480px] max-h-[88dvh] flex flex-col bg-surface rounded-t-banner sm:rounded-card shadow-float"
+            initial={reduce ? { opacity: 0 } : { y: '100%' }}
+            animate={reduce ? { opacity: 1 } : { y: 0, transition: { type: 'spring', stiffness: 420, damping: 40 } }}
+            exit={reduce ? { opacity: 0 } : { y: '100%', transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }}
+            drag={reduce ? false : 'y'}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 120 || info.velocity.y > 600) onClose();
+            }}
+          >
+            <span aria-hidden="true" className="mx-auto mt-2.5 mb-1 w-10 h-1.5 rounded-full bg-line cursor-grab sm:hidden" />
+            <div className="flex items-center justify-between gap-3 px-5 pt-2 sm:pt-5 pb-2">
+              <h2 id={titleId} className="text-[1.1875rem] font-semibold text-ink">
+                {title}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={t('Close')}
+                className="-mr-2 w-11 h-11 grid place-items-center rounded-full text-muted hover:bg-surface-muted hover:text-ink cursor-pointer"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
+            {footer && <div className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line-soft">{footer}</div>}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body,
+  );
+};
 
 /** Nothing to show yet: icon, one line, one action. */
 export const EmptyState: React.FC<{ icon: React.ReactNode; title: string; sub?: string; action?: React.ReactNode }> = ({ icon, title, sub, action }) => (

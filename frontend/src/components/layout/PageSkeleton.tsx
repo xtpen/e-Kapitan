@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bone } from '../ui';
+import { RESIDENT_SKELETONS } from './residentSkeletons';
 
 /*
  * Page skeletons (docs/DESIGN.md section 5.17). Each one mirrors a real page layout from section 6,
@@ -19,37 +20,35 @@ export type SkeletonKind =
   | 'feed'
   | 'chat'
   | 'publicHome'
-  // Resident portal (mobile first, docs/RESIDENT_UX_BRIEF.md)
-  | 'rHome'
-  | 'rHub'
-  | 'rRequests'
-  | 'rList'
-  | 'rMenu'
-  | 'rForm'
-  | 'rSettings'
-  | 'rChat'
-  | 'rProfile';
+  // Resident portal: one skeleton per page (residentSkeletons.tsx)
+  | keyof typeof RESIDENT_SKELETONS;
 
 /** Which skeleton each tab shows while it loads. Unknown tabs get the form layout. */
 const BY_TAB: Record<string, SkeletonKind> = {
-  // Resident
+  // Resident: every page has its own skeleton
   home: 'rHome',
-  services: 'rHub',
-  documents: 'rList',
-  request_wizard: 'rForm',
+  services: 'rServices',
+  documents: 'rDocuments',
+  request_wizard: 'rRequestForm',
   tracking: 'rRequests',
-  complaints: 'rForm',
-  appointments: 'rForm',
-  printing: 'rForm',
-  court: 'rForm',
-  account: 'rList',
+  complaints: 'rReport',
+  appointments: 'rVisit',
+  printing: 'rPrinting',
+  court: 'rCourt',
+  account: 'rAccount',
+  account_security: 'rSecurity',
+  help: 'rHelp',
   profile: 'rProfile',
-  settings: 'rSettings',
-  notifications: 'rList',
+  settings: 'rDisplay',
+  notify_settings: 'rNotify',
+  privacy_policy: 'rLegal',
+  terms: 'rLegal',
+  privacy_notice: 'rLegal',
+  notifications: 'rNotifications',
   ai_assistant: 'rChat',
-  qr_verify: 'rForm',
-  announcements: 'feed',
-  officials_directory: 'cards',
+  qr_verify: 'rVerify',
+  announcements: 'rAnnouncements',
+  officials_directory: 'rOfficials',
   // Public site
   guest_home: 'publicHome',
   guest_announcements: 'feed',
@@ -465,239 +464,6 @@ const PublicHome = () => (
   </>
 );
 
-/* ---------- resident portal ---------- */
-
-const Card: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
-  <div className={`bg-surface border border-line rounded-card ${className}`}>{children}</div>
-);
-const Circle: React.FC<{ size?: string }> = ({ size = 'w-10 h-10' }) => <Bone className={`${size} rounded-full shrink-0`} />;
-const Title: React.FC<{ sub?: boolean }> = ({ sub = true }) => (
-  <div className="px-1 grid gap-2">
-    <Line w="w-40" h="h-8" className="rounded-control" />
-    {sub && <Line w="w-56" h="h-3.5" />}
-  </div>
-);
-/** One list row: circle + two lines (+ optional trailing pill). */
-const ListRow: React.FC<{ pill?: boolean }> = ({ pill }) => (
-  <div className="flex items-center gap-3 py-3">
-    <Circle />
-    <div className="flex-1 grid gap-2">
-      <Line w="w-3/5" h="h-4" />
-      <Line w="w-2/5" h="h-3" />
-    </div>
-    {pill && <Bone className="h-6 w-16 rounded-full" />}
-  </div>
-);
-const Column: React.FC<{ wide?: boolean; children: React.ReactNode }> = ({ wide, children }) => (
-  <div className={`mx-auto ${wide ? 'max-w-[960px]' : 'max-w-[720px]'} grid gap-4`}>{children}</div>
-);
-
-/** A card of list rows with an optional title row (kit Section flush + List). */
-const ListCard: React.FC<{ rows?: number; title?: boolean; pill?: boolean }> = ({ rows = 3, title = true, pill }) => (
-  <Card className="overflow-hidden">
-    {title && (
-      <div className="px-4 sm:px-5 pt-4 pb-1 flex justify-between">
-        <Line w="w-32" h="h-4" />
-        <Line w="w-14" h="h-3.5" />
-      </div>
-    )}
-    <div className="px-4 sm:px-5 divide-y divide-line-soft">
-      {Array.from({ length: rows }, (_, i) => (
-        <ListRow key={i} pill={pill} />
-      ))}
-    </div>
-  </Card>
-);
-
-/** Home: greeting, the six services, in progress; announcements and hours beside on desktop. */
-const RHome = () => (
-  <div className="mx-auto max-w-[1040px] grid gap-4">
-    <Title />
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      <div className="grid gap-4 min-w-0">
-        <Card className="p-4 sm:p-5">
-          <div className="flex justify-between mb-3">
-            <Line w="w-36" h="h-4" />
-            <Line w="w-20" h="h-3.5" />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="grid justify-items-center gap-2 py-3">
-                <Circle size="w-12 h-12" />
-                <Line w="w-16" h="h-3.5" />
-              </div>
-            ))}
-          </div>
-        </Card>
-        <ListCard rows={3} pill />
-      </div>
-      <div className="grid gap-4 min-w-0">
-        <ListCard rows={3} />
-        <Card className="p-4 sm:p-5 flex items-center gap-3">
-          <Circle />
-          <div className="grid gap-2">
-            <Line w="w-28" h="h-4" />
-            <Line w="w-44" h="h-3" />
-          </div>
-        </Card>
-      </div>
-    </div>
-  </div>
-);
-
-/** Services: search, then groups of list rows. */
-const RHub = () => (
-  <Column>
-    <Title />
-    <Bone className="h-12 w-full rounded-control" />
-    <ListCard rows={2} />
-    <ListCard rows={2} />
-    <ListCard rows={3} />
-  </Column>
-);
-
-/** Requests: segmented filter, then one list. */
-const RRequests = () => (
-  <Column>
-    <div className="flex items-end justify-between">
-      <Title />
-      <Bone className="h-11 w-32 rounded-control" />
-    </div>
-    <Bone className="h-12 w-full rounded-control" />
-    <ListCard rows={6} title={false} pill />
-  </Column>
-);
-
-/** A list in one card (documents, notifications). */
-const RList = () => (
-  <Column>
-    <Title />
-    <Bone className="h-12 w-full rounded-full" />
-    <Card className="px-4 divide-y divide-line-soft">
-      {Array.from({ length: 7 }, (_, i) => (
-        <ListRow key={i} pill={i % 3 === 0} />
-      ))}
-    </Card>
-  </Column>
-);
-
-/** Menu: you, a shortcut grid, switches, rows, sign out. */
-const RMenu = () => (
-  <Column>
-    <Line w="w-28" h="h-8" className="rounded-control ml-1" />
-    <Card className="p-4 flex items-center gap-4">
-      <Circle size="w-16 h-16" />
-      <div className="grid gap-2 flex-1">
-        <Line w="w-44" h="h-5" />
-        <Line w="w-28" h="h-3.5" />
-      </div>
-    </Card>
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {Array.from({ length: 6 }, (_, i) => (
-        <Card key={i} className="min-h-[96px] p-3.5 grid content-start gap-2.5">
-          <Circle />
-          <Line w="w-24" h="h-4" />
-        </Card>
-      ))}
-    </div>
-    <Card className="px-4 divide-y divide-line-soft">
-      <ListRow />
-      <ListRow />
-    </Card>
-    <Bone className="h-12 w-full rounded-control" />
-  </Column>
-);
-
-/** A form, phone first: title, step bar, a card of fields, a full-width button. */
-const RForm = () => (
-  <Column>
-    <Title />
-    <Bone className="h-1.5 w-full rounded-full" />
-    <Card className="p-4 sm:p-5">
-      <Field />
-      <Field />
-      <div className="grid grid-cols-2 gap-3">
-        <Field />
-        <Field />
-      </div>
-      <Field />
-      <Bone className="mt-6 h-12 w-full rounded-control" />
-    </Card>
-  </Column>
-);
-
-/** Settings: small group titles over cards of rows. */
-const RSettings = () => (
-  <Column>
-    <Title />
-    {[3, 3, 2, 3].map((n, g) => (
-      <div key={g} className="grid gap-2">
-        <Line w="w-28" h="h-3" className="ml-1" />
-        <Card className="px-4 divide-y divide-line-soft">
-          {Array.from({ length: n }, (_, i) => (
-            <div key={i} className="flex items-center gap-3 py-3.5">
-              <Circle />
-              <Line w="w-40" h="h-4" />
-              <Bone className="ml-auto h-7 w-12 rounded-full" />
-            </div>
-          ))}
-        </Card>
-      </div>
-    ))}
-  </Column>
-);
-
-/** Ask Kap: a chat card with bubbles and the input at the bottom. */
-const RChat = () => (
-  <div className="mx-auto max-w-[720px]">
-    <Card className="h-[calc(100dvh-180px)] md:h-[calc(100dvh-160px)] flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 p-4 border-b border-line">
-        <Circle />
-        <div className="grid gap-2">
-          <Line w="w-24" h="h-4" />
-          <Line w="w-44" h="h-3" />
-        </div>
-      </div>
-      <div className="flex-1 p-4 grid content-start gap-3">
-        <Bone className="h-16 w-3/4 rounded-[18px]" />
-        <Bone className="h-10 w-1/2 rounded-[18px] justify-self-end" />
-        <Bone className="h-20 w-4/5 rounded-[18px]" />
-      </div>
-      <div className="p-3 flex gap-2 border-t border-line">
-        <Bone className="flex-1 h-11 rounded-full" />
-        <Circle size="w-11 h-11" />
-      </div>
-    </Card>
-  </div>
-);
-
-/** Your profile: header card, then cards of label/value rows. */
-const RProfile = () => (
-  <Column>
-    <Title sub={false} />
-    <Card className="p-5 flex items-center gap-4">
-      <Circle size="w-16 h-16" />
-      <div className="grid gap-2 flex-1">
-        <Line w="w-48" h="h-5" />
-        <Line w="w-32" h="h-3.5" />
-      </div>
-    </Card>
-    {[5, 2, 1].map((n, g) => (
-      <Card key={g} className="p-4 sm:p-5">
-        <Line w="w-32" h="h-5" />
-        <div className="mt-2 divide-y divide-line-soft">
-          {Array.from({ length: n }, (_, i) => (
-            <div key={i} className="flex justify-between py-3">
-              <Line w="w-24" h="h-3.5" />
-              <Line w="w-36" h="h-3.5" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    ))}
-  </Column>
-);
-
 const LAYOUTS: Record<SkeletonKind, React.FC> = {
   dashboard: Dashboard,
   adminOverview: AdminOverview,
@@ -710,22 +476,14 @@ const LAYOUTS: Record<SkeletonKind, React.FC> = {
   feed: Feed,
   chat: Chat,
   publicHome: PublicHome,
-  rHome: RHome,
-  rHub: RHub,
-  rRequests: RRequests,
-  rList: RList,
-  rMenu: RMenu,
-  rForm: RForm,
-  rSettings: RSettings,
-  rChat: RChat,
-  rProfile: RProfile,
+  ...RESIDENT_SKELETONS,
 };
 
 /** Loading placeholder shaped like the page that's coming. */
 export const PageSkeleton: React.FC<{ kind?: SkeletonKind }> = ({ kind = 'form' }) => {
   const Layout = LAYOUTS[kind];
   return (
-    <div className={kind === 'publicHome' || kind.startsWith('r') ? 'w-full' : 'max-w-[1200px] w-full'} role="status" aria-label="Loading page" aria-busy="true">
+    <div className={kind === 'publicHome' ? 'w-full' : kind.startsWith('r') ? 'w-full [&_*]:min-w-0' : 'max-w-[1200px] w-full'} role="status" aria-label="Loading page" aria-busy="true">
       <Layout />
     </div>
   );

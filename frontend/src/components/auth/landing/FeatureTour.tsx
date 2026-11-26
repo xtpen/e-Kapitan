@@ -7,7 +7,8 @@ import { FEATURES, Notice, PreviewFrame } from './features';
 /*
  * Scroll-driven feature tour. Desktop: each feature's explanation scrolls past on the left while a
  * pinned preview on the right switches to match the block crossing the middle of the screen.
- * Phones: each explanation is followed by its own preview. Previews swap in sequence (old out fast,
+ * Phones and tablets: a row of feature chips and swipeable cards (copy + preview) that snap into
+ * place, with dots that follow; tapping a chip or a dot scrolls to that card. Previews swap in sequence (old out fast,
  * then the new one's rows rise in one after another), and everything is still under reduced motion.
  */
 
@@ -46,6 +47,151 @@ const Copy: React.FC<{ index: number }> = ({ index }) => {
   );
 };
 
+/** Phones and tablets: chips + swipeable cards that snap, with dots. */
+const MobileTour: React.FC = () => {
+  const reduceMotion = useReducedMotion();
+  const [active, setActive] = useState(0);
+  const track = useRef<HTMLDivElement>(null);
+  const chips = useRef<HTMLDivElement>(null);
+  const cards = useRef<(HTMLElement | null)[]>([]);
+
+  // Which card is centred decides the active chip and dot.
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const mid = el.scrollLeft + el.clientWidth / 2;
+        let best = 0;
+        let dist = Infinity;
+        cards.current.forEach((c, i) => {
+          if (!c) return;
+          const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid);
+          if (d < dist) {
+            dist = d;
+            best = i;
+          }
+        });
+        setActive(best);
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  // Keep the active chip visible in its own row (never scrolls the page).
+  useEffect(() => {
+    const row = chips.current;
+    const chip = row?.children[active] as HTMLElement | undefined;
+    if (!row || !chip) return;
+    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }, [active, reduceMotion]);
+
+  const goTo = (i: number) => {
+    const el = track.current;
+    const c = cards.current[i];
+    if (!el || !c) return;
+    el.scrollTo({ left: c.offsetLeft - (el.clientWidth - c.offsetWidth) / 2, behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
+  return (
+    <Reveal y={16} className="lg:hidden mt-8">
+      {/* Chips */}
+      <div
+        ref={chips}
+        role="tablist"
+        aria-label="Features"
+        className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {FEATURES.map((f, i) => {
+          const Icon = f.icon;
+          const on = i === active;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => goTo(i)}
+              className={`shrink-0 inline-flex items-center gap-2 min-h-11 pl-3 pr-4 rounded-full border font-semibold text-meta cursor-pointer
+                transition-[background-color,color,border-color] duration-200
+                ${on ? 'bg-navy text-white border-navy' : 'bg-surface text-navy-ink border-hairline'}`}
+            >
+              <Icon className="w-4 h-4" strokeWidth={1.9} />
+              {f.tab}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Cards */}
+      <div
+        ref={track}
+        data-no-gesture
+        className="mt-4 flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 sm:-mx-6 sm:px-6 scroll-px-4 sm:scroll-px-6 pb-2
+          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {FEATURES.map((f, i) => {
+          const Icon = f.icon;
+          const P = f.Panel;
+          return (
+            <article
+              key={f.id}
+              ref={el => {
+                cards.current[i] = el;
+              }}
+              aria-roledescription="slide"
+              aria-label={`${i + 1} of ${FEATURES.length}: ${f.tab}`}
+              className={`snap-center shrink-0 w-[86%] sm:w-[62%] rounded-banner border border-hairline bg-mist p-4 sm:p-5 flex flex-col
+                transition-[opacity,scale] duration-300 ease-out-strong ${i === active ? 'opacity-100 scale-100' : 'opacity-70 scale-[0.97]'}`}
+            >
+              <span className="flex items-center gap-2.5 text-caption font-semibold uppercase tracking-[0.1em] text-muted">
+                <span className="w-9 h-9 rounded-full grid place-items-center bg-navy-tint text-navy-ink">
+                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.9} />
+                </span>
+                {f.tab}
+              </span>
+              <h3 className="mt-3 text-[1.375rem] leading-tight font-semibold text-navy-ink text-balance">{f.title}</h3>
+              <p className="mt-2 text-muted leading-relaxed">{f.text}</p>
+              <div className="pt-4">
+                <PreviewFrame>
+                  <P />
+                </PreviewFrame>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Dots */}
+      <ol className="mt-3 flex items-center justify-center gap-1" aria-label="Feature cards">
+        {FEATURES.map((f, i) => (
+          <li key={f.id}>
+            <button
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`${f.tab}${i === active ? ' (showing)' : ''}`}
+              aria-current={i === active ? 'step' : undefined}
+              className="p-2 cursor-pointer"
+            >
+              <span
+                className={`block h-2 rounded-full transition-[width,background-color] duration-300 ease-out-strong
+                  ${i === active ? 'w-6 bg-navy' : 'w-2 bg-hairline'}`}
+              />
+            </button>
+          </li>
+        ))}
+      </ol>
+    </Reveal>
+  );
+};
+
 export const FeatureTour: React.FC = () => {
   const reduceMotion = useReducedMotion();
   const [active, setActive] = useState(0);
@@ -71,11 +217,12 @@ export const FeatureTour: React.FC = () => {
   const goTo = (i: number) => blocks.current[i]?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
 
   return (
-    <div className="lg:grid lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 xl:gap-16">
+    <>
+    <MobileTour />
+    <div className="hidden lg:grid lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 xl:gap-16">
       {/* Explanations */}
       <div>
         {FEATURES.map((f, i) => {
-          const P = f.Panel;
           return (
             <div
               key={f.id}
@@ -83,18 +230,10 @@ export const FeatureTour: React.FC = () => {
                 blocks.current[i] = el;
               }}
               data-index={i}
-              className="py-10 lg:py-0 lg:min-h-[56vh] lg:flex lg:items-center border-b border-hairline last:border-b-0 lg:border-b-0"
+              className="min-h-[56vh] flex items-center"
             >
               <div className="w-full">
                 <Copy index={i} />
-                {/* Phones and tablets: the preview sits under its explanation */}
-                <Reveal y={0} delay={80} className="lg:hidden mt-8">
-                  <PreviewFrame>
-                    <div className="panel-stagger-reveal">
-                      <P />
-                    </div>
-                  </PreviewFrame>
-                </Reveal>
               </div>
             </div>
           );
@@ -158,5 +297,6 @@ export const FeatureTour: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

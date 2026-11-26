@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Send } from 'lucide-react';
 import { IconCircle, Page, PageTitle, Section } from '../resident/kit';
+import { useT } from '../../i18n';
 
 interface ChatMessage {
   id: string;
@@ -54,6 +55,7 @@ export const KaBarangayAI: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 'msg-1', sender: 'assistant', text: WELCOME, time: now(), source: 'knowledge-base' },
   ]);
+  const t = useT();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -94,32 +96,35 @@ export const KaBarangayAI: React.FC = () => {
 
   const showSuggestions = messages.length === 1 && !loading;
 
+  /** Fixed texts (welcome, offline reply, suggested questions) are shown in the chosen language; the text kept in history and sent to the API stays in English. */
+  const displayText = (m: ChatMessage) => (m.text === WELCOME || m.text === OFFLINE_REPLY || (m.sender === 'user' && SUGGESTED.includes(m.text)) ? t(m.text) : m.text);
+
   return (
     <Page>
-      <PageTitle title="Ask Kap" sub="Quick answers about papers, fees and hours." />
+      <PageTitle title={t('Ask Kap')} sub={t('Quick answers about papers, fees and hours.')} />
 
       <Section
         flush
         className="flex flex-col h-[calc(100dvh-270px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-240px)] min-h-[400px] lg:max-h-[820px]"
       >
         {/* Messages */}
-        <div ref={listRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 grid content-start gap-3" aria-live="polite" aria-label="Conversation">
+        <div ref={listRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 grid content-start gap-3" aria-live="polite" aria-label={t('Conversation')}>
           {messages.map(m => {
             const mine = m.sender === 'user';
             return (
               <div key={m.id} className={`flex items-end gap-2 ${mine ? 'justify-end' : ''}`}>
                 {!mine && <KapIcon />}
                 <div className={`max-w-[85%] sm:max-w-[75%] ${mine ? 'text-right' : ''}`}>
-                  <span className="sr-only">{mine ? 'You said:' : 'Kap said:'}</span>
+                  <span className="sr-only">{mine ? t('You said:') : t('Kap said:')}</span>
                   <div
                     className={`inline-block text-left px-4 py-2.5 rounded-2xl whitespace-pre-line
                       ${mine ? 'bg-navy text-white rounded-br-md' : 'bg-surface-muted text-ink rounded-bl-md'}`}
                   >
-                    <RichText text={m.text} />
+                    <RichText text={displayText(m)} />
                   </div>
                   <p className="text-caption text-muted mt-1 px-1">
                     {m.time}
-                    {!mine && m.source === 'gemini-ai' && ' · Check with the hall to be sure.'}
+                    {!mine && m.source === 'gemini-ai' && ` · ${t('Check with the hall to be sure.')}`}
                   </p>
                 </div>
               </div>
@@ -127,7 +132,7 @@ export const KaBarangayAI: React.FC = () => {
           })}
 
           {showSuggestions && (
-            <ul aria-label="Suggested questions" className="flex flex-wrap gap-2 pl-10">
+            <ul aria-label={t('Suggested questions')} className="flex flex-wrap gap-2 pl-10">
               {SUGGESTED.map(q => (
                 <li key={q}>
                   <button
@@ -135,7 +140,7 @@ export const KaBarangayAI: React.FC = () => {
                     onClick={() => send(q)}
                     className="min-h-11 px-4 py-2 rounded-full border-[1.5px] border-line bg-surface text-meta font-semibold text-navy-ink text-left cursor-pointer transition-colors hover:border-navy-ink"
                   >
-                    {q}
+                    {t(q)}
                   </button>
                 </li>
               ))}
@@ -145,13 +150,14 @@ export const KaBarangayAI: React.FC = () => {
           {loading && (
             <div role="status" className="flex items-end gap-2">
               <KapIcon pulse />
-              <span className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-surface-muted text-muted">Kap is typing…</span>
+              <span className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-surface-muted text-muted">{t('Kap is typing…')}</span>
             </div>
           )}
         </div>
 
         {/* Input, pinned to the bottom of the card */}
         <form
+          data-tour="kap-input"
           className="flex items-center gap-2 px-3 sm:px-4 py-3 border-t border-line-soft"
           onSubmit={e => {
             e.preventDefault();
@@ -159,13 +165,13 @@ export const KaBarangayAI: React.FC = () => {
           }}
         >
           <label htmlFor="kap-input" className="sr-only">
-            Your question
+            {t('Your question')}
           </label>
           <input
             id="kap-input"
             ref={inputRef}
             autoComplete="off"
-            placeholder="Type your question"
+            placeholder={t('Type your question')}
             value={input}
             onChange={e => setInput(e.target.value)}
             className="flex-1 min-w-0 min-h-12 px-4 py-3 bg-surface-muted text-ink text-base rounded-full border-[1.5px] border-transparent placeholder:text-muted focus:outline-none focus:border-navy-ink focus:ring-[3px] focus:ring-navy-ink/20"
@@ -173,7 +179,7 @@ export const KaBarangayAI: React.FC = () => {
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            aria-label="Send"
+            aria-label={t('Send')}
             className="w-12 h-12 shrink-0 rounded-full grid place-items-center bg-navy text-white cursor-pointer transition-[background-color,scale] duration-150 active:scale-95
               disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed"
           >

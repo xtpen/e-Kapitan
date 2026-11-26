@@ -3,8 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion, useIsPresent } from 'motion/react';
+import type { ReactNode } from 'react';
+
+/** A page that is sliding away is hidden from screen readers and can't take focus. */
+function LeavingInert({ children }: { children: ReactNode }) {
+  const present = useIsPresent();
+  return (
+    <div aria-hidden={present ? undefined : true} inert={!present || undefined}>
+      {children}
+    </div>
+  );
+}
 import {
   ArrowLeft,
   ClipboardList,
@@ -26,6 +37,13 @@ import { ToastContainer } from './components/layout/ToastContainer';
 import { PageSkeleton, skeletonFor } from './components/layout/PageSkeleton';
 import { LandingPage } from './components/auth/LandingPage';
 import { ResidentShell } from './components/layout/ResidentShell';
+import { GuidedTour } from './components/resident/GuidedTour';
+import { backMoveFor, isPlace, navMotion, peekBack, type NavMotion } from './components/layout/residentNav';
+
+type Bezier = [number, number, number, number];
+const EASE_OUT: Bezier = [0.23, 1, 0.32, 1];
+const EASE_IN: Bezier = [0.4, 0, 1, 1];
+const EASE_DRAWER: Bezier = [0.32, 0.72, 0, 1];
 import { useResidentActivity } from './components/resident/useResidentActivity';
 import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
 
@@ -65,6 +83,10 @@ const NotificationsView = lazyNamed(() => import('./components/resident/Notifica
 const SettingsView = lazyNamed(() => import('./components/resident/SettingsView'), 'SettingsView');
 const ServicesHub = lazyNamed(() => import('./components/resident/ServicesHub'), 'ServicesHub');
 const AccountView = lazyNamed(() => import('./components/resident/AccountView'), 'AccountView');
+const AccountSecurityView = lazyNamed(() => import('./components/resident/AccountSecurityView'), 'AccountSecurityView');
+const HelpView = lazyNamed(() => import('./components/resident/HelpView'), 'HelpView');
+const NotificationSettingsView = lazyNamed(() => import('./components/resident/NotificationSettingsView'), 'NotificationSettingsView');
+const LegalView = lazyNamed(() => import('./components/legal/LegalView'), 'LegalView');
 
 // Admin portal
 const AdminOverview = lazyNamed(() => import('./components/admin/AdminOverview'), 'AdminOverview');
@@ -101,12 +123,19 @@ const MainAppContent: React.FC = () => {
     currentRole, 
     selectedDocumentForPrint, 
     setSelectedDocumentForPrint,
+    addToast,
     largeTextMode 
   } = useBarangay();
 
   const [selectedServiceForWizard, setSelectedServiceForWizard] = useState<any | null>(null);
   // Starts true: the first paint is the page's skeleton, never page → skeleton → page.
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  // Each page shows its skeleton the first time it opens in this session (standing in for the
+  // first data fetch). Coming back to a page shows it straight away; pull to refresh shows it again.
+  const [visited, setVisited] = useState<Set<string>>(() => new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const pageKey = `${currentRole}:${activeTab}`;
+  const isPageLoading = refreshing || !visited.has(pageKey);
+  const reduceMotion = useReducedMotion();
   const { unreadCount: residentUnread, readyCount: residentReady } = useResidentActivity();
 
   // Large text mode scales the root font size, so every rem-based size grows with it.
@@ -118,10 +147,29 @@ const MainAppContent: React.FC = () => {
   // page's skeleton briefly, standing in for a real data fetch.
   useEffect(() => {
     window.scrollTo({ top: 0 });
-    setIsPageLoading(true);
-    const timer = setTimeout(() => setIsPageLoading(false), 450);
+    if (visited.has(pageKey)) return;
+    const timer = setTimeout(() => setVisited(prev => new Set(prev).add(pageKey)), 450);
     return () => clearTimeout(timer);
-  }, [activeTab, currentRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageKey]);
+
+  // Pull to refresh (resident shell): show the page's skeleton again, then confirm.
+  useEffect(() => {
+    let t = 0;
+    const onRefresh = () => {
+      setRefreshing(true);
+      t = window.setTimeout(() => {
+        setRefreshing(false);
+        addToast('Up to date', 'Showing the latest from the barangay.', 'success');
+      }, 700);
+    };
+    window.addEventListener('ekapitan:refresh', onRefresh);
+    return () => {
+      window.removeEventListener('ekapitan:refresh', onRefresh);
+      window.clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Old header + tab bar, used only by the legacy Staff and Official roles.
   const staffTabs = [
@@ -144,12 +192,10 @@ const MainAppContent: React.FC = () => {
 
   const currentTabs = currentRole === 'staff' ? staffTabs : currentRole === 'official' ? officialTabs : [];
 
-  const renderCurrentView = () => {
-    if (isPageLoading) {
-      return <PageSkeleton kind={skeletonFor(activeTab)} />;
-    }
+  const renderCurrentView = () => (isPageLoading ? <PageSkeleton kind={skeletonFor(activeTab)} /> : renderView(activeTab));
 
-    switch (activeTab) {
+  const renderView = (tab: string) => {
+    switch (tab) {
       // Citizen Views
       case 'home':
         return <ResidentDashboard />;
@@ -157,6 +203,10 @@ const MainAppContent: React.FC = () => {
         return <ServicesHub />;
       case 'account':
         return <AccountView />;
+      case 'account_security':
+        return <AccountSecurityView />;
+      case 'help':
+        return <HelpView />;
       case 'documents':
         return (
           <ServicesDirectory 
@@ -192,6 +242,12 @@ const MainAppContent: React.FC = () => {
         return <NotificationsView />;
       case 'settings':
         return <SettingsView />;
+      case 'notify_settings':
+        return <NotificationSettingsView />;
+      case 'privacy_policy':
+      case 'terms':
+      case 'privacy_notice':
+        return <LegalView id={tab} />;
 
       // Staff Views
       case 'dashboard':
@@ -286,8 +342,8 @@ const MainAppContent: React.FC = () => {
         <motion.div
           key={`${activeTab}-${currentRole}`}
           initial={{ opacity: 0, transform: 'translateY(8px)' }}
-          animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.28, ease: [0.23, 1, 0.32, 1] } }}
-          exit={{ opacity: 0, transform: 'translateY(-4px)', transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } }}
+          animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.28, ease: EASE_OUT } }}
+          exit={{ opacity: 0, transform: 'translateY(-4px)', transition: { duration: 0.12, ease: EASE_IN } }}
         >
           <div key={isPageLoading ? 'skeleton' : 'loaded'} className={isPageLoading ? 'animate-fade' : 'page-enter'}>
             {/* The skeleton also covers the moment a screen's code is still downloading. */}
@@ -295,6 +351,146 @@ const MainAppContent: React.FC = () => {
           </div>
         </motion.div>
       </AnimatePresence>
+    </div>
+  );
+
+  /*
+   * Residents on phones: pages stack like screens in a phone app.
+   *   push  the new page slides in from the right on top; the old one slides back a little and dims
+   *   pop   the top page slides off to the right, revealing the page underneath
+   *   left / right  moving between places slides sideways, matching the swipe
+   * Both pages are on screen during the move (popLayout), each with its own opaque background.
+   */
+  const navRef = useRef<{ tab: string; motion: NavMotion }>({ tab: activeTab, motion: 'none' });
+  if (navRef.current.tab !== activeTab) {
+    const from = navRef.current.tab;
+    const back = backMoveFor(activeTab);
+    const motionKind: NavMotion = back
+      ? back.instant
+        ? 'instant'
+        : isPlace(from) && isPlace(activeTab)
+          ? navMotion(from, activeTab)
+          : 'pop'
+      : navMotion(from, activeTab);
+    navRef.current = { tab: activeTab, motion: motionKind };
+  }
+  const stackMotion = navRef.current.motion;
+
+  /*
+   * Drag from the left edge (phones): the page follows the finger and the page you came from shows
+   * underneath, sliding into place. Let go past a third of the screen and it finishes the slide and
+   * goes back; otherwise it springs back. The frame sends the drag as 'ekapitan:edge' events.
+   */
+  const [edgeX, setEdgeX] = useState(0);
+  const [edgeDragging, setEdgeDragging] = useState(false);
+  useEffect(() => {
+    const onEdge = (e: Event) => {
+      const { phase, x } = (e as CustomEvent<{ phase: 'move' | 'commit' | 'cancel'; x: number }>).detail;
+      if (phase === 'move') {
+        setEdgeDragging(true);
+        setEdgeX(x);
+      } else {
+        setEdgeDragging(false);
+        setEdgeX(phase === 'commit' ? window.innerWidth : 0);
+      }
+    };
+    window.addEventListener('ekapitan:edge', onEdge);
+    return () => window.removeEventListener('ekapitan:edge', onEdge);
+  }, []);
+  // New page: drop any drag offset at once (no transition), then let later drags animate again.
+  useEffect(() => {
+    setEdgeDragging(true);
+    setEdgeX(0);
+    const f = requestAnimationFrame(() => requestAnimationFrame(() => setEdgeDragging(false)));
+    return () => cancelAnimationFrame(f);
+  }, [activeTab]);
+  const edgeProgress = Math.min(edgeX / Math.max(1, typeof window === 'undefined' ? 1 : window.innerWidth), 1);
+  const underTab = edgeX > 0 ? peekBack(activeTab) : null;
+  const stackVariants = {
+    enter: (m: NavMotion) =>
+      reduceMotion
+        ? { opacity: 0 }
+        : m === 'push'
+          ? { x: '100%', zIndex: 2, boxShadow: '-16px 0 32px rgb(0 0 0 / 0.12)' }
+          : m === 'pop'
+            ? { x: '-24%', opacity: 0.6, zIndex: 1 }
+            : m === 'left'
+              ? { x: '28%', opacity: 0, zIndex: 1 }
+              : m === 'right'
+                ? { x: '-28%', opacity: 0, zIndex: 1 }
+                : m === 'instant'
+                  ? { opacity: 1, x: 0, zIndex: 1 }
+                  : { opacity: 0, zIndex: 1 },
+    center: (m: NavMotion) => ({
+      x: 0,
+      opacity: 1,
+      boxShadow: '0 0 0 rgb(0 0 0 / 0)',
+      transition: reduceMotion
+        ? { duration: 0.15 }
+        : m === 'instant'
+          ? { duration: 0 }
+          : m === 'push' || m === 'pop'
+          ? { duration: 0.38, ease: EASE_DRAWER }
+          : { duration: 0.3, ease: EASE_OUT },
+    }),
+    exit: (m: NavMotion) =>
+      reduceMotion
+        ? { opacity: 0, transition: { duration: 0.1 } }
+        : m === 'push'
+          ? { x: '-24%', opacity: 0.6, zIndex: 1, transition: { duration: 0.38, ease: EASE_DRAWER } }
+          : m === 'pop'
+            ? { x: '100%', zIndex: 2, boxShadow: '-16px 0 32px rgb(0 0 0 / 0.12)', transition: { duration: 0.34, ease: EASE_DRAWER } }
+            : m === 'left'
+              ? { x: '-28%', opacity: 0, transition: { duration: 0.24, ease: EASE_IN } }
+              : m === 'right'
+                ? { x: '28%', opacity: 0, transition: { duration: 0.24, ease: EASE_IN } }
+                : m === 'instant'
+                  ? { opacity: 0, transition: { duration: 0 } }
+                  : { opacity: 0, transition: { duration: 0.12 } },
+  };
+  const pagePad = 'px-4 sm:px-6 pt-4 lg:pt-6 pb-8 lg:pb-12';
+  const residentStack = (
+    <div className="relative">
+      {/* The page underneath, while the top one is being dragged away */}
+      {underTab && (
+        <div aria-hidden="true" className="fixed inset-x-0 top-14 bottom-0 z-0 overflow-hidden bg-canvas pointer-events-none">
+          <div className={pagePad} style={{ transform: `translateX(${-24 * (1 - edgeProgress)}%)` }}>
+            <Suspense fallback={null}>{renderView(underTab)}</Suspense>
+          </div>
+          <div className="absolute inset-0 bg-scrim" style={{ opacity: 0.18 * (1 - edgeProgress) }} />
+        </div>
+      )}
+      <div
+        className="relative z-[1]"
+        style={
+          edgeX > 0
+            ? {
+                transform: `translateX(${edgeX}px)`,
+                transition: edgeDragging ? 'none' : 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+                boxShadow: '-16px 0 32px rgb(0 0 0 / 0.14)',
+              }
+            : { transition: 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)' }
+        }
+      >
+      <AnimatePresence mode="popLayout" initial={false} custom={stackMotion}>
+        <motion.div
+          key={`${activeTab}-${currentRole}`}
+          custom={stackMotion}
+          variants={stackVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          className={`relative bg-canvas min-h-[calc(100svh-120px)] lg:min-h-[calc(100svh-64px)] ${pagePad}`}
+        >
+          <LeavingInert>
+            <div key={isPageLoading ? 'skeleton' : 'loaded'} className={isPageLoading ? 'animate-fade' : 'page-enter'}>
+              <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
+            </div>
+          </LeavingInert>
+        </motion.div>
+      </AnimatePresence>
+      </div>
+      <GuidedTour page={activeTab} ready={!isPageLoading && edgeX === 0} />
     </div>
   );
 
@@ -336,7 +532,7 @@ const MainAppContent: React.FC = () => {
       <>
         <ToastContainer />
         <ResidentShell unreadCount={residentUnread} readyCount={residentReady}>
-          {pageTransition}
+          {residentStack}
         </ResidentShell>
         {printModal}
       </>
@@ -452,14 +648,15 @@ const MainAppContent: React.FC = () => {
 const MainAppWrapper: React.FC = () => {
   const { isAuthenticated } = useBarangay();
 
+  // Fade only: a transform here would turn every position:fixed bar inside into position:absolute.
   return (
     <AnimatePresence mode="wait">
       {!isAuthenticated ? (
         <motion.div
           key="login"
-          initial={{ opacity: 0, scale: 1.02 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="min-h-screen bg-canvas"
         >
@@ -468,9 +665,9 @@ const MainAppWrapper: React.FC = () => {
       ) : (
         <motion.div
           key="app"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 1.02 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           <MainAppContent />
