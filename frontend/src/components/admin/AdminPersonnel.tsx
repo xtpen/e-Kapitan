@@ -169,7 +169,7 @@ export const AdminPersonnel: React.FC = () => {
   const detailView = (p: Personnel) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy">{p.name}</h2>
+        <h2 className="text-h3 font-semibold text-navy-ink">{p.name}</h2>
         {pill(p)}
       </div>
       <p className="text-meta text-muted">{p.position}</p>
@@ -263,7 +263,7 @@ export const AdminPersonnel: React.FC = () => {
 
   const formView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">{panel === 'add' ? 'Add staff' : `Edit ${selected?.name}`}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add staff' : `Edit ${selected?.name}`}</h2>
       <p className="text-meta text-muted">Give each person only the areas their job needs.</p>
       <Field label="Full name" error={errors.name}>
         {p => <Input {...p} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />}
@@ -422,7 +422,7 @@ export const AdminPersonnel: React.FC = () => {
             detailView(selected)
           ) : (
             <Card>
-              <h2 className="text-h3 font-semibold text-navy">Staff details</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">Staff details</h2>
               <p className="text-meta text-muted mt-1">Choose a person to see what they can use.</p>
             </Card>
           )}

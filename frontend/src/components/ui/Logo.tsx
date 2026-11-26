@@ -47,7 +47,7 @@ export const LogoMark: React.FC<LogoMarkProps> = ({ size = 36, tone = 'navy', an
 };
 
 /** Mark + "eKapitan". Use in headers and footers instead of typing the name next to an image. */
-export const Wordmark: React.FC<LogoMarkProps & { textClassName?: string }> = ({ textClassName = 'text-xl text-navy', ...mark }) => (
+export const Wordmark: React.FC<LogoMarkProps & { textClassName?: string }> = ({ textClassName = 'text-xl text-navy-ink', ...mark }) => (
   <span className="inline-flex items-center gap-2.5">
     <LogoMark {...mark} />
     <span className={`font-display font-bold leading-none ${textClassName}`}>eKapitan</span>

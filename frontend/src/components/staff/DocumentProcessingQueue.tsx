@@ -126,8 +126,8 @@ export const DocumentProcessingQueue: React.FC = () => {
                   <span className="text-xs font-bold text-ink">{req.referenceNumber}</span>
                   <span className={`text-label font-bold uppercase px-2 py-0.5 rounded-full ${
  req.status ==='completed'?'bg-primary-tint text-primary-strong':
- req.status ==='ready_for_release'?'bg-info-bg text-navy':
- req.status ==='approved'?'bg-info-bg text-navy':
+ req.status ==='ready_for_release'?'bg-info-bg text-navy-ink':
+ req.status ==='approved'?'bg-info-bg text-navy-ink':
  req.status ==='rejected'?'bg-danger-bg text-danger-fg':
 'bg-warning-bg text-warning-fg'
  }`}>
@@ -321,7 +321,7 @@ export const DocumentProcessingQueue: React.FC = () => {
 
       {/* Reject Application Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 ">
           <div className="bg-surface rounded-card max-w-md w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95">
             <h3 className="text-base font-bold text-ink font-heading">
               Reject Document Application

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { savedTextSizeIsLarge } from './preferencesStorage';
 import { 
   UserRole, 
   UserProfile, 
@@ -206,7 +207,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentRole, setCurrentRole] = useState<UserRole>('citizen');
   const [currentUser, setCurrentUser] = useState<UserProfile>(ROLE_PROFILES.citizen);
   const [activeTab, setActiveTab] = useState<string>('home');
-  const [largeTextMode, setLargeTextMode] = useState<boolean>(false);
+  // Starts from the Settings page's saved text size, so Large text survives a reload.
+  const [largeTextMode, setLargeTextMode] = useState<boolean>(savedTextSizeIsLarge);
 
   // Data states
   const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
@@ -513,7 +515,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       category: data.category || 'Other Community Concern',
       title: data.title || 'Barangay Concern Report',
       description: data.description || '',
-      location: data.location || 'Barangay 4A',
+      location: data.location || 'Not given',
       purok: data.purok || 'Purok 1 - Centro',
       incidentDateTime: data.incidentDateTime || new Date().toISOString().substring(0, 16).replace('T', ' '),
       reporterName: data.isAnonymous ? 'Anonymous Resident' : (data.reporterName || currentUser.name),

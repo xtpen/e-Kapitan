@@ -184,7 +184,7 @@ export const AdminComplaints: React.FC = () => {
     return (
       <Card aria-live="polite">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-h3 font-semibold text-navy">{r.referenceNumber}</h2>
+          <h2 className="text-h3 font-semibold text-navy-ink">{r.referenceNumber}</h2>
           {pill(r)}
         </div>
         <p className="text-meta text-muted">{r.category}</p>
@@ -443,7 +443,7 @@ export const AdminComplaints: React.FC = () => {
             renderDetail(selected)
           ) : (
             <Card>
-              <h2 className="text-h3 font-semibold text-navy">Report details</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">Report details</h2>
               <p className="text-meta text-muted mt-1">Choose a report to review it.</p>
             </Card>
           )}

@@ -67,7 +67,7 @@ export const AuditTrailViewer: React.FC = () => {
             placeholder="Search action, user, or target ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface focus:outline-navy"
+            className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface focus:outline-navy-ink"
           />
         </div>
 

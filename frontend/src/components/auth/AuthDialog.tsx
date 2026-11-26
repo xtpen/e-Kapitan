@@ -1,8 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { CheckCircle2, X } from 'lucide-react';
-import { Button, Checkbox, Field, FileUpload, Input, PasswordInput } from '../ui';
+import { ArrowLeft, Bell, Check, CheckCircle2, CircleAlert, ClipboardList, FileCheck2, ShieldCheck, X } from 'lucide-react';
+import { Button, Checkbox, Expand, Field, FileUpload, Input, LogoMark, PasswordInput } from '../ui';
+import { TAGLINE } from '../../config/brand';
 import type { AuthScreen } from '../public/publicNav';
 
 export type Role = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
@@ -11,21 +12,28 @@ const MAX_ID_BYTES = 5 * 1024 * 1024;
 const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 const EASE_DRAWER: [number, number, number, number] = [0.32, 0.72, 0, 1];
+const EASE_IN: [number, number, number, number] = [0.4, 0, 1, 1];
 
 const isMobile = (v: string) => /^09\d{9}$/.test(v.replace(/[\s-]/g, ''));
 const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-const ErrorSummary: React.FC<{ show: boolean }> = ({ show }) =>
-  show ? (
-    <p role="alert" className="mt-4 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
-      Please fix the fields marked below.
+const ErrorSummary: React.FC<{ show: boolean }> = ({ show }) => (
+  <Expand show={show}>
+    <p role="alert" className="mt-5 flex items-center gap-2 rounded-control bg-danger-bg text-danger-fg text-meta font-semibold px-4 py-3">
+      {show && (
+        <>
+          <CircleAlert className="w-4 h-4 shrink-0" strokeWidth={2.2} aria-hidden="true" />
+          Please fix the fields marked below.
+        </>
+      )}
     </p>
-  ) : null;
+  </Expand>
+);
 
 const TextButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', ...rest }) => (
   <button
     type="button"
-    className={`font-semibold text-navy hover:underline underline-offset-4 cursor-pointer min-h-11 ${className}`}
+    className={`font-semibold text-navy-ink hover:underline underline-offset-4 cursor-pointer min-h-11 disabled:text-muted ${className}`}
     {...rest}
   />
 );
@@ -43,6 +51,81 @@ const usePhoneLayout = () => {
   return phone;
 };
 
+/* ---------- Brand side (tablets and up) ---------- */
+
+const SIGN_IN_POINTS = [
+  { icon: ClipboardList, text: 'See where every request stands' },
+  { icon: Bell, text: 'Get a text when something is ready' },
+  { icon: FileCheck2, text: 'Keep your documents and bookings in one place' },
+];
+
+const SIGN_UP_STEPS = ['Tell us about you', 'Set a password and add your ID', 'Staff verify your account'];
+
+const BrandSide: React.FC<{ screen: AuthScreen; step: number }> = ({ screen, step }) => {
+  const reduceMotion = useReducedMotion();
+  return (
+  <aside className="hidden md:flex flex-col w-[42%] shrink-0 bg-navy text-white p-9 lg:p-10" aria-hidden="true">
+    <div className="flex items-center gap-2.5">
+      <LogoMark size={34} tone="white" />
+      <span className="font-display text-lg font-bold">eKapitan</span>
+    </div>
+    <p className="mt-10 font-display text-[1.625rem] leading-[1.15] font-semibold tracking-[-0.01em] text-balance">{TAGLINE}</p>
+
+    <AnimatePresence mode="wait" initial={false}>
+    {screen === 'login' ? (
+      <motion.ul
+        key="login"
+        className="mt-8 grid gap-4"
+        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateY(8px)' }}
+        animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.3, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: { duration: 0.14, ease: EASE_IN } }}
+      >
+        {SIGN_IN_POINTS.map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-3 text-meta text-on-navy">
+            <span className="w-9 h-9 shrink-0 rounded-lg grid place-items-center bg-white/10 text-white">
+              <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+            </span>
+            {text}
+          </li>
+        ))}
+      </motion.ul>
+    ) : (
+      <motion.ol
+        key="register"
+        className="mt-8 grid gap-1"
+        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateY(8px)' }}
+        animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.3, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: { duration: 0.14, ease: EASE_IN } }}
+      >
+        {SIGN_UP_STEPS.map((s, i) => {
+          const done = i < step;
+          const current = i === step;
+          return (
+            <li key={s} className="flex items-center gap-3 py-2">
+              <span
+                className={`w-8 h-8 shrink-0 rounded-full grid place-items-center text-label font-bold transition-colors duration-300
+                  ${done ? 'bg-white text-navy-ink' : current ? 'bg-white/15 text-white ring-2 ring-white' : 'bg-white/10 text-white/60'}`}
+              >
+                {done ? <Check className="w-4 h-4" strokeWidth={3} /> : i + 1}
+              </span>
+              <span className={`text-meta transition-colors duration-300 ${current ? 'text-white font-semibold' : done ? 'text-on-navy' : 'text-white/60'}`}>
+                {s}
+              </span>
+            </li>
+          );
+        })}
+      </motion.ol>
+    )}
+    </AnimatePresence>
+
+    <p className="mt-auto pt-10 flex gap-2.5 text-label text-on-navy leading-relaxed">
+      <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={1.8} />
+      Your details are used only for your requests, as the Data Privacy Act of 2012 requires.
+    </p>
+  </aside>
+  );
+};
+
 export interface AuthDialogProps {
   /** Which tab is open; null closes the dialog. */
   screen: AuthScreen | null;
@@ -54,9 +137,11 @@ export interface AuthDialogProps {
 }
 
 /**
- * Sign in / Sign up. A centered dialog on desktop and a bottom sheet on phones (docs/DESIGN.md).
- * Prototype auth: any sign-in works; an email containing "admin", "staff" or "captain"/"official"
- * opens that role for the demo.
+ * Sign in / Sign up (docs/DESIGN.md). Tablets and desktop: a two-part dialog, navy brand side on
+ * the left (what you get, or the sign-up steps with your progress), form on the right. Phones: a
+ * bottom sheet with the form only. Sign up is two short steps, so the form never becomes a long
+ * scroll. Prototype auth: any sign-in works; an email containing "admin", "staff" or
+ * "captain"/"official" opens that role for the demo.
  */
 export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, onClose, onEnter, busy }) => {
   const phone = usePhoneLayout();
@@ -64,6 +149,8 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const open = screen !== null;
+  /** Direction of the last move (1 forward, -1 back), so content slides the way you went. */
+  const [dir, setDir] = useState(1);
 
   /* ---------- Sign in ---------- */
   const [loginMode, setLoginMode] = useState<'login' | 'forgot' | 'code'>('login');
@@ -74,6 +161,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
   const [loginErrors, setLoginErrors] = useState<Partial<Record<'identifier' | 'password' | 'code', string>>>({});
 
   /* ---------- Sign up ---------- */
+  const [regStep, setRegStep] = useState<1 | 2>(1);
   const [regName, setRegName] = useState('');
   const [regMobile, setRegMobile] = useState('');
   const [regAddress, setRegAddress] = useState('');
@@ -102,10 +190,18 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
 
   // Switching tabs starts that tab fresh: clear errors and leave password recovery.
   const switchTo = (s: AuthScreen) => {
+    if (s === screen) return;
+    setDir(s === 'register' ? 1 : -1);
     setLoginErrors({});
     setRegErrors({});
     setLoginMode('login');
     onScreenChange(s);
+  };
+
+  const setMode = (m: typeof loginMode, d: number) => {
+    setDir(d);
+    setLoginErrors({});
+    setLoginMode(m);
   };
 
   const validIdentifier = (v: string) => isEmail(v) || isMobile(v);
@@ -134,8 +230,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
         setLoginErrors({ identifier: 'Enter the email or mobile number on your account.' });
         return;
       }
-      setLoginErrors({});
-      setLoginMode('code');
+      setMode('code', 1);
       return;
     }
     if (!/^\d{6}$/.test(code)) {
@@ -145,23 +240,33 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
     onEnter('citizen');
   };
 
+  /** Step 1: who you are. Step 2: password and ID. Each step checks only its own fields. */
   const submitRegister = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof regErrors = {};
-    if (regName.trim().split(/\s+/).length < 2) errs.name = 'Enter your first and last name.';
-    if (!isMobile(regMobile)) errs.mobile = 'Enter an 11-digit mobile number that starts with 09.';
-    if (regAddress.trim().length < 5) errs.address = 'Enter your house number and street.';
+    if (regStep === 1) {
+      if (regName.trim().split(/\s+/).length < 2) errs.name = 'Enter your first and last name.';
+      if (!isMobile(regMobile)) errs.mobile = 'Enter an 11-digit mobile number that starts with 09.';
+      if (regAddress.trim().length < 5) errs.address = 'Enter your house number and street.';
+      setRegErrors(errs);
+      if (Object.keys(errs).length) return;
+      setDir(1);
+      setRegStep(2);
+      return;
+    }
     if (regPassword.length < 8) errs.password = 'Use at least 8 characters.';
     if (!regId) errs.id = 'Upload a photo or scan of a valid ID.';
     else if (!ID_TYPES.includes(regId.type)) errs.id = 'Upload a JPG, PNG or PDF file.';
     else if (regId.size > MAX_ID_BYTES) errs.id = 'Upload a file that is 5 MB or smaller.';
     setRegErrors(errs);
     if (Object.keys(errs).length) return;
+    setDir(1);
     setRegistered(regName.trim().split(/\s+/)[0]);
   };
 
   const resetRegistration = () => {
     setRegistered(null);
+    setRegStep(1);
     setRegName('');
     setRegMobile('');
     setRegAddress('');
@@ -179,8 +284,21 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
       : loginMode === 'login'
         ? 'Welcome back'
         : 'Reset your password';
+  const subtitle =
+    screen === 'register'
+      ? registered
+        ? 'Your registration is in.'
+        : 'For residents of the barangay. It takes about five minutes.'
+      : loginMode === 'login'
+        ? 'Sign in to request and track barangay services.'
+        : loginMode === 'forgot'
+          ? 'We will send a 6-digit code to your email or mobile number.'
+          : `Enter the 6-digit code we sent to ${identifier}.`;
 
-  // Motion: phones slide the sheet up (drawer curve), desktop fades and scales from 0.96. Exit is faster.
+  // Brand side progress: 0, 1 while filling in, 2 once sent (staff verification is next).
+  const brandStep = registered ? 2 : regStep - 1;
+
+  // Motion: phones slide the sheet up (drawer curve), larger screens rise 16px while scaling from 0.96.
   const panelMotion = reduceMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : phone
@@ -190,21 +308,32 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
           exit: { transform: 'translateY(100%)', transition: { duration: 0.26, ease: EASE_DRAWER } },
         }
       : {
-          initial: { opacity: 0, transform: 'scale(0.96)' },
-          animate: { opacity: 1, transform: 'scale(1)', transition: { duration: 0.24, ease: EASE_OUT } },
-          exit: { opacity: 0, transform: 'scale(0.98)', transition: { duration: 0.15, ease: EASE_OUT } },
+          initial: { opacity: 0, transform: 'translateY(16px) scale(0.96)' },
+          animate: { opacity: 1, transform: 'translateY(0px) scale(1)', transition: { duration: 0.34, ease: EASE_OUT } },
+          exit: { opacity: 0, transform: 'translateY(8px) scale(0.98)', transition: { duration: 0.18, ease: EASE_IN } },
         };
+
+  // Content swaps (tab, step, recovery): old view leaves fast, new one slides in from the side you moved to.
+  const swap = {
+    initial: (d: number) => (reduceMotion ? { opacity: 0 } : { opacity: 0, transform: `translateX(${d * 24}px)` }),
+    animate: { opacity: 1, transform: 'translateX(0px)', transition: { duration: 0.3, ease: EASE_OUT } },
+    exit: (d: number) =>
+      reduceMotion
+        ? { opacity: 0, transition: { duration: 0.12 } }
+        : { opacity: 0, transform: `translateX(${d * -24}px)`, transition: { duration: 0.14, ease: EASE_IN } },
+  };
+  const viewKey = `${screen}-${loginMode}-${regStep}-${registered ? 'done' : 'form'}`;
 
   return createPortal(
     <AnimatePresence>
-      {open && (
+      {open && screen && (
         <div key="auth" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
           <motion.div
             aria-hidden="true"
-            className="absolute inset-0 bg-navy/50"
+            className="absolute inset-0 bg-scrim/40 backdrop-blur-[3px]"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.24 } }}
-            exit={{ opacity: 0, transition: { duration: 0.18 } }}
+            animate={{ opacity: 1, transition: { duration: 0.3 } }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
             onClick={onClose}
           />
           <motion.div
@@ -214,232 +343,311 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
             aria-labelledby={titleId}
             tabIndex={-1}
             {...panelMotion}
-            className="relative w-full sm:max-w-[480px] max-h-[92dvh] sm:max-h-[calc(100dvh-48px)] overflow-y-auto overscroll-contain
-              bg-surface rounded-t-banner sm:rounded-card shadow-float outline-none
-              px-5 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8"
+            className="relative w-full sm:max-w-[500px] md:max-w-[900px] h-[min(92dvh,720px)] sm:h-[min(700px,calc(100dvh-48px))] flex
+              bg-surface rounded-t-banner sm:rounded-banner shadow-[0_24px_64px_rgb(18_48_79/0.28)] outline-none overflow-hidden"
           >
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 pt-1.5">
-                <h2 id={titleId} className="text-h3-lg font-semibold text-navy leading-tight">
-                  {title}
-                </h2>
-                {showTabs && (
-                  <p className="text-meta text-muted mt-1">
-                    {screen === 'login' ? 'Sign in to request and track barangay services.' : 'For residents. Staff check every account.'}
-                  </p>
-                )}
-              </div>
+            <BrandSide screen={screen} step={brandStep} />
+
+            <div className="relative flex-1 min-w-0 flex flex-col overflow-y-auto overscroll-contain px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-9 sm:pt-8 sm:pb-8">
+              {/* Sheet handle (phones) */}
+              <span aria-hidden="true" className="sm:hidden block mx-auto mb-4 w-10 h-1 rounded-full bg-hairline" />
+
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="w-11 h-11 -mr-2 shrink-0 grid place-items-center rounded-control text-muted hover:bg-surface-muted hover:text-navy cursor-pointer transition-colors"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 w-11 h-11 grid place-items-center rounded-control text-muted hover:bg-mist hover:text-navy-ink cursor-pointer
+                  transition-[background-color,color,scale] duration-150 ease-out-strong active:scale-[0.94]"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
+
+              {/* Sign in | Sign up, with an indicator that slides between them */}
+              {showTabs && (
+                <div role="tablist" aria-label="Account" className="grid grid-cols-2 p-1 mr-12 sm:mr-10 max-w-[320px] rounded-control bg-mist">
+                  {(['login', 'register'] as const).map(s => {
+                    const selected = screen === s;
+                    return (
+                      <button
+                        key={s}
+                        role="tab"
+                        type="button"
+                        aria-selected={selected}
+                        onClick={() => switchTo(s)}
+                        className={`relative min-h-10 rounded-lg text-meta font-semibold cursor-pointer transition-colors duration-200
+                          ${selected ? 'text-navy-ink' : 'text-muted hover:text-navy-ink'}`}
+                      >
+                        {selected && (
+                          <motion.span
+                            layoutId="auth-tab"
+                            aria-hidden="true"
+                            className="absolute inset-0 rounded-lg bg-surface shadow-[0_1px_3px_rgb(18_48_79/0.14)]"
+                            transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: EASE_OUT }}
+                          />
+                        )}
+                        <span className="relative">{s === 'login' ? 'Sign in' : 'Sign up'}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <AnimatePresence mode="wait" initial={false} custom={dir}>
+                <motion.div key={viewKey} custom={dir} variants={swap} initial="initial" animate="animate" exit="exit" className="pb-7">
+                  {/* Title */}
+                  <div className={showTabs ? 'mt-7' : 'mt-2 pr-12'}>
+                    {screen === 'login' && loginMode !== 'login' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCode('');
+                          setMode(loginMode === 'code' ? 'forgot' : 'login', -1);
+                        }}
+                        className="group -ml-1 mb-3 inline-flex items-center gap-1.5 min-h-10 px-1 text-meta font-semibold text-muted hover:text-navy-ink cursor-pointer transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:-translate-x-0.5" aria-hidden="true" />
+                        Back
+                      </button>
+                    )}
+                    <h2 id={titleId} className="text-[1.625rem] sm:text-[1.875rem] font-semibold text-navy-ink leading-tight tracking-[-0.01em]">
+                      {title}
+                    </h2>
+                    <p className="text-muted mt-1.5">{subtitle}</p>
+                  </div>
+
+                  {/* ---------- Sign in ---------- */}
+                  {screen === 'login' && loginMode === 'login' && (
+                    <form noValidate onSubmit={submitLogin} role="tabpanel" className="mt-2">
+                      <ErrorSummary show={Object.keys(loginErrors).length > 0} />
+                      <Field label="Email or mobile number" required error={loginErrors.identifier}>
+                        {p => (
+                          <Input
+                            {...p}
+                            autoComplete="username"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            inputMode="email"
+                            placeholder="e.g. juan@email.com or 0917 123 4567"
+                            value={identifier}
+                            onChange={e => setIdentifier(e.target.value)}
+                          />
+                        )}
+                      </Field>
+                      <Field label="Password" required error={loginErrors.password}>
+                        {p => (
+                          <PasswordInput
+                            {...p}
+                            placeholder="Enter your password"
+                            autoComplete="current-password"
+                            enterKeyHint="go"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                          />
+                        )}
+                      </Field>
+                      <div className="flex flex-wrap items-center justify-between gap-x-4 mt-2 mb-5">
+                        <Checkbox label="Remember me" checked={remember} onChange={e => setRemember(e.target.checked)} />
+                        <TextButton className="text-meta" onClick={() => setMode('forgot', 1)}>
+                          Forgot password?
+                        </TextButton>
+                      </div>
+                      <Button variant="brand" type="submit" fullWidth disabled={!!busy}>
+                        {busy && busy !== 'guest' ? 'Signing in…' : 'Sign in'}
+                      </Button>
+                    </form>
+                  )}
+
+                  {/* ---------- Forgot password ---------- */}
+                  {screen === 'login' && loginMode !== 'login' && (
+                    <form noValidate onSubmit={submitForgot} className="mt-2">
+                      <ErrorSummary show={Object.keys(loginErrors).length > 0} />
+                      {loginMode === 'forgot' ? (
+                        <Field label="Email or mobile number" required error={loginErrors.identifier}>
+                          {p => (
+                            <Input
+                              {...p}
+                              placeholder="The one on your account"
+                              autoComplete="username"
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              value={identifier}
+                              onChange={e => setIdentifier(e.target.value)}
+                            />
+                          )}
+                        </Field>
+                      ) : (
+                        <Field label="6-digit code" required error={loginErrors.code}>
+                          {p => (
+                            <Input
+                              {...p}
+                              placeholder="000000"
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              enterKeyHint="done"
+                              maxLength={6}
+                              className="tracking-[0.4em] font-semibold"
+                              value={code}
+                              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                            />
+                          )}
+                        </Field>
+                      )}
+                      <Button variant="brand" type="submit" fullWidth className="mt-6" disabled={!!busy}>
+                        {loginMode === 'forgot' ? 'Send code' : 'Verify and sign in'}
+                      </Button>
+                      {loginMode === 'code' && (
+                        <p className="mt-3 text-center text-meta text-muted">
+                          Didn’t get it? <TextButton onClick={() => setCode('')}>Send a new code</TextButton>
+                        </p>
+                      )}
+                    </form>
+                  )}
+
+                  {/* ---------- Sign up ---------- */}
+                  {screen === 'register' && !registered && (
+                    <form noValidate onSubmit={submitRegister} role="tabpanel" className="mt-5">
+                      {/* Step progress */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-label font-semibold uppercase tracking-[0.08em] text-muted whitespace-nowrap">
+                          Step {regStep} of 2 · {regStep === 1 ? 'About you' : 'Password and ID'}
+                        </span>
+                        <span className="flex-1 grid grid-cols-2 gap-1.5" aria-hidden="true">
+                          <span className="h-1.5 rounded-full bg-navy" />
+                          <span className={`h-1.5 rounded-full transition-colors duration-300 ${regStep === 2 ? 'bg-navy' : 'bg-hairline'}`} />
+                        </span>
+                      </div>
+                      <p className="mt-2 text-label text-muted">
+                        <span className="text-danger-fg" aria-hidden="true">
+                          *
+                        </span>{' '}
+                        Required
+                      </p>
+                      <ErrorSummary show={Object.keys(regErrors).length > 0} />
+
+                      {regStep === 1 ? (
+                        <>
+                          <Field label="Full name" required error={regErrors.name}>
+                            {p => (
+                              <Input
+                                {...p}
+                                autoComplete="name"
+                                placeholder="e.g. Juan Dela Cruz"
+                                value={regName}
+                                onChange={e => setRegName(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                          <Field label="Mobile number" required error={regErrors.mobile} help="We send updates and your account approval by SMS.">
+                            {p => (
+                              <Input
+                                {...p}
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel"
+                                placeholder="e.g. 0917 123 4567"
+                                value={regMobile}
+                                onChange={e => setRegMobile(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                          <Field label="Home address" required error={regErrors.address} help="House number, street and purok.">
+                            {p => (
+                              <Input
+                                {...p}
+                                autoComplete="street-address"
+                                placeholder="e.g. 12 Rizal St., Purok 3"
+                                value={regAddress}
+                                onChange={e => setRegAddress(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                          <Button variant="brand" type="submit" fullWidth className="mt-6">
+                            Continue
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Field label="Create a password" required error={regErrors.password} help="At least 8 characters. Mix letters and numbers to make it stronger.">
+                            {p => (
+                              <PasswordInput
+                                {...p}
+                                placeholder="At least 8 characters"
+                                autoComplete="new-password"
+                                value={regPassword}
+                                onChange={e => setRegPassword(e.target.value)}
+                              />
+                            )}
+                          </Field>
+                          <Field label="Valid ID" required error={regErrors.id} help="JPG, PNG or PDF, up to 5 MB. Staff use it to verify you.">
+                            {p => (
+                              <FileUpload
+                                {...p}
+                                tone="navy"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                hint="or choose a photo or scan of your ID"
+                                files={regId ? [regId] : []}
+                                onChange={fs => setRegId(fs[0] ?? null)}
+                              />
+                            )}
+                          </Field>
+                          <div className="grid grid-cols-[auto_1fr] gap-3 mt-6">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setRegErrors({});
+                                setDir(-1);
+                                setRegStep(1);
+                              }}
+                            >
+                              Back
+                            </Button>
+                            <Button variant="brand" type="submit">
+                              Create account
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </form>
+                  )}
+
+                  {/* ---------- Sign up done ---------- */}
+                  {screen === 'register' && registered && (
+                    <div role="status" className="mt-6">
+                      <span className="w-14 h-14 rounded-full grid place-items-center bg-success-bg text-success-fg animate-pop" aria-hidden="true">
+                        <CheckCircle2 className="w-7 h-7" strokeWidth={1.8} />
+                      </span>
+                      <p className="mt-5">
+                        Staff will check your details and ID. We will text{' '}
+                        <b className="font-semibold whitespace-nowrap">{regMobile}</b> once your account is active.
+                      </p>
+                      <ol className="mt-6 grid gap-3 border-t border-hairline pt-5">
+                        {['Staff check your details and ID', 'You get a text when your account is active', 'Sign in and send your first request'].map(
+                          (s, i) => (
+                            <li key={s} className="flex items-center gap-3 text-meta text-ink">
+                              <span className="w-7 h-7 shrink-0 rounded-full grid place-items-center bg-navy-tint text-navy-ink text-label font-bold">{i + 1}</span>
+                              {s}
+                            </li>
+                          ),
+                        )}
+                      </ol>
+                      <Button variant="brand" fullWidth className="mt-7" onClick={resetRegistration}>
+                        Back to sign in
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Guest way out, always one tap away */}
+              {showTabs && (
+                <p className="text-center text-meta mt-auto pt-5 border-t border-hairline">
+                  <span className="text-muted">Not a resident? </span>
+                  <TextButton onClick={() => onEnter('guest')} disabled={!!busy}>
+                    {busy === 'guest' ? 'Opening…' : 'Continue as guest'}
+                  </TextButton>
+                </p>
+              )}
             </div>
-
-            {/* Sign in | Sign up */}
-            {showTabs && (
-              <div role="tablist" aria-label="Account" className="grid grid-cols-2 gap-1 p-1 mt-5 rounded-control bg-surface-muted">
-                {(['login', 'register'] as const).map(s => {
-                  const selected = screen === s;
-                  return (
-                    <button
-                      key={s}
-                      role="tab"
-                      type="button"
-                      aria-selected={selected}
-                      onClick={() => switchTo(s)}
-                      className={`min-h-11 rounded-lg font-semibold cursor-pointer transition-[background-color,color,box-shadow] duration-150
-                        ${selected ? 'bg-surface text-navy shadow-[0_1px_2px_rgb(18_48_79/0.12)]' : 'text-muted hover:text-navy'}`}
-                    >
-                      {s === 'login' ? 'Sign in' : 'Sign up'}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ---------- Sign in ---------- */}
-            {screen === 'login' && loginMode === 'login' && (
-              <form noValidate onSubmit={submitLogin} role="tabpanel">
-                <ErrorSummary show={Object.keys(loginErrors).length > 0} />
-                <Field label="Email or mobile number" error={loginErrors.identifier}>
-                  {p => (
-                    <Input
-                      {...p}
-                      autoComplete="username"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      inputMode="email"
-                      placeholder="name@email.com or 09XX XXX XXXX"
-                      value={identifier}
-                      onChange={e => setIdentifier(e.target.value)}
-                    />
-                  )}
-                </Field>
-                <Field label="Password" error={loginErrors.password}>
-                  {p => (
-                    <PasswordInput
-                      {...p}
-                      autoComplete="current-password"
-                      enterKeyHint="go"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                    />
-                  )}
-                </Field>
-                <div className="flex flex-wrap items-center justify-between gap-x-4 mt-2 mb-4">
-                  <Checkbox label="Remember me" checked={remember} onChange={e => setRemember(e.target.checked)} />
-                  <TextButton
-                    onClick={() => {
-                      setLoginErrors({});
-                      setLoginMode('forgot');
-                    }}
-                  >
-                    Forgot password?
-                  </TextButton>
-                </div>
-                <Button variant="brand" type="submit" fullWidth disabled={!!busy}>
-                  {busy && busy !== 'guest' ? 'Signing in…' : 'Sign in'}
-                </Button>
-              </form>
-            )}
-
-            {/* ---------- Forgot password ---------- */}
-            {screen === 'login' && loginMode !== 'login' && (
-              <form noValidate onSubmit={submitForgot}>
-                <p className="text-meta text-muted mt-1">
-                  {loginMode === 'forgot'
-                    ? 'We will send a 6-digit code to your email or mobile number.'
-                    : `Enter the 6-digit code we sent to ${identifier}.`}
-                </p>
-                <ErrorSummary show={Object.keys(loginErrors).length > 0} />
-                {loginMode === 'forgot' ? (
-                  <Field label="Email or mobile number" error={loginErrors.identifier}>
-                    {p => (
-                      <Input
-                        {...p}
-                        autoComplete="username"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        value={identifier}
-                        onChange={e => setIdentifier(e.target.value)}
-                      />
-                    )}
-                  </Field>
-                ) : (
-                  <Field label="6-digit code" error={loginErrors.code}>
-                    {p => (
-                      <Input
-                        {...p}
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        enterKeyHint="done"
-                        maxLength={6}
-                        className="tracking-[0.4em] font-semibold"
-                        value={code}
-                        onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                      />
-                    )}
-                  </Field>
-                )}
-                <div className="grid grid-cols-2 gap-2.5 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setLoginErrors({});
-                      setCode('');
-                      setLoginMode('login');
-                    }}
-                  >
-                    Back
-                  </Button>
-                  <Button variant="brand" type="submit" disabled={!!busy}>
-                    {loginMode === 'forgot' ? 'Send code' : 'Verify'}
-                  </Button>
-                </div>
-                {loginMode === 'code' && (
-                  <TextButton className="mt-3" onClick={() => setCode('')}>
-                    Send a new code
-                  </TextButton>
-                )}
-              </form>
-            )}
-
-            {/* ---------- Sign up ---------- */}
-            {screen === 'register' && !registered && (
-              <form noValidate onSubmit={submitRegister} role="tabpanel">
-                <ErrorSummary show={Object.keys(regErrors).length > 0} />
-                <Field label="Full name" error={regErrors.name}>
-                  {p => <Input {...p} autoComplete="name" value={regName} onChange={e => setRegName(e.target.value)} />}
-                </Field>
-                <Field label="Mobile number" error={regErrors.mobile} help="We send updates and your account approval by SMS.">
-                  {p => (
-                    <Input
-                      {...p}
-                      type="tel"
-                      inputMode="numeric"
-                      autoComplete="tel"
-                      placeholder="09XX XXX XXXX"
-                      value={regMobile}
-                      onChange={e => setRegMobile(e.target.value)}
-                    />
-                  )}
-                </Field>
-                <Field label="Home address" error={regErrors.address} help="House number, street and purok.">
-                  {p => <Input {...p} autoComplete="street-address" value={regAddress} onChange={e => setRegAddress(e.target.value)} />}
-                </Field>
-                <Field label="Create a password" error={regErrors.password} help="At least 8 characters.">
-                  {p => (
-                    <PasswordInput {...p} autoComplete="new-password" value={regPassword} onChange={e => setRegPassword(e.target.value)} />
-                  )}
-                </Field>
-                <Field label="Valid ID" error={regErrors.id} help="JPG, PNG or PDF, up to 5 MB.">
-                  {p => (
-                    <FileUpload
-                      {...p}
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      hint="or choose a photo or scan of your ID"
-                      files={regId ? [regId] : []}
-                      onChange={fs => setRegId(fs[0] ?? null)}
-                    />
-                  )}
-                </Field>
-                <p className="text-meta text-muted mt-4 mb-5">Staff verify your details before your account opens.</p>
-                <Button variant="brand" type="submit" fullWidth>
-                  Create account
-                </Button>
-              </form>
-            )}
-
-            {/* ---------- Sign up done ---------- */}
-            {screen === 'register' && registered && (
-              <div role="status" className="mt-4">
-                <div className="w-13 h-13 rounded-tile grid place-items-center bg-success-bg text-success-fg mb-4" aria-hidden="true">
-                  <CheckCircle2 className="w-7 h-7" strokeWidth={1.8} />
-                </div>
-                <p>
-                  We received your registration. Staff will check your details and ID, then send an SMS to{' '}
-                  <b className="font-semibold whitespace-nowrap">{regMobile}</b> once your account is active.
-                </p>
-                <Button variant="outline" fullWidth className="mt-6" onClick={resetRegistration}>
-                  Back to sign in
-                </Button>
-              </div>
-            )}
-
-            {/* Guest way out, always one tap away */}
-            {showTabs && (
-              <p className="text-center text-meta mt-6 pt-5 border-t border-line-soft">
-                <span className="text-muted">Not a resident? </span>
-                <TextButton onClick={() => onEnter('guest')} disabled={!!busy}>
-                  {busy === 'guest' ? 'Opening…' : 'Continue as guest'}
-                </TextButton>
-              </p>
-            )}
           </motion.div>
         </div>
       )}

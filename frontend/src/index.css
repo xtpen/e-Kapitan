@@ -32,6 +32,13 @@
   --color-navy: #12304F;
   --color-navy-deep: #0C2238;
   --color-navy-tint: #EEF3F9;
+  /* Navy as text, borders and focus rings (text-navy-ink, border-navy-ink). Same as navy in light;
+     in dark it turns into a soft light blue, while bg-navy stays a fill. */
+  --color-navy-ink: #12304F;
+  /* Backdrop behind dialogs, sheets and drawers (bg-scrim/50). */
+  --color-scrim: #12304F;
+  /* Text on gold fills (accent buttons). Stays dark navy in both themes. */
+  --color-on-gold: #12304F;
   --color-on-navy: #C9D6E6;
   --color-ink: #1D2A3A;
   --color-muted: #556070;
@@ -111,6 +118,94 @@
   }
 }
 
+/*
+ * Dark theme (Settings → Appearance; class set by PreferencesContext). Every component uses the
+ * tokens above, so redefining them here re-colors the whole app.
+ *
+ * A real dark mode, like the ones people know from their phones: neutral charcoal surfaces
+ * (not blue-black), cards a step lighter than the page, near-white text, and color kept for
+ * meaning only. Navy is split in two: bg-navy is a calm blue fill that still carries white text
+ * (5.7:1), while text-navy-ink / border-navy-ink become a soft light blue that reads like a
+ * heading instead of glowing. Backdrops (bg-scrim) go to black.
+ */
+html.dark {
+  /* Brand */
+  --color-navy: #2F68AD;
+  --color-navy-deep: #275A97;
+  --color-navy-tint: #1F2A37;
+  --color-navy-ink: #C9DBF2;
+  --color-on-navy: #DCE6F3;
+  --color-scrim: #000000;
+  --color-ink: #E7E9EC;
+  --color-muted: #A4ABB4;
+  --color-primary: #1F8A63;
+  --color-primary-strong: #6BCFA5;
+  --color-primary-tint: #17271F;
+  --color-primary-tint-line: #24402F;
+  --color-gold: #F2B84B;
+
+  /* Surfaces: page < card < raised control */
+  --color-canvas: #121417;
+  --color-surface: #1C1F23;
+  --color-surface-muted: #272B30;
+  --color-line: #32373D;
+  --color-line-soft: #282C31;
+  --color-field-line: #5C636C;
+  --color-mist: #17191C;
+  --color-hairline: #2D3136;
+
+  /* Status: dark tinted chips with light text */
+  --color-success-bg: #18291F;
+  --color-success-fg: #82D6AE;
+  --color-info-bg: #1A2636;
+  --color-info-fg: #A4C6F0;
+  --color-warning-bg: #2D2614;
+  --color-warning-fg: #E9C46E;
+  --color-danger-bg: #331C1C;
+  --color-danger-tile: #331C1C;
+  --color-danger-fg: #F0A39B;
+  --color-neutral-bg: #272B30;
+  --color-neutral-fg: #BAC0C8;
+
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
+}
+html.dark .bone::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
+}
+
+/* High contrast (Settings → Accessibility): darker secondary text and firmer borders. */
+html.high-contrast {
+  --color-muted: #39424F;
+  --color-line: #A9B1BC;
+  --color-line-soft: #C4CAD3;
+  --color-hairline: #A9B1BC;
+  --color-field-line: #4B5563;
+}
+html.dark.high-contrast {
+  --color-muted: #CDD3DA;
+  --color-line: #4B5159;
+  --color-line-soft: #3B4047;
+  --color-hairline: #4B5159;
+  --color-field-line: #8B939D;
+}
+
+/* Extra large text (Settings → Text size). Large text (112.5%) is html.large-text below. */
+html.large-text.xlarge-text {
+  font-size: 125%;
+}
+
+/* Reduce motion (Settings → Accessibility), on top of the device's own setting. */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Form panels that just opened (Add / Edit): slide in + a short navy glow that fades. */
 @keyframes attention-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -158,7 +253,7 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-navy);
+    outline: 3px solid var(--color-navy-ink);
     outline-offset: 2px;
   }
 
@@ -326,26 +421,7 @@
     transform: scaleX(1);
   }
 
-  /* FAQ: answers open and close with a height animation where the browser supports it
-     (::details-content + interpolate-size); elsewhere they simply appear. */
-  .faq-item {
-    interpolate-size: allow-keywords;
-  }
-  .faq-item::details-content {
-    height: 0;
-    overflow: clip;
-    transition:
-      height 300ms cubic-bezier(0.23, 1, 0.32, 1),
-      content-visibility 300ms allow-discrete;
-  }
-  .faq-item[open]::details-content {
-    height: auto;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .faq-item::details-content {
-      transition: none;
-    }
     .reveal .hero-underline {
       transform: none;
       transition: none;

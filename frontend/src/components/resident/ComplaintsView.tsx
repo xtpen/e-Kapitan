@@ -1,37 +1,69 @@
 import React, { useRef, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  Dog,
+  Droplets,
+  EyeOff,
+  Lightbulb,
+  MessageSquareWarning,
+  MoreHorizontal,
+  Trash2,
+  Users,
+  Volume2,
+  type LucideIcon,
+} from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import type { IncidentCategory, IncidentReport } from '../../types';
+import type { IncidentCategory, IncidentReport, IncidentStatus } from '../../types';
 import { INCIDENT_CATEGORIES, PUROKS } from '../../data/reference';
 import { buildReportStages } from '../shared/reportStages';
 import {
   Button,
-  Card,
-  CardHeader,
   Checkbox,
-  DataTable,
+  Expand,
   Field,
   FileUpload,
   Input,
-  PageHeader,
   ProgressTimeline,
   Select,
   StatusPill,
+  Switch,
   Textarea,
+  dateTimeValue,
   formatShortDateTime,
   incidentStatus,
   todayISO,
 } from '../ui';
+import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
 type Errors = Partial<Record<'date' | 'location' | 'description' | 'files' | 'consent', string>>;
 
-/**
- * Resident · Complaints & Reports. Mockup: "Resident · Complaints" (desktop + mobile). See DESIGN.md.
- * Residents only see their own reports.
- */
+/** Everyday name and icon for each kind of problem. The stored category stays the same. */
+const CATEGORY: Record<IncidentCategory, { label: string; icon: LucideIcon }> = {
+  'Noise Disturbance': { label: 'Noise', icon: Volume2 },
+  'Neighbor Dispute': { label: 'Neighbor', icon: Users },
+  'Sanitation & Garbage': { label: 'Garbage', icon: Trash2 },
+  'Public Safety / Streetlight': { label: 'Streetlight or safety', icon: Lightbulb },
+  'Stray Animal Concern': { label: 'Stray animal', icon: Dog },
+  'Drainage / Flooding': { label: 'Flooding', icon: Droplets },
+  'Other Community Concern': { label: 'Something else', icon: MoreHorizontal },
+};
+const categoryInfo = (c: IncidentCategory) => CATEGORY[c] ?? { label: c, icon: MessageSquareWarning };
+
+/** One short line: what happens next for each status. */
+const NEXT_STEP: Record<IncidentStatus, string> = {
+  received: 'Staff will read your report soon.',
+  assigned: 'Staff are checking it. They may contact you.',
+  in_progress: 'The barangay is working on it.',
+  hearing_scheduled: 'A meeting has been set. Check your notifications and bring a valid ID.',
+  resolved: 'Done. If it happens again, send a new report.',
+  dismissed: 'This report was closed. Ask at the barangay hall if you have questions.',
+};
+
+/** Resident · Report a problem: pick the kind, add the details, send. Your reports are listed below. */
 export const ComplaintsView: React.FC = () => {
   const { incidents, createIncidentReport, currentUser } = useBarangay();
 
@@ -46,21 +78,22 @@ export const ComplaintsView: React.FC = () => {
   const [errors, setErrors] = useState<Errors>({});
   const [justFiled, setJustFiled] = useState<IncidentReport | null>(null);
   const [myAnonymousIds, setMyAnonymousIds] = useState<string[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const myReports = incidents.filter(i => i.reporterName === currentUser.name || myAnonymousIds.includes(i.id));
-  const selected = myReports.find(r => r.id === selectedId) ?? myReports[0];
+  const myReports = incidents
+    .filter(i => i.reporterName === currentUser.name || myAnonymousIds.includes(i.id))
+    .sort((a, b) => dateTimeValue(b.submittedAt) - dateTimeValue(a.submittedAt));
 
   const validate = (): Errors => {
     const e: Errors = {};
     if (!date) e.date = 'Enter the date it happened.';
     else if (date > todayISO()) e.date = 'The date cannot be in the future.';
-    if (!location.trim()) e.location = 'Enter a street or landmark so staff can find it.';
-    if (description.trim().length < 15) e.description = 'Describe what happened in a sentence or two.';
-    if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = 'Attach JPG, PNG or PDF files only.';
+    if (!location.trim()) e.location = 'Enter a street or landmark.';
+    if (description.trim().length < 15) e.description = 'Tell us what happened in a sentence or two.';
+    if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = 'Use a JPG, PNG or PDF file.';
     else if (files.some(f => f.size > MAX_FILE_BYTES)) e.files = 'Each file must be 5 MB or smaller.';
-    if (!consent) e.consent = 'Check the box to agree before you submit.';
+    if (!consent) e.consent = 'Tick this box to send your report.';
     return e;
   };
 
@@ -68,7 +101,11 @@ export const ComplaintsView: React.FC = () => {
     ev.preventDefault();
     const e = validate();
     setErrors(e);
-    if (Object.keys(e).length > 0) return;
+    if (Object.keys(e).length > 0) {
+      // Take the resident to the first thing to fix.
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
 
     const created = createIncidentReport({
       category,
@@ -83,7 +120,7 @@ export const ComplaintsView: React.FC = () => {
     });
     if (anonymous) setMyAnonymousIds(ids => [created.id, ...ids]);
     setJustFiled(created);
-    setSelectedId(created.id);
+    setOpenId(created.id);
     setLocation('');
     setDescription('');
     setFiles([]);
@@ -91,162 +128,135 @@ export const ComplaintsView: React.FC = () => {
     setConsent(false);
   };
 
-  const statusPill = (r: IncidentReport) => (
-    <StatusPill tone={incidentStatus[r.status].tone}>{incidentStatus[r.status].label}</StatusPill>
-  );
-
-  const selectReport = (r: IncidentReport) => {
-    setSelectedId(r.id);
-    if (window.matchMedia('(max-width: 1023px)').matches) {
-      progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader
-        title="Complaints & Reports"
-        description="Tell the barangay about a concern. You will get a tracking number."
-      />
+    <Page>
+      <PageTitle title="Report a problem" sub="Tell the barangay what's wrong." />
 
-      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-5 items-start">
-        {/* ---------- Form ---------- */}
-        <Card padded="lg">
-          <h2 className="text-h3-lg font-semibold text-navy">File a new report</h2>
-
-          {justFiled && (
-            <div role="status" className="mt-4 flex gap-3 rounded-control bg-success-bg text-success-fg px-4 py-3">
-              <CheckCircle2 className="w-6 h-6 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-              <p>
-                <b className="font-semibold">Report submitted.</b> Your tracking number is{' '}
-                <b className="font-semibold whitespace-nowrap">{justFiled.referenceNumber}</b>. You can follow its progress
-                under My reports.
-              </p>
-            </div>
-          )}
-
-          <form noValidate onSubmit={submit}>
-            {Object.keys(errors).length > 0 && (
-              <p role="alert" className="mt-4 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
-                Please fix the fields marked below.
-              </p>
-            )}
-            <div className="grid sm:grid-cols-2 gap-x-5">
-              <Field label="Type of concern">
-                {p => (
-                  <Select {...p} value={category} onChange={e => setCategory(e.target.value as IncidentCategory)}>
-                    {INCIDENT_CATEGORIES.map(c => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="Date of incident" error={errors.date}>
-                {p => <Input {...p} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} />}
-              </Field>
-              <Field label="Purok">
-                {p => (
-                  <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
-                    {PUROKS.map(x => (
-                      <option key={x}>{x}</option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="Location" error={errors.location}>
-                {p => (
-                  <Input
-                    {...p}
-                    placeholder="Street or landmark"
-                    value={location}
-                    onChange={e => setLocation(e.target.value)}
-                  />
-                )}
-              </Field>
-            </div>
-            <Field label="What happened?" error={errors.description}>
-              {p => (
-                <Textarea
-                  {...p}
-                  placeholder="Describe the concern in your own words"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                />
-              )}
-            </Field>
-            <Field label="Photos or documents" optional error={errors.files} help="JPG, PNG or PDF, up to 5 MB each.">
-              {p => (
-                <FileUpload
-                  {...p}
-                  multiple
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  hint="or choose photos or documents"
-                  files={files}
-                  onChange={setFiles}
-                />
-              )}
-            </Field>
-
-            <div className="mt-4">
-              <Checkbox
-                label="Hide my name from the person I'm reporting"
-                description="Only authorized barangay staff will see who filed it. You can still track it here."
-                checked={anonymous}
-                onChange={e => setAnonymous(e.target.checked)}
-              />
-              <Checkbox
-                label="I agree to the processing of my personal data"
-                description="It is used only to act on this report, as required by the Data Privacy Act of 2012."
-                checked={consent}
-                onChange={e => setConsent(e.target.checked)}
-                error={errors.consent}
-              />
-            </div>
-
-            <Button type="submit" fullWidth className="mt-6">
-              Submit report
-            </Button>
-          </form>
-        </Card>
-
-        {/* ---------- My reports + progress ---------- */}
-        <div className="grid gap-3 sm:gap-5">
-          <Card>
-            <CardHeader title="My reports" />
-            <DataTable<IncidentReport>
-              rows={myReports}
-              rowKey={r => r.id}
-              onRowClick={selectReport}
-              rowLabel={r => `Show progress of ${r.referenceNumber}`}
-              columns={[
-                {
-                  header: 'Tracking no.',
-                  cell: r => (
-                    <span className={r.id === selected?.id ? 'font-semibold text-navy' : undefined}>{r.referenceNumber}</span>
-                  ),
-                  className: 'whitespace-nowrap',
-                },
-                { header: 'Concern', cell: r => r.category },
-                { header: 'Status', cell: statusPill },
-              ]}
-              mobile={{ title: r => r.category, status: statusPill, meta: r => r.referenceNumber }}
-              empty={<p className="text-meta text-muted py-2">You have not filed any reports yet.</p>}
-            />
-          </Card>
-
-          {selected && (
-            <div ref={progressRef} className="scroll-mt-24">
-              <Card aria-live="polite">
-                <h3 className="text-h3 font-semibold text-navy mb-1">Progress of {selected.referenceNumber}</h3>
-                <p className="text-meta text-muted mb-4">
-                  {selected.category} · {selected.location}
-                </p>
-                <ProgressTimeline stages={buildReportStages(selected)} />
-              </Card>
-            </div>
-          )}
+      <Section title="What's the problem?" id="report-kind-title">
+        <div role="radiogroup" aria-labelledby="report-kind-title" className="grid grid-cols-2 gap-2">
+          {INCIDENT_CATEGORIES.map(c => {
+            const { label, icon: Icon } = categoryInfo(c);
+            return <Choice key={c} selected={category === c} onSelect={() => setCategory(c)} label={label} icon={<Icon />} />;
+          })}
         </div>
-      </div>
-    </div>
+      </Section>
+
+      <Section title="Details">
+        <form ref={formRef} noValidate onSubmit={submit}>
+          <div className="grid sm:grid-cols-2 gap-x-4 -mt-4">
+            <Field label="Purok">
+              {p => (
+                <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
+                  {PUROKS.map(x => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Street or landmark" error={errors.location}>
+              {p => <Input {...p} placeholder="Example: Near the chapel" value={location} onChange={e => setLocation(e.target.value)} />}
+            </Field>
+          </div>
+
+          <Field label="When did it happen?" error={errors.date}>
+            {p => <Input {...p} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} />}
+          </Field>
+
+          <Field label="What happened?" error={errors.description}>
+            {p => <Textarea {...p} placeholder="Tell us in your own words" value={description} onChange={e => setDescription(e.target.value)} />}
+          </Field>
+
+          <Field label="Add a photo" optional error={errors.files}>
+            {p => (
+              <FileUpload {...p} multiple accept=".jpg,.jpeg,.png,.pdf" hint="JPG, PNG or PDF, up to 5 MB" files={files} onChange={setFiles} />
+            )}
+          </Field>
+
+          <div className="mt-4 border-t border-line-soft pt-1">
+            <Switch
+              icon={<EyeOff />}
+              label="Hide my name"
+              description="Only barangay staff will know it was you."
+              checked={anonymous}
+              onChange={setAnonymous}
+            />
+            <Checkbox
+              label="The barangay may use my details for this report."
+              checked={consent}
+              onChange={e => setConsent(e.target.checked)}
+              error={errors.consent}
+            />
+          </div>
+
+          <FormActions>
+            <Button type="submit" variant="brand">
+              Send report
+            </Button>
+          </FormActions>
+        </form>
+      </Section>
+
+      {justFiled && (
+        <Section tone="success">
+          <div role="status" className="flex items-center gap-3">
+            <IconCircle tone="green">
+              <CheckCircle2 />
+            </IconCircle>
+            <p className="text-ink">
+              <b className="font-semibold">Report sent.</b> Tracking number{' '}
+              <b className="font-semibold whitespace-nowrap">{justFiled.referenceNumber}</b>
+            </p>
+          </div>
+        </Section>
+      )}
+
+      <Section title="My reports" flush>
+        {myReports.length === 0 ? (
+          <EmptyState icon={<MessageSquareWarning />} title="No reports yet" />
+        ) : (
+          <List>
+            {myReports.map(r => {
+              const { label, icon: Icon } = categoryInfo(r.category);
+              const open = openId === r.id;
+              const status = incidentStatus[r.status];
+              return (
+                <div key={r.id}>
+                  <ListRow
+                    icon={
+                      <IconCircle>
+                        <Icon />
+                      </IconCircle>
+                    }
+                    title={label}
+                    sub={formatShortDateTime(r.submittedAt)}
+                    chevron={false}
+                    trailing={
+                      <span className="flex items-center gap-2">
+                        <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`w-5 h-5 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                        />
+                        <span className="sr-only">{open ? 'Hide details' : 'Show details'}</span>
+                      </span>
+                    }
+                    onClick={() => setOpenId(open ? null : r.id)}
+                  />
+                  <Expand show={open}>
+                    <div className="pr-4 sm:pr-5 pb-4 pl-[68px] sm:pl-[72px] grid gap-3">
+                      <p className="text-meta text-muted">
+                        Tracking number <b className="font-semibold text-ink">{r.referenceNumber}</b>
+                      </p>
+                      <ProgressTimeline stages={buildReportStages(r)} />
+                      <p className="text-meta text-ink">{NEXT_STEP[r.status]}</p>
+                    </div>
+                  </Expand>
+                </div>
+              );
+            })}
+          </List>
+        )}
+      </Section>
+    </Page>
   );
 };

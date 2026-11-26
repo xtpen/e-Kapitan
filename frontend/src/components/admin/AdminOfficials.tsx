@@ -65,7 +65,7 @@ export const AdminOfficials: React.FC = () => {
   const detail = (o: Official) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy">{o.name}</h2>
+        <h2 className="text-h3 font-semibold text-navy-ink">{o.name}</h2>
         {pill(o)}
       </div>
       <p className="text-meta text-muted">{o.position}</p>
@@ -107,7 +107,7 @@ export const AdminOfficials: React.FC = () => {
 
   const formView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">{panel === 'add' ? 'Add official' : `Edit ${selected?.name}`}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add official' : `Edit ${selected?.name}`}</h2>
       <Field label="Full name" error={errors.name}>
         {p => <Input {...p} value={form.name} onChange={e => set('name', e.target.value)} />}
       </Field>

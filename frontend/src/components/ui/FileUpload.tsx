@@ -6,12 +6,15 @@ export interface FileUploadProps {
   id?: string;
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
   accept?: string;
   multiple?: boolean;
   files: File[];
   onChange: (files: File[]) => void;
   /** Short hint inside the drop zone, e.g. "PDF or Word". Size limits go in Field's help. */
   hint?: string;
+  /** Accent colour: green inside the app (default), navy on the landing page and its dialog. */
+  tone?: 'primary' | 'navy';
 }
 
 const formatSize = (bytes: number) =>
@@ -28,8 +31,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   files,
   onChange,
   hint,
+  tone = 'primary',
   ...aria
 }) => {
+  const accent =
+    tone === 'navy'
+      ? { tile: 'bg-navy-tint text-navy-ink', item: 'border-hairline bg-mist', text: 'text-navy-ink' }
+      : { tile: 'bg-primary-tint text-primary-strong', item: 'border-primary-tint-line bg-primary-tint/50', text: 'text-primary-strong' };
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const invalid = !!aria['aria-invalid'];
@@ -80,12 +88,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             take(e.dataTransfer.files);
           }}
           className={`group flex flex-col @md:flex-row items-center gap-3 @md:gap-4 rounded-control border-[1.5px] border-dashed px-4 py-5 @md:py-4 text-center @md:text-left cursor-pointer transition-colors
-            peer-focus-visible:outline-3 peer-focus-visible:outline-navy peer-focus-visible:outline-offset-2
-            ${dragging ? 'border-navy bg-navy-tint' : invalid ? 'border-danger-fg bg-surface' : 'border-field-line bg-surface hover:border-navy hover:bg-navy-tint/60'}`}
+            peer-focus-visible:outline-3 peer-focus-visible:outline-navy-ink peer-focus-visible:outline-offset-2
+            ${dragging ? 'border-navy-ink bg-navy-tint' : invalid ? 'border-danger-fg bg-surface' : 'border-field-line bg-surface hover:border-navy-ink hover:bg-navy-tint/60'}`}
         >
           <span
             aria-hidden="true"
-            className="w-12 h-12 rounded-tile grid place-items-center shrink-0 bg-primary-tint text-primary-strong transition-transform group-hover:-translate-y-0.5"
+            className={`w-12 h-12 rounded-tile grid place-items-center shrink-0 ${accent.tile} transition-transform group-hover:-translate-y-0.5`}
           >
             <UploadCloud className="w-6 h-6" strokeWidth={1.8} />
           </span>
@@ -97,7 +105,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
           </span>
           <span
             aria-hidden="true"
-            className="inline-flex items-center justify-center min-h-11 px-[18px] rounded-control border-2 border-navy bg-surface text-navy font-semibold text-meta whitespace-nowrap transition-colors group-hover:bg-navy group-hover:text-white"
+            className="inline-flex items-center justify-center min-h-11 px-[18px] rounded-control border-2 border-navy-ink bg-surface text-navy-ink font-semibold text-meta whitespace-nowrap transition-colors group-hover:bg-navy group-hover:text-white"
           >
             Choose file
           </span>
@@ -112,9 +120,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             return (
               <li
                 key={`${f.name}-${i}`}
-                className="flex items-center gap-3 rounded-control border-[1.5px] border-primary-tint-line bg-primary-tint/50 pl-3 pr-1.5 py-1.5"
+                className={`flex items-center gap-3 rounded-control border-[1.5px] ${accent.item} pl-3 pr-1.5 py-1.5`}
               >
-                <span aria-hidden="true" className="w-9 h-9 rounded-lg grid place-items-center bg-surface text-primary-strong shrink-0">
+                <span aria-hidden="true" className={`w-9 h-9 rounded-lg grid place-items-center bg-surface ${accent.text} shrink-0`}>
                   <Icon className="w-5 h-5" strokeWidth={1.8} />
                 </span>
                 <span className="flex-1 min-w-0">
@@ -124,7 +132,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
                 {!multiple && (
                   <label
                     htmlFor={id}
-                    className="text-meta font-semibold text-primary-strong hover:underline underline-offset-4 cursor-pointer px-2 min-h-11 inline-flex items-center"
+                    className={`text-meta font-semibold ${accent.text} hover:underline underline-offset-4 cursor-pointer px-2 min-h-11 inline-flex items-center`}
                   >
                     Change
                   </label>

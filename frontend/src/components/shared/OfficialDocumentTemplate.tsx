@@ -175,7 +175,7 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
 
   return createPortal(
     <div
-      className="certificate-viewer fixed inset-0 z-[90] flex flex-col bg-navy/60"
+      className="certificate-viewer fixed inset-0 z-[90] flex flex-col bg-scrim/60"
       role="dialog"
       aria-modal="true"
       aria-labelledby="certificate-title"
@@ -184,7 +184,7 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
       {/* Toolbar (screen only) */}
       <div className="print:hidden bg-surface border-b border-line px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-3 gap-y-2.5 shrink-0">
         <div className="flex-1 min-w-0 order-1">
-          <p id="certificate-title" className="font-display font-semibold text-navy text-h3 leading-tight truncate">
+          <p id="certificate-title" className="font-display font-semibold text-navy-ink text-h3 leading-tight truncate">
             {title}
           </p>
           <p className="text-meta text-muted truncate">
@@ -202,7 +202,7 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
           type="button"
           onClick={onClose}
           aria-label="Close certificate"
-          className="order-2 sm:order-3 w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy hover:bg-surface-muted cursor-pointer"
+          className="order-2 sm:order-3 w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy-ink hover:bg-surface-muted cursor-pointer"
         >
           <X className="w-5 h-5" aria-hidden="true" />
         </button>
@@ -212,14 +212,14 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 print:p-0 print:overflow-visible" onClick={e => e.target === e.currentTarget && onClose()}>
         <article className="certificate-sheet mx-auto w-full max-w-[820px] bg-surface text-ink shadow-float rounded-[4px] px-6 py-8 sm:px-12 sm:py-12 print:shadow-none print:rounded-none print:max-w-none print:p-0">
           {/* Letterhead */}
-          <header className="flex items-center gap-4 pb-4 border-b-[3px] border-double border-navy">
+          <header className="flex items-center gap-4 pb-4 border-b-[3px] border-double border-navy-ink">
             <Seal label="City" />
             <div className="flex-1 text-center">
               <p className="text-caption uppercase tracking-[0.12em] text-muted">Republic of the Philippines</p>
               <p className="text-caption text-muted">
                 Province of {PROVINCE} · {CITY}
               </p>
-              <p className="font-display font-bold text-navy text-[1.5rem] sm:text-[1.75rem] leading-tight mt-1 uppercase">
+              <p className="font-display font-bold text-navy-ink text-[1.5rem] sm:text-[1.75rem] leading-tight mt-1 uppercase">
                 Barangay {BARANGAY}
               </p>
               <p className="text-caption font-semibold uppercase tracking-[0.14em] text-ink mt-0.5">Office of the Punong Barangay</p>
@@ -263,7 +263,7 @@ export const OfficialDocumentTemplate: React.FC<Props> = ({ document: doc, onClo
 
             {/* Certificate body */}
             <div className="order-1 sm:order-2 print:order-2 flex flex-col">
-              <h2 className="font-display font-bold text-navy text-center uppercase tracking-[0.06em] text-[1.25rem] sm:text-[1.5rem] leading-tight">
+              <h2 className="font-display font-bold text-navy-ink text-center uppercase tracking-[0.06em] text-[1.25rem] sm:text-[1.5rem] leading-tight">
                 {title}
               </h2>
               <p className="text-center text-caption text-muted mt-1">Reference no. {doc.referenceNumber}</p>

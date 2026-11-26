@@ -160,8 +160,8 @@ export const IncidentBlotterDesk: React.FC = () => {
                   <span className="text-xs font-bold text-ink">{inc.referenceNumber}</span>
                   <span className={`text-label font-bold uppercase px-2 py-0.5 rounded-full ${
  inc.status ==='resolved'?'bg-primary-tint text-primary-strong':
- inc.status ==='in_progress'?'bg-info-bg text-navy':
- inc.status ==='hearing_scheduled'?'bg-info-bg text-navy':
+ inc.status ==='in_progress'?'bg-info-bg text-navy-ink':
+ inc.status ==='hearing_scheduled'?'bg-info-bg text-navy-ink':
 'bg-warning-bg text-warning-fg'
  }`}>
                     {inc.status.replace('_', ' ')}
@@ -385,7 +385,7 @@ export const IncidentBlotterDesk: React.FC = () => {
 
       {/* Case Resolution Modal */}
       {showResolveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 ">
           <div className="bg-surface rounded-card max-w-md w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95">
             <h3 className="text-base font-bold text-ink font-heading">
               Resolve Blotter Case & Record Agreement

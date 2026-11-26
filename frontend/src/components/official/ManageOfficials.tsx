@@ -46,7 +46,7 @@ export const ManageOfficials: React.FC = () => {
   return (
     <div className={`space-y-6 ${largeTextMode ?'text-lg':'text-base'}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-navy">
+        <div className="flex items-center gap-3 text-navy-ink">
           <Users className="w-6 h-6" />
           <h2 className="text-xl sm:text-2xl font-bold font-heading">Manage Officials Directory</h2>
         </div>
@@ -133,13 +133,13 @@ export const ManageOfficials: React.FC = () => {
                       <div className="flex flex-col gap-2 min-w-[240px]">
                         <input 
                           type="text" 
-                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-sm font-bold focus:ring-2 focus:ring-navy outline-none"
+                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-sm font-bold focus:ring-2 focus:ring-navy-ink outline-none"
                           value={editForm.name || ''}
                           onChange={e => setEditForm({...editForm, name: e.target.value})}
                         />
                         <input 
                           type="text" 
-                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-navy outline-none"
+                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-navy-ink outline-none"
                           value={editForm.position || ''}
                           onChange={e => setEditForm({...editForm, position: e.target.value})}
                         />
@@ -159,13 +159,13 @@ export const ManageOfficials: React.FC = () => {
                       <div className="flex flex-col gap-2 min-w-[240px]">
                         <input 
                           type="text" 
-                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-navy outline-none"
+                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-navy-ink outline-none"
                           value={editForm.committee || ''}
                           onChange={e => setEditForm({...editForm, committee: e.target.value})}
                         />
                         <input 
                           type="text" 
-                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-xs text-muted focus:ring-2 focus:ring-navy outline-none"
+                          className="w-full bg-surface border border-line rounded-md px-2 py-1 text-xs text-muted focus:ring-2 focus:ring-navy-ink outline-none"
                           value={editForm.contactDetails || ''}
                           onChange={e => setEditForm({...editForm, contactDetails: e.target.value})}
                         />

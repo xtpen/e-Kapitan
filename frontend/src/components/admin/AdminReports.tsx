@@ -87,7 +87,7 @@ export const AdminReports: React.FC = () => {
         {series.map(s => (
           <Card key={s.title} className="min-w-0">
             <div className="flex items-start justify-between gap-3 mb-4">
-              <h2 className="text-h3 font-semibold text-navy">{s.title}</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">{s.title}</h2>
               <button
                 type="button"
                 onClick={() => downloadCsv(s.title.toLowerCase().replace(/\s+/g, '-'), [s])}

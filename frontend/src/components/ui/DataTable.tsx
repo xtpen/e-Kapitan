@@ -114,7 +114,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={() => toggle(c.header)}
-                      className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] font-semibold cursor-pointer min-h-8 -mx-1 px-1 rounded hover:text-navy ${active ? 'text-navy' : ''}`}
+                      className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] font-semibold cursor-pointer min-h-8 -mx-1 px-1 rounded hover:text-navy-ink ${active ? 'text-navy-ink' : ''}`}
                     >
                       {c.header}
                       <Icon className={`w-3.5 h-3.5 ${active ? '' : 'opacity-50'}`} aria-hidden="true" />
@@ -212,7 +212,7 @@ export function DataTable<T>({
                     type="button"
                     onClick={() => onRowClick(row)}
                     aria-current={isSelected?.(row) ? 'true' : undefined}
-                    className={`w-full text-left border rounded-tile p-3.5 cursor-pointer hover:border-navy transition-colors ${isSelected?.(row) ? 'bg-navy-tint border-navy' : 'bg-surface border-line'}`}
+                    className={`w-full text-left border rounded-tile p-3.5 cursor-pointer hover:border-navy-ink transition-colors ${isSelected?.(row) ? 'bg-navy-tint border-navy-ink' : 'bg-surface border-line'}`}
                   >
                     {body}
                   </button>
@@ -236,7 +236,7 @@ export function DataTable<T>({
               onClick={() => setPage(current - 1)}
               disabled={current === 0}
               aria-label="Previous page"
-              className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy cursor-pointer hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy-ink cursor-pointer hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-5 h-5" aria-hidden="true" />
             </button>
@@ -260,7 +260,7 @@ export function DataTable<T>({
               onClick={() => setPage(current + 1)}
               disabled={current >= pages - 1}
               aria-label="Next page"
-              className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy cursor-pointer hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy-ink cursor-pointer hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-5 h-5" aria-hidden="true" />
             </button>

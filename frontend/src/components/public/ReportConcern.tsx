@@ -83,7 +83,7 @@ export const ReportConcern: React.FC = () => {
 
   const whatNext = (
     <Card tone="callout">
-      <h2 className="text-h3 font-semibold text-navy mb-3">What happens next</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink mb-3">What happens next</h2>
       <ol className="grid gap-2.5">
         {[
           'You get a tracking number right away.',
@@ -134,7 +134,7 @@ export const ReportConcern: React.FC = () => {
             </div>
           ) : (
             <form noValidate onSubmit={submit}>
-              <h2 className="text-h3-lg font-semibold text-navy">File a new report</h2>
+              <h2 className="text-h3-lg font-semibold text-navy-ink">File a new report</h2>
               {Object.keys(errors).length > 0 && (
                 <p role="alert" className="mt-4 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
                   Please fix the fields marked below.
@@ -227,7 +227,7 @@ export const ReportConcern: React.FC = () => {
         <div className="grid gap-3 sm:gap-5">
           {whatNext}
           <Card>
-            <h2 className="text-h3 font-semibold text-navy">Already filed a report?</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink">Already filed a report?</h2>
             <p className="text-meta text-muted mt-1 mb-4">Check its progress with your tracking number.</p>
             <Button variant="secondary" onClick={() => setActiveTab('report_status')}>
               Track a report

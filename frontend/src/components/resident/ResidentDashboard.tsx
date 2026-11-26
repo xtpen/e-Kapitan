@@ -1,182 +1,178 @@
 import React from 'react';
-import { CircleDot, FileText, Printer, TriangleAlert } from 'lucide-react';
+import { CalendarDays, CircleDot, ClipboardList, Clock, FileText, Megaphone, MessageCircle, PackageCheck, PenLine, Printer, TriangleAlert } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
-import { Button, Card, CardHeader, IconTile, StatCard, StatusPill, TextLink, type IconTileTone } from '../ui';
+import { StatusPill } from '../ui';
 import { useResidentActivity } from './useResidentActivity';
+import { CLAIM_HOURS, KindIcon, requestProgress } from './requestProgress';
+import { EmptyState, IconCircle, List, ListRow, Page, PageTitle, Section, SectionLink, type IconTone } from './kit';
 
-/** Resident Dashboard. Mockup: "Resident · Dashboard" (desktop + mobile). See DESIGN.md. */
+/*
+ * Home: what needs you, what you can do, how your requests are going.
+ *   1. Greeting
+ *   2. Needs your attention (only when something is ready or needs a fix)
+ *   3. What do you need? (six services)
+ *   4. Your requests (latest three)
+ *   5. Announcements (headlines) and pick-up hours, beside the rest on desktop
+ */
+
+const QUICK: { id: string; label: string; icon: React.ReactNode; tone: IconTone }[] = [
+  { id: 'documents', label: 'Documents', icon: <FileText />, tone: 'navy' },
+  { id: 'complaints', label: 'Report a problem', icon: <TriangleAlert />, tone: 'red' },
+  { id: 'printing', label: 'Printing', icon: <Printer />, tone: 'green' },
+  { id: 'court', label: 'Book the court', icon: <CircleDot />, tone: 'amber' },
+  { id: 'appointments', label: 'Visit the hall', icon: <CalendarDays />, tone: 'blue' },
+  { id: 'ai_assistant', label: 'Ask Kap', icon: <MessageCircle />, tone: 'navy' },
+];
+
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+};
+
+const shortDate = (value: string) => {
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? value : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 export const ResidentDashboard: React.FC = () => {
-  const { currentUser, setActiveTab } = useBarangay();
-  const { rows, activeCount, readyCount, notifications, unreadCount } = useResidentActivity();
-
+  const { currentUser, setActiveTab, announcements, documentRequests, incidents, printRequests, courtReservations, appointments } = useBarangay();
+  const { rows } = useResidentActivity();
+  const sources = { documentRequests, incidents, printRequests, courtReservations, appointments };
   const firstName = currentUser.name.split(' ')[0];
-  const recent = rows.slice(0, 4);
-  const activeRows = rows.filter(r => r.isActive).slice(0, 3);
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const quickActions: { label: string; tab: string; icon: React.ReactNode; tone: IconTileTone }[] = [
-    { label: 'Request a Document', tab: 'services', icon: <FileText strokeWidth={1.8} />, tone: 'green' },
-    { label: 'File a Report', tab: 'complaints', icon: <TriangleAlert strokeWidth={1.8} />, tone: 'warning' },
-    { label: 'Print Request', tab: 'printing', icon: <Printer strokeWidth={1.8} />, tone: 'info' },
-    { label: 'Reserve Court', tab: 'court', icon: <CircleDot strokeWidth={1.8} />, tone: 'green' },
-  ];
-
-  const notificationsCard = (
-    <Card>
-      <CardHeader
-        title="Notifications"
-        action={notifications.length > 0 && <TextLink onClick={() => setActiveTab('notifications')}>View all</TextLink>}
-      />
-      {notifications.length === 0 ? (
-        <p className="text-meta text-muted">You're all caught up.</p>
-      ) : (
-        <ul className="space-y-2.5">
-          {notifications.slice(0, 3).map(n => (
-            <li key={n.id} className="relative pl-4">
-              {n.unread && (
-                <span aria-hidden="true" className="absolute left-0 top-[0.6em] w-[7px] h-[7px] rounded-full bg-primary" />
-              )}
-              <b className="font-semibold">
-                {n.title}
-                {n.unread && <span className="sr-only"> (unread)</span>}
-              </b>
-              <br />
-              <span className="text-meta text-muted">{n.detail}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-
-  const claimingHours = (
-    <Card tone="callout">
-      <h3 className="text-h3 font-semibold text-navy">Claiming hours</h3>
-      <p className="text-meta text-muted mt-1">Weekdays, 1:00 PM to 4:00 PM at the Barangay Hall.</p>
-    </Card>
-  );
+  const ready = rows.filter(r => r.isReadyToClaim);
+  const needsFix = rows.filter(r => r.kind === 'document' && documentRequests.find(d => d.id === r.id)?.status === 'returned');
+  const latest = rows.filter(r => r.isActive && !r.isReadyToClaim).slice(0, 3);
+  const news = [...announcements].sort((a, b) => Date.parse(b.date) - Date.parse(a.date)).slice(0, 3);
 
   return (
-    <div className="max-w-[1200px]">
-      {/* ---------- Mobile ---------- */}
-      <div className="md:hidden">
-        <h1 className="text-2xl font-bold text-navy">Good day, {firstName}</h1>
-        <p className="text-meta text-muted mt-1 mb-3.5">What would you like to do?</p>
+    <Page wide>
+      <PageTitle title={`${greeting()}, ${firstName}`} sub={today} />
 
-        <div className="grid grid-cols-2 gap-2.5">
-          {quickActions.map(a => (
-            <button
-              key={a.tab}
-              type="button"
-              onClick={() => setActiveTab(a.tab)}
-              className="text-left bg-surface border border-line rounded-tile p-3.5 font-semibold cursor-pointer hover:border-navy transition-colors"
-            >
-              <IconTile tone={a.tone} size="sm" className="mb-2 [&_svg]:w-[22px] [&_svg]:h-[22px]">
-                {a.icon}
-              </IconTile>
-              {a.label}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        {/* ---------- Main column ---------- */}
+        <div className="grid grid-cols-1 gap-4 min-w-0">
+          {(ready.length > 0 || needsFix.length > 0) && (
+            <Section flush title="Needs your attention" id="home-attention">
+              <List>
+                {ready.map(r => (
+                  <ListRow
+                    key={r.id}
+                    icon={
+                      <IconCircle tone="green">
+                        <PackageCheck />
+                      </IconCircle>
+                    }
+                    title={r.service}
+                    sub={`Ready to pick up · ${CLAIM_HOURS}`}
+                    onClick={() => setActiveTab('tracking')}
+                  />
+                ))}
+                {needsFix.map(r => (
+                  <ListRow
+                    key={r.id}
+                    icon={
+                      <IconCircle tone="amber">
+                        <PenLine />
+                      </IconCircle>
+                    }
+                    title={r.service}
+                    sub="Needs a fix from you"
+                    onClick={() => setActiveTab('tracking')}
+                  />
+                ))}
+              </List>
+            </Section>
+          )}
 
-        <h2 className="text-h3 font-semibold text-navy mt-5 mb-2.5">My active requests</h2>
-        {activeRows.length === 0 ? (
-          <Card>
-            <p className="text-meta text-muted">You have no active requests.</p>
-          </Card>
-        ) : (
-          <ul className="grid gap-2.5">
-            {activeRows.map(r => (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab(r.tab)}
-                  className="w-full text-left bg-surface border border-line rounded-tile p-3.5 cursor-pointer hover:border-navy transition-colors"
-                >
-                  <span className="flex justify-between items-start gap-2">
-                    <b className="font-semibold">{r.service}</b>
-                    <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>
-                  </span>
-                  <span className="block text-meta text-muted mt-0.5">{r.reference}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+          <Section title="What do you need?" id="home-services" action={<SectionLink onClick={() => setActiveTab('services')}>All services</SectionLink>}>
+            <ul className="grid grid-cols-3 gap-2 mt-1">
+              {QUICK.map(q => (
+                <li key={q.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(q.id)}
+                    className="w-full h-full min-h-[104px] flex flex-col items-center justify-start gap-2 px-1.5 py-3 rounded-tile text-center cursor-pointer
+                      hover:bg-surface-muted active:bg-surface-muted transition-colors duration-150"
+                  >
+                    <IconCircle tone={q.tone} size="lg">
+                      {q.icon}
+                    </IconCircle>
+                    <span className="text-meta font-semibold text-ink leading-tight">{q.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Section>
 
-        <div className="grid gap-2.5 mt-5">
-          {notificationsCard}
-          {claimingHours}
-        </div>
-      </div>
-
-      {/* ---------- Tablet / desktop ---------- */}
-      <div className="hidden md:block">
-        <section className="bg-navy text-white rounded-banner px-8 py-7 flex flex-wrap justify-between items-center gap-4">
-          <div>
-            <h1 className="text-h2 leading-tight font-semibold text-white">Good day, {firstName}</h1>
-            <p className="text-on-navy mt-1">Need something from the barangay today?</p>
-          </div>
-          <Button variant="accent" onClick={() => setActiveTab('services')}>
-            Request a document
-          </Button>
-        </section>
-
-        <div className="grid grid-cols-3 gap-5 my-5">
-          <StatCard label="Active requests" value={activeCount} />
-          <StatCard label="Ready to claim" value={readyCount} />
-          <StatCard label="Unread notifications" value={unreadCount} />
-        </div>
-
-        <div className="grid lg:grid-cols-[1.7fr_1fr] gap-5 items-start">
-          <Card>
-            <CardHeader title="My recent requests" action={<TextLink onClick={() => setActiveTab('tracking')}>View all</TextLink>} />
-            {recent.length === 0 ? (
-              <div className="py-6">
-                <p className="text-meta text-muted mb-4">You have no requests yet.</p>
-                <Button size="sm" onClick={() => setActiveTab('services')}>
-                  Request a document
-                </Button>
-              </div>
+          <Section flush title="In progress" id="home-requests" action={<SectionLink onClick={() => setActiveTab('tracking')}>See all</SectionLink>}>
+            {latest.length === 0 ? (
+              <EmptyState
+                icon={<ClipboardList />}
+                title="Nothing in progress"
+                sub="Requests you send show up here."
+                action={
+                  <button type="button" onClick={() => setActiveTab('documents')} className="min-h-11 px-5 rounded-control bg-navy text-white font-semibold cursor-pointer">
+                    Get a document
+                  </button>
+                }
+              />
             ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    {['Reference', 'Service', 'Status'].map(h => (
-                      <th
-                        key={h}
-                        scope="col"
-                        className="text-left text-label uppercase tracking-[0.06em] font-semibold text-muted py-2.5 px-2 border-b-2 border-line"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.map(r => (
-                    <tr
-                      key={r.id}
-                      onClick={() => setActiveTab(r.tab)}
-                      className="border-b border-line-soft last:border-b-0 cursor-pointer hover:bg-navy-tint"
-                    >
-                      <td className="py-3.5 px-2 text-meta whitespace-nowrap">{r.reference}</td>
-                      <td className="py-3.5 px-2 text-meta">{r.service}</td>
-                      <td className="py-3.5 px-2">
-                        <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <List>
+                {latest.map(r => (
+                  <ListRow
+                    key={r.id}
+                    icon={<KindIcon kind={r.kind} />}
+                    title={r.service}
+                    sub={requestProgress(r, sources)?.next}
+                    trailing={<span className="hidden sm:inline-flex"><StatusPill tone={r.status.tone}>{r.status.label}</StatusPill></span>}
+                    chevron={false}
+                    onClick={() => setActiveTab('tracking')}
+                  />
+                ))}
+              </List>
             )}
-          </Card>
+          </Section>
+        </div>
 
-          <div className="grid gap-5">
-            {notificationsCard}
-            {claimingHours}
-          </div>
+        {/* ---------- Side column (below on phones) ---------- */}
+        <div className="grid grid-cols-1 gap-4 min-w-0">
+          <Section flush title="Announcements" id="home-news" action={<SectionLink onClick={() => setActiveTab('announcements')}>See all</SectionLink>}>
+            {news.length === 0 ? (
+              <EmptyState icon={<Megaphone />} title="No announcements" />
+            ) : (
+              <List>
+                {news.map(a => (
+                  <ListRow
+                    key={a.id}
+                    icon={
+                      <IconCircle tone={a.isUrgent ? 'red' : 'amber'}>
+                        <Megaphone />
+                      </IconCircle>
+                    }
+                    title={<span className="line-clamp-2">{a.title}</span>}
+                    sub={`${shortDate(a.date)} · ${a.category}`}
+                    onClick={() => setActiveTab('announcements')}
+                  />
+                ))}
+              </List>
+            )}
+          </Section>
+
+          <Section>
+            <div className="flex items-center gap-3">
+              <IconCircle tone="blue">
+                <Clock />
+              </IconCircle>
+              <div className="min-w-0">
+                <p className="font-semibold text-ink leading-snug">Pick-up hours</p>
+                <p className="text-meta text-muted">{CLAIM_HOURS} at the barangay hall</p>
+              </div>
+            </div>
+          </Section>
         </div>
       </div>
-    </div>
+    </Page>
   );
 };

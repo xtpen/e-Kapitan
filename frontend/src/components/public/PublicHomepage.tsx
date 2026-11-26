@@ -118,7 +118,7 @@ export const PublicHomepage: React.FC = () => {
     <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
       <div>
         <p className="text-caption font-semibold uppercase tracking-[0.08em] text-primary-strong mb-2">{eyebrow}</p>
-        <h2 className="text-[1.375rem] sm:text-h2 leading-tight font-semibold text-navy">{title}</h2>
+        <h2 className="text-[1.375rem] sm:text-h2 leading-tight font-semibold text-navy-ink">{title}</h2>
       </div>
       <TextLink onClick={onClick}>{link}</TextLink>
     </div>
@@ -129,7 +129,7 @@ export const PublicHomepage: React.FC = () => {
       {/* ================= Phone ================= */}
       <div className="md:hidden">
         <section className="bg-primary-tint px-4 py-5">
-          <h1 className="text-h2 leading-tight font-bold text-navy">Barangay services, now online</h1>
+          <h1 className="text-h2 leading-tight font-bold text-navy-ink">Barangay services, now online</h1>
           <p className="text-meta text-muted mt-2 mb-3.5">Request certificates, file reports and book the court from your phone.</p>
           <Button fullWidth onClick={toLogin}>
             Request a document
@@ -137,7 +137,7 @@ export const PublicHomepage: React.FC = () => {
         </section>
 
         <section id="services" className="px-4 pt-4 scroll-mt-20" aria-labelledby="services-title-m">
-          <h2 id="services-title-m" className="text-h3 font-semibold text-navy mb-2.5">
+          <h2 id="services-title-m" className="text-h3 font-semibold text-navy-ink mb-2.5">
             Our services
           </h2>
           <div className="grid grid-cols-2 gap-2.5">
@@ -146,7 +146,7 @@ export const PublicHomepage: React.FC = () => {
                 key={s.short}
                 type="button"
                 onClick={s.onOpen}
-                className="text-left bg-surface border border-line rounded-tile p-3.5 font-semibold cursor-pointer hover:border-navy transition-colors"
+                className="text-left bg-surface border border-line rounded-tile p-3.5 font-semibold cursor-pointer hover:border-navy-ink transition-colors"
               >
                 <IconTile tone={s.tone} size="sm" className="mb-2 [&_svg]:w-[22px] [&_svg]:h-[22px]">
                   {s.icon}
@@ -160,7 +160,7 @@ export const PublicHomepage: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('guest_announcements')}
-              className="w-full text-left mt-2.5 bg-surface border border-line rounded-tile p-3.5 cursor-pointer hover:border-navy transition-colors"
+              className="w-full text-left mt-2.5 bg-surface border border-line rounded-tile p-3.5 cursor-pointer hover:border-navy-ink transition-colors"
             >
               <span className="block text-meta text-muted">{longAnnouncementDate(featured.date)}</span>
               <b className="font-semibold">{featured.title}</b>
@@ -208,7 +208,7 @@ export const PublicHomepage: React.FC = () => {
             </div>
 
             <Card className="shadow-float text-ink">
-              <h2 className="text-h3 font-semibold text-navy">Track your request</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">Track your request</h2>
               <p className="text-meta text-muted mt-1">Enter the reference number you received.</p>
               <form noValidate onSubmit={track}>
                 <Field label="Reference number" error={refError}>
@@ -242,7 +242,7 @@ export const PublicHomepage: React.FC = () => {
                 <IconTile tone={s.tone} className="mb-3.5">
                   {s.icon}
                 </IconTile>
-                <h3 className="text-h3 font-semibold text-navy">{s.title}</h3>
+                <h3 className="text-h3 font-semibold text-navy-ink">{s.title}</h3>
                 <p className="text-meta text-muted mt-1.5 mb-2 flex-1">{s.text}</p>
                 <TextLink onClick={s.onOpen} className="text-base">
                   {s.link}
@@ -264,7 +264,7 @@ export const PublicHomepage: React.FC = () => {
               <Reveal y={20}>
               <Card padded="lg">
                 <StatusPill tone={announcementTone(featured)}>{featured.category}</StatusPill>
-                <h3 className="text-[1.375rem] lg:text-h2 leading-tight font-semibold text-navy mt-3.5 mb-2">{featured.title}</h3>
+                <h3 className="text-[1.375rem] lg:text-h2 leading-tight font-semibold text-navy-ink mt-3.5 mb-2">{featured.title}</h3>
                 <p className="text-meta text-muted line-clamp-4 whitespace-pre-line">{featured.content}</p>
                 <p className="text-meta text-muted mt-4">{longAnnouncementDate(featured.date)}</p>
               </Card>
@@ -274,7 +274,7 @@ export const PublicHomepage: React.FC = () => {
                   <Reveal as="li" key={a.id} delay={80 + i * 60} y={16}>
                     <Card>
                       <span className="text-meta text-muted">{longAnnouncementDate(a.date)}</span>
-                      <h3 className="text-h3 font-semibold text-navy">{a.title}</h3>
+                      <h3 className="text-h3 font-semibold text-navy-ink">{a.title}</h3>
                     </Card>
                   </Reveal>
                 ))}
@@ -297,7 +297,7 @@ export const PublicHomepage: React.FC = () => {
                     >
                       {initialsOf(o.name)}
                     </div>
-                    <h3 className="text-h3 font-semibold text-navy">{o.name}</h3>
+                    <h3 className="text-h3 font-semibold text-navy-ink">{o.name}</h3>
                     <p className="text-meta text-muted">{roleLine(o)}</p>
                   </Card>
                 </Reveal>

@@ -79,7 +79,7 @@ export const AdminPrintingRequests: React.FC = () => {
   const renderDetail = (p: PrintRequest) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy">{p.referenceNumber}</h2>
+        <h2 className="text-h3 font-semibold text-navy-ink">{p.referenceNumber}</h2>
         {pill(p)}
       </div>
       <p className="text-meta text-muted">{p.residentName}</p>
@@ -102,7 +102,7 @@ export const AdminPrintingRequests: React.FC = () => {
           [String(sheets(p)), 'to print'],
         ].map(([n, l]) => (
           <div key={l} className="rounded-control bg-surface-muted py-2.5">
-            <div className="font-display text-h2 font-bold text-navy leading-none">{n}</div>
+            <div className="font-display text-h2 font-bold text-navy-ink leading-none">{n}</div>
             <div className="text-caption text-muted mt-1">{l}</div>
           </div>
         ))}
@@ -277,7 +277,7 @@ export const AdminPrintingRequests: React.FC = () => {
             renderDetail(selected)
           ) : (
             <Card>
-              <h2 className="text-h3 font-semibold text-navy">Job details</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">Job details</h2>
               <p className="text-meta text-muted mt-1">Choose a print request to see its settings.</p>
             </Card>
           )}

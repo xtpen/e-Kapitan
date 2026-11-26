@@ -37,7 +37,7 @@ const stateClass: Record<DayState, string> = {
   available: 'bg-success-bg text-success-fg border-success-bg hover:border-success-fg cursor-pointer',
   booked: 'bg-danger-bg text-danger-fg border-danger-bg',
   closed: 'bg-danger-bg text-danger-fg border-danger-bg',
-  open: 'bg-surface text-ink border-line hover:border-navy cursor-pointer',
+  open: 'bg-surface text-ink border-line hover:border-navy-ink cursor-pointer',
 };
 
 const stateWord: Record<DayState, string> = {
@@ -70,7 +70,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="text-h3 font-semibold text-navy" aria-live="polite">
+        <h3 className="text-h3 font-semibold text-navy-ink" aria-live="polite">
           {title}
         </h3>
         <div className="flex gap-2">
@@ -115,7 +115,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                   aria-pressed={isSelected}
                   className={`w-full ${renderDayExtra ? 'min-h-[92px] p-2 flex flex-col items-stretch justify-start text-left' : 'h-11 sm:h-[52px] grid place-items-center'}
                     rounded-control border font-semibold transition-colors disabled:cursor-not-allowed
-                    ${isSelected ? 'bg-navy text-white border-navy outline-3 outline-navy outline-offset-1' : stateClass[state]}`}
+                    ${isSelected ? 'bg-navy text-white border-navy-ink outline-3 outline-navy-ink outline-offset-1' : stateClass[state]}`}
                 >
                   {i + 1}
                   {renderDayExtra?.(iso)}
@@ -130,7 +130,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         {[
           ['bg-success-bg border-success-fg/30', 'Available'],
           ['bg-danger-bg border-danger-fg/30', 'Booked or closed'],
-          ['bg-navy border-navy', 'Selected'],
+          ['bg-navy border-navy-ink', 'Selected'],
           ['bg-neutral-bg border-line', 'Past'],
         ].map(([cls, text]) => (
           <li key={text} className="flex items-center gap-2">

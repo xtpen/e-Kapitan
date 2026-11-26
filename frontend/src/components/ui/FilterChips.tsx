@@ -34,7 +34,7 @@ export function FilterChips<T extends string>({ chips, value, onChange, label = 
             aria-pressed={on}
             onClick={() => onChange(c.id)}
             className={`shrink-0 inline-flex items-center gap-2 min-h-11 px-4 rounded-full border-[1.5px] font-semibold text-meta cursor-pointer transition-colors
-              ${on ? 'bg-navy border-navy text-white' : 'bg-surface border-line text-ink hover:border-navy'}`}
+              ${on ? 'bg-navy border-navy-ink text-white' : 'bg-surface border-line text-ink hover:border-navy-ink'}`}
           >
             {c.label}
             {c.count !== undefined && (

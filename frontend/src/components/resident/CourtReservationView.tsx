@@ -1,32 +1,22 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { CalendarDays, CheckCircle2 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { CourtReservation } from '../../types';
-import {
-  Button,
-  Calendar,
-  Card,
-  CardHeader,
-  DataTable,
-  Field,
-  Input,
-  PageHeader,
-  StatusPill,
-  TimeSlot,
-  courtStatus,
-  toISODate,
-  type DayState,
-} from '../ui';
+import { Button, Calendar, Field, Input, StatusPill, courtStatus, toISODate, type DayState } from '../ui';
+import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
 
 /** How far ahead residents can book. Placeholder; the barangay decides. */
 const BOOKING_WINDOW_DAYS = 60;
 
 const parseISO = (iso: string) => new Date(`${iso}T00:00:00`);
 const longDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-const shortDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const shortDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const slotStartHour = (slotId: string) => Number(slotId.split('-')[0]);
+const isPhone = () => window.matchMedia('(max-width: 1023px)').matches;
+const scrollToSection = (headingId: string) =>
+  requestAnimationFrame(() => document.getElementById(headingId)?.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
-/** Resident · Court Reservation. Mockup: "Resident · Court reservation" (desktop + mobile). See DESIGN.md. */
+/** Resident · Book the court. Pick a day, pick a time, say what it's for, send. */
 export const CourtReservationView: React.FC = () => {
   const { courtSlots, courtReservations, courtClosures, createCourtReservation, currentUser } = useBarangay();
 
@@ -82,27 +72,35 @@ export const CourtReservationView: React.FC = () => {
     .filter(r => (!!currentUser.residentId && r.residentId === currentUser.residentId) || r.residentName === currentUser.name)
     .sort((a, b) => (a.date === b.date ? slotStartHour(b.slotId) - slotStartHour(a.slotId) : b.date.localeCompare(a.date)));
 
-  const slotLabel = (id: string) => courtSlots.find(s => s.id === id)?.label ?? id;
+  const upcoming = mine
+    .filter(r => r.date >= today && (r.status === 'pending' || r.status === 'approved'))
+    .sort((a, b) => (a.date === b.date ? slotStartHour(a.slotId) - slotStartHour(b.slotId) : a.date.localeCompare(b.date)));
+  const past = mine.filter(r => !upcoming.includes(r));
 
-  const slotsRef = useRef<HTMLDivElement>(null);
+  const slotLabel = (id: string) => courtSlots.find(s => s.id === id)?.label ?? id;
+  const openSlots = date ? courtSlots.filter(s => slotOpen(date, s.id)).length : 0;
 
   const selectDate = (iso: string) => {
     setDate(iso);
     setSlotId(null);
     setErrors({});
     setJustSent(null);
-    // On phones and tablets the slots sit below the calendar: bring them into view.
-    if (window.matchMedia('(max-width: 1023px)').matches) {
-      requestAnimationFrame(() => slotsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
+    // On phones and tablets the times sit below the calendar: bring them into view.
+    if (isPhone()) scrollToSection('court-time-title');
+  };
+
+  const showDate = (iso: string) => {
+    setMonth(parseISO(iso));
+    selectDate(iso);
+    if (!isPhone()) scrollToSection('court-day-title');
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!date) return;
     const errs: typeof errors = {};
-    if (!slotId) errs.slot = 'Choose a time slot.';
-    if (activity.trim().length < 3) errs.activity = 'Tell us what the court is for, e.g. basketball practice.';
+    if (!slotId) errs.slot = 'Pick a time.';
+    if (activity.trim().length < 3) errs.activity = 'Tell us what it is for, like basketball practice.';
     setErrors(errs);
     if (Object.keys(errs).length || !slotId) return;
     const created = createCourtReservation({ date, slotId, activity: activity.trim() });
@@ -111,14 +109,32 @@ export const CourtReservationView: React.FC = () => {
     setActivity('');
   };
 
-  const pill = (r: CourtReservation) => <StatusPill tone={courtStatus[r.status].tone}>{courtStatus[r.status].label}</StatusPill>;
+  const bookingRow = (r: CourtReservation, tappable: boolean) => (
+    <ListRow
+      key={r.id}
+      icon={
+        <IconCircle>
+          <CalendarDays />
+        </IconCircle>
+      }
+      title={r.activity}
+      sub={
+        <>
+          {shortDate(r.date)}, {slotLabel(r.slotId)}
+          {r.status === 'declined' && r.notes && <span className="block break-words">{r.notes}</span>}
+        </>
+      }
+      trailing={<StatusPill tone={courtStatus[r.status].tone}>{courtStatus[r.status].label}</StatusPill>}
+      onClick={tappable ? () => showDate(r.date) : undefined}
+    />
+  );
 
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader title="Court Reservation" description="Pick a date, choose a time slot, then submit your request." />
+    <Page wide>
+      <PageTitle title="Book the court" />
 
-      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 items-start">
-        <Card>
+      <div className="grid gap-4 items-start lg:grid-cols-2">
+        <Section title="Pick a day" id="court-day-title" className="scroll-mt-24">
           <Calendar
             month={month}
             onMonthChange={setMonth}
@@ -128,44 +144,27 @@ export const CourtReservationView: React.FC = () => {
             selected={date}
             onSelect={selectDate}
           />
-        </Card>
+        </Section>
 
-        <div ref={slotsRef} className="scroll-mt-24">
-        <Card>
+        <Section title={date ? longDate(date) : 'Pick a time'} id="court-time-title" className="scroll-mt-24">
           {!date ? (
-            <>
-              <h3 className="text-h3 font-semibold text-navy">Choose a date</h3>
-              <p className="text-meta text-muted mt-1">Pick a green day on the calendar to see its time slots.</p>
-            </>
+            <p className="text-muted">Pick a green day first.</p>
           ) : (
             <form noValidate onSubmit={submit}>
-              <h3 className="text-h3 font-semibold text-navy" aria-live="polite">
-                {longDate(date)}
-              </h3>
-
-              {justSent && justSent.date === date && (
-                <div role="status" className="mt-3 flex gap-3 rounded-control bg-success-bg text-success-fg px-4 py-3">
-                  <CheckCircle2 className="w-6 h-6 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                  <p>
-                    <b className="font-semibold">Request sent.</b> Reference{' '}
-                    <b className="font-semibold whitespace-nowrap">{justSent.referenceNumber}</b> for{' '}
-                    {slotLabel(justSent.slotId)}. We will notify you once the barangay approves it.
-                  </p>
-                </div>
-              )}
-
-              <p id="slot-help" className="text-meta text-muted mt-1 mb-3.5">
-                Choose a time slot
-              </p>
-              <div role="radiogroup" aria-labelledby="slot-help" aria-describedby={errors.slot ? 'slot-error' : undefined}>
+              <div
+                role="radiogroup"
+                aria-label="Time"
+                aria-describedby={errors.slot ? 'court-slot-error' : undefined}
+                className="grid sm:grid-cols-2 lg:grid-cols-1 gap-2"
+              >
                 {courtSlots.map(s => {
                   const open = slotOpen(date, s.id);
                   return (
-                    <TimeSlot
+                    <Choice
                       key={s.id}
                       label={s.label}
-                      available={open}
-                      unavailableText={isTaken(date, s.id) ? 'Booked' : 'Not available'}
+                      sub={open ? undefined : isTaken(date, s.id) ? 'Booked' : 'Closed'}
+                      disabled={!open}
                       selected={slotId === s.id}
                       onSelect={() => {
                         setSlotId(s.id);
@@ -175,55 +174,62 @@ export const CourtReservationView: React.FC = () => {
                   );
                 })}
               </div>
+              {openSlots === 0 && <p className="text-meta text-muted mt-2">No times left on this day.</p>}
               {errors.slot && (
-                <p id="slot-error" className="text-meta text-danger-fg">
+                <p id="court-slot-error" className="text-meta text-danger-fg mt-2">
                   {errors.slot}
                 </p>
               )}
 
-              <Field label="Activity or event" error={errors.activity}>
-                {p => (
-                  <Input
-                    {...p}
-                    placeholder="Example: Basketball practice"
-                    value={activity}
-                    onChange={e => setActivity(e.target.value)}
-                  />
-                )}
+              <Field label="What is it for?" error={errors.activity}>
+                {p => <Input {...p} placeholder="Example: Basketball practice" value={activity} onChange={e => setActivity(e.target.value)} />}
               </Field>
-              <Button type="submit" fullWidth className="mt-5">
-                Submit request
-              </Button>
-              <p className="text-meta text-muted mt-2.5">You will be notified once the barangay approves it.</p>
+
+              <FormActions>
+                <Button type="submit" variant="brand" disabled={openSlots === 0}>
+                  Send request
+                </Button>
+              </FormActions>
             </form>
           )}
-        </Card>
-        </div>
+        </Section>
       </div>
 
-      <Card className="mt-5">
-        <CardHeader title="My reservation history" />
-        <DataTable<CourtReservation>
-          rows={mine}
-          rowKey={r => r.id}
-          columns={[
-            { header: 'Reference', cell: r => r.referenceNumber, className: 'whitespace-nowrap' },
-            {
-              header: 'Date and time',
-              cell: r => `${shortDate(r.date)}, ${slotLabel(r.slotId).split(' to ')[0]}`,
-              className: 'whitespace-nowrap',
-            },
-            { header: 'Activity', cell: r => r.activity },
-            { header: 'Status', cell: pill },
-          ]}
-          mobile={{
-            title: r => `${shortDate(r.date)}, ${slotLabel(r.slotId).split(' to ')[0]}`,
-            status: pill,
-            meta: r => `${r.activity} · ${r.referenceNumber}`,
-          }}
-          empty={<p className="text-meta text-muted py-2">You have no reservations yet.</p>}
-        />
-      </Card>
-    </div>
+      {justSent && (
+        <Section tone="success">
+          <div role="status" className="flex items-center gap-3">
+            <IconCircle tone="green">
+              <CheckCircle2 />
+            </IconCircle>
+            <p className="text-ink">
+              <b className="font-semibold">Request sent.</b> Tracking number{' '}
+              <b className="font-semibold whitespace-nowrap">{justSent.referenceNumber}</b>. We'll tell you when it's approved.
+            </p>
+          </div>
+        </Section>
+      )}
+
+      <Section title="My bookings" flush>
+        {mine.length === 0 ? (
+          <EmptyState icon={<CalendarDays />} title="No bookings yet" />
+        ) : (
+          <>
+            {upcoming.length === 0 ? (
+              <p className="px-4 sm:px-5 pb-4 text-meta text-muted">Nothing coming up.</p>
+            ) : (
+              <List>{upcoming.map(r => bookingRow(r, true))}</List>
+            )}
+            {past.length > 0 && (
+              <details className="border-t border-line-soft">
+                <summary className="min-h-12 flex items-center px-4 sm:px-5 cursor-pointer font-semibold text-meta text-navy-ink">
+                  Past bookings ({past.length})
+                </summary>
+                <List className="border-t border-line-soft">{past.map(r => bookingRow(r, false))}</List>
+              </details>
+            )}
+          </>
+        )}
+      </Section>
+    </Page>
   );
 };

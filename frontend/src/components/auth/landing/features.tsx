@@ -38,7 +38,7 @@ export interface Feature {
 const Pill: React.FC<{ tone?: 'navy' | 'ready' | 'quiet'; children: React.ReactNode }> = ({ tone = 'navy', children }) => (
   <span
     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-label font-semibold whitespace-nowrap
-      ${tone === 'ready' ? 'bg-success-bg text-success-fg' : tone === 'quiet' ? 'bg-mist text-muted' : 'bg-navy-tint text-navy'}`}
+      ${tone === 'ready' ? 'bg-success-bg text-success-fg' : tone === 'quiet' ? 'bg-mist text-muted' : 'bg-navy-tint text-navy-ink'}`}
   >
     <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-current" />
     {children}
@@ -47,8 +47,8 @@ const Pill: React.FC<{ tone?: 'navy' | 'ready' | 'quiet'; children: React.ReactN
 
 const ScreenHeader: React.FC<{ icon: React.ReactNode; title: string; right?: React.ReactNode }> = ({ icon, title, right }) => (
   <div className="flex items-center gap-2.5 pb-3 mb-3 border-b border-hairline">
-    <span className="w-8 h-8 rounded-lg grid place-items-center bg-navy-tint text-navy [&_svg]:w-4 [&_svg]:h-4">{icon}</span>
-    <b className="font-display text-navy">{title}</b>
+    <span className="w-8 h-8 rounded-lg grid place-items-center bg-navy-tint text-navy-ink [&_svg]:w-4 [&_svg]:h-4">{icon}</span>
+    <b className="font-display text-navy-ink">{title}</b>
     <span className="ml-auto">{right}</span>
   </div>
 );
@@ -116,15 +116,15 @@ const CourtPanel: React.FC = () => {
           <span
             key={i}
             className={`h-8 rounded-lg grid place-items-center text-label font-semibold
-              ${s === 3 ? 'bg-navy text-white' : s === 1 ? 'bg-navy-tint text-navy' : s === 2 ? 'bg-mist text-muted line-through' : 'text-muted/60'}`}
+              ${s === 3 ? 'bg-navy text-white' : s === 1 ? 'bg-navy-tint text-navy-ink' : s === 2 ? 'bg-mist text-muted line-through' : 'text-muted/60'}`}
           >
             {((i + 20) % 30) + 1}
           </span>
         ))}
       </div>
       <div className="mt-3 grid gap-2">
-        <div className="flex items-center justify-between rounded-control border-2 border-navy bg-navy-tint px-3 py-2">
-          <span className="text-meta font-semibold text-navy">4:00 PM to 6:00 PM</span>
+        <div className="flex items-center justify-between rounded-control border-2 border-navy-ink bg-navy-tint px-3 py-2">
+          <span className="text-meta font-semibold text-navy-ink">4:00 PM to 6:00 PM</span>
           <Pill tone="ready">Available</Pill>
         </div>
         <div className="flex items-center justify-between rounded-control border border-hairline bg-mist px-3 py-2">
@@ -140,7 +140,7 @@ const PrintingPanel: React.FC = () => (
   <div>
     <ScreenHeader icon={<Printer strokeWidth={1.8} />} title="Printing" right={<Pill tone="ready">Free</Pill>} />
     <div className="flex items-center gap-3 rounded-control border border-hairline p-3">
-      <span className="w-9 h-11 rounded-md bg-navy-tint text-navy grid place-items-center text-label font-bold">PDF</span>
+      <span className="w-9 h-11 rounded-md bg-navy-tint text-navy-ink grid place-items-center text-label font-bold">PDF</span>
       <div>
         <b className="block text-meta font-semibold text-ink">Scholarship-form.pdf</b>
         <span className="text-label text-muted">We counted 4 pages</span>
@@ -149,7 +149,7 @@ const PrintingPanel: React.FC = () => (
     </div>
     <div className="mt-3 flex flex-wrap gap-1.5">
       {['A4', 'Black and white', 'Two-sided', '2 copies'].map(o => (
-        <span key={o} className="rounded-full border border-hairline px-2.5 py-1 text-label font-semibold text-navy">
+        <span key={o} className="rounded-full border border-hairline px-2.5 py-1 text-label font-semibold text-navy-ink">
           {o}
         </span>
       ))}
@@ -191,13 +191,13 @@ const StaffPanel: React.FC = () => (
       ].map(([l, n]) => (
         <div key={l} className="rounded-control bg-mist px-3 py-2">
           <span className="text-label text-muted">{l}</span>
-          <b className="block font-display text-h3 text-navy leading-tight">{n}</b>
+          <b className="block font-display text-h3 text-navy-ink leading-tight">{n}</b>
         </div>
       ))}
     </div>
     <div className="mt-3">
       <Row title="Juan Dela Cruz" meta="Barangay Clearance · 9:12 AM" right={<span className="rounded-lg bg-navy text-white text-label font-semibold px-2.5 py-1">Approve</span>} />
-      <Row title="Ana Reyes" meta="Court · Nov 26, 4:00 PM" right={<span className="rounded-lg border border-navy text-navy text-label font-semibold px-2.5 py-1">Review</span>} />
+      <Row title="Ana Reyes" meta="Court · Nov 26, 4:00 PM" right={<span className="rounded-lg border border-navy-ink text-navy-ink text-label font-semibold px-2.5 py-1">Review</span>} />
       <Row title="Pedro Garcia" meta="Printing · 8 pages" right={<Pill tone="ready">Ready</Pill>} />
     </div>
   </div>
@@ -280,7 +280,7 @@ export const Notice: React.FC<{ text: string; rippleDelay?: number }> = ({ text,
     <span className="relative w-8 h-8 rounded-full grid place-items-center bg-navy text-white shrink-0">
       {/* rippleDelay: when the notice itself arrives late, ring once it is actually visible */}
       <span
-        className="absolute inset-0 rounded-full border-2 border-navy ripple-once"
+        className="absolute inset-0 rounded-full border-2 border-navy-ink ripple-once"
         style={rippleDelay === undefined ? undefined : { animationDelay: `${rippleDelay}ms` }}
       />
       <Bell className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />

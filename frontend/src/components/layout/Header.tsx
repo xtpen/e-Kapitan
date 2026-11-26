@@ -70,7 +70,7 @@ export const Header: React.FC = () => {
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl sm:text-2xl font-bold text-navy font-heading">
+                <span className="text-xl sm:text-2xl font-bold text-navy-ink font-heading">
                   eKapitan
                 </span>
                 <span className="hidden sm:inline-block bg-primary-tint text-primary-strong text-label font-semibold px-2 py-0.5 rounded-full border border-primary-tint-line">
@@ -245,7 +245,7 @@ export const Header: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setHotlineModalOpen(false)}
-              className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-navy/60 "
+              className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-scrim/60 "
             >
               <motion.div 
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -294,10 +294,10 @@ export const Header: React.FC = () => {
 
                   <div className="p-3.5 rounded-control bg-info-bg border border-line flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-navy">National Emergency Hotline</p>
+                      <p className="text-xs font-bold text-navy-ink">National Emergency Hotline</p>
                       <p className="text-sm font-bold text-info-fg mt-0.5">911 (Police / Fire / Paramedic)</p>
                     </div>
-                    <span className="text-label text-navy font-semibold">National</span>
+                    <span className="text-label text-navy-ink font-semibold">National</span>
                   </div>
                 </div>
 
@@ -324,7 +324,7 @@ export const Header: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setLogoutModalOpen(false)}
-              className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-navy/60 "
+              className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-scrim/60 "
             >
               <motion.div 
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}

@@ -14,13 +14,13 @@ const SHADOW_SOFT = 'hover:shadow-[0_4px_12px_-4px_rgb(18_48_79/0.22)]';
 
 const variants: Record<Variant, string> = {
   primary: `bg-primary text-white border-2 border-primary hover:bg-primary-strong hover:border-primary-strong ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(20_96_74/0.4)]`,
-  secondary: `bg-surface text-navy border-2 border-navy hover:bg-navy-tint ${LIFT} ${SHADOW_SOFT}`,
-  accent: `bg-gold text-navy border-2 border-gold hover:brightness-95 ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(106_74_0/0.35)]`,
+  secondary: `bg-surface text-navy-ink border-2 border-navy-ink hover:bg-navy-tint ${LIFT} ${SHADOW_SOFT}`,
+  accent: `bg-gold text-on-gold border-2 border-gold hover:brightness-95 ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(106_74_0/0.35)]`,
   danger: `bg-danger-fg text-white border-2 border-danger-fg hover:brightness-110 ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(139_36_24/0.4)]`,
   // Landing page (navy on white)
   brand: `bg-navy text-white border-2 border-navy hover:bg-navy-deep hover:border-navy-deep ${LIFT} ${SHADOW_NAVY}`,
-  outline: `bg-surface text-navy border-2 border-hairline hover:border-navy hover:bg-navy-tint ${LIFT} ${SHADOW_SOFT}`,
-  inverse: `bg-surface text-navy border-2 border-surface hover:bg-navy-tint hover:border-navy-tint ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(0_0_0/0.35)]`,
+  outline: `bg-surface text-navy-ink border-2 border-hairline hover:border-navy-ink hover:bg-navy-tint ${LIFT} ${SHADOW_SOFT}`,
+  inverse: `bg-surface text-navy-ink border-2 border-surface hover:bg-navy-tint hover:border-navy-tint ${LIFT} hover:shadow-[0_6px_16px_-4px_rgb(0_0_0/0.35)]`,
   'inverse-outline': `bg-transparent text-white border-2 border-white/40 hover:border-white hover:bg-white/15 ${LIFT}`,
 };
 

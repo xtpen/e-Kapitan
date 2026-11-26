@@ -1,28 +1,18 @@
-import React, { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { CheckCircle2, Printer } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { PaperSize, PrintColor, PrintRequest, PrintSides } from '../../types';
-import {
-  Button,
-  Card,
-  CardHeader,
-  DataTable,
-  Field,
-  FileUpload,
-  Input,
-  PageHeader,
-  Select,
-  StatusPill,
-  formatShortDateTime,
-  printStatus,
-} from '../ui';
+import { Button, Field, FileUpload, Input, StatusPill, dateTimeValue, formatShortDateTime, printStatus } from '../ui';
+import { Choice, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const FILE_EXT = /\.(pdf|doc|docx)$/i;
 
 const COLOR_LABEL: Record<PrintColor, string> = { black_and_white: 'Black and white', color: 'Color' };
-const SIDES_LABEL: Record<PrintSides, string> = { one_sided: 'One-sided', two_sided: 'Two-sided' };
+const SIDES_LABEL: Record<PrintSides, string> = { one_sided: 'One side', two_sided: 'Both sides' };
 const PAPER_SIZES: PaperSize[] = ['A4', 'Letter', 'Legal'];
+/** Everyday names residents use at the store. */
+const PAPER_HINT: Record<PaperSize, string> = { A4: 'Most common', Letter: 'Short bond', Legal: 'Long bond' };
 
 /** Best-effort page count for PDFs (counts page objects). Returns null if it can't tell. */
 const countPdfPages = async (file: File): Promise<number | null> => {
@@ -36,13 +26,46 @@ const countPdfPages = async (file: File): Promise<number | null> => {
   }
 };
 
-const describe = (p: Pick<PrintRequest, 'pages' | 'paperSize' | 'color' | 'copies'>) =>
-  `${p.pages} ${p.pages === 1 ? 'page' : 'pages'}, ${p.paperSize}, ${COLOR_LABEL[p.color].toLowerCase()}` +
-  (p.copies > 1 ? `, ${p.copies} copies` : '');
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+const describe = (p: Pick<PrintRequest, 'pages' | 'paperSize' | 'color' | 'copies' | 'sides'>) =>
+  `${plural(p.pages, 'page', 'pages')} · ${p.paperSize} · ${COLOR_LABEL[p.color].toLowerCase()}` +
+  (p.copies > 1 ? ` · ${p.copies} copies` : '');
 
 type Errors = Partial<Record<'file' | 'pages' | 'copies', string>>;
 
-/** Resident · Printing. Mockup: "Resident · Printing". See DESIGN.md. */
+/** A labelled group of <Choice> options. The label matches the Field label style. */
+function Options<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  cols,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string; sub?: string }[];
+  onChange: (v: T) => void;
+  cols: string;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <p id={id} className="block font-semibold text-meta text-ink mt-4 mb-1.5">
+        {label}
+      </p>
+      <div role="radiogroup" aria-labelledby={id} className={`grid gap-2 ${cols}`}>
+        {options.map(o => (
+          <Choice key={o.value} selected={o.value === value} onSelect={() => onChange(o.value)} label={o.label} sub={o.sub} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Resident · Printing (tab id `printing`). Your file, print options, send. Then the resident's prints.
+ */
 export const PrintingView: React.FC = () => {
   const { printRequests, createPrintRequest, currentUser } = useBarangay();
 
@@ -56,12 +79,15 @@ export const PrintingView: React.FC = () => {
   const [errors, setErrors] = useState<Errors>({});
   const [justSent, setJustSent] = useState<PrintRequest | null>(null);
 
-  const mine = printRequests.filter(
-    p => (!!currentUser.residentId && p.residentId === currentUser.residentId) || p.residentName === currentUser.name,
-  );
+  const mine = printRequests
+    .filter(p => (!!currentUser.residentId && p.residentId === currentUser.residentId) || p.residentName === currentUser.name)
+    .sort((a, b) => dateTimeValue(b.submittedAt) - dateTimeValue(a.submittedAt));
 
   const pageCount = Math.max(0, Math.floor(Number(pages)) || 0);
   const copyCount = Math.max(0, Math.floor(Number(copies)) || 0);
+  const ready = pageCount > 0 && copyCount > 0;
+  const totalPages = pageCount * copyCount;
+  const hasErrors = Object.keys(errors).length > 0;
 
   const onFile = async (f: File | null) => {
     setFile(f);
@@ -84,8 +110,7 @@ export const PrintingView: React.FC = () => {
     return e;
   };
 
-  const submit = (ev: React.FormEvent) => {
-    ev.preventDefault();
+  const submit = () => {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length > 0 || !file) return;
@@ -104,129 +129,112 @@ export const PrintingView: React.FC = () => {
     setPages('');
     setAutoCounted(null);
     setCopies('1');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const pill = (p: PrintRequest) => <StatusPill tone={printStatus[p.status].tone}>{printStatus[p.status].label}</StatusPill>;
-
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader title="Printing Services" description="Upload your file and choose your options. Printing is free for residents." />
+    <Page>
+      <PageTitle title="Printing" sub="Free. Pick up at the hall." />
 
-      <div className="grid lg:grid-cols-[1.5fr_1fr] gap-5 items-start">
-        <Card padded="lg">
-          <h2 className="text-h3-lg font-semibold text-navy">New print request</h2>
-
-          {justSent && (
-            <div role="status" className="mt-4 flex gap-3 rounded-control bg-success-bg text-success-fg px-4 py-3">
-              <CheckCircle2 className="w-6 h-6 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-              <p>
-                <b className="font-semibold">Print request submitted.</b> Your reference number is{' '}
-                <b className="font-semibold whitespace-nowrap">{justSent.referenceNumber}</b>. We will notify you when it is
-                ready to pick up.
-              </p>
-            </div>
-          )}
-
-          <form id="print-form" noValidate onSubmit={submit}>
-            {Object.keys(errors).length > 0 && (
-              <p role="alert" className="mt-4 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
-                Please fix the fields marked below.
-              </p>
-            )}
-            <Field label="Upload document" error={errors.file} help="PDF or Word, up to 10 MB.">
-              {p => (
-                <FileUpload
-                  {...p}
-                  accept=".pdf,.doc,.docx"
-                  files={file ? [file] : []}
-                  onChange={fs => onFile(fs[0] ?? null)}
-                />
-              )}
-            </Field>
-            <div className="grid grid-cols-2 gap-x-3 sm:gap-x-5">
-              <Field
-                label="Pages in the file"
-                error={errors.pages}
-                help={autoCounted ? `We counted ${autoCounted}. Change it if that's wrong.` : undefined}
-              >
-                {p => (
-                  <Input {...p} type="number" inputMode="numeric" min={1} max={500} value={pages} onChange={e => setPages(e.target.value)} />
-                )}
-              </Field>
-              <Field label="Copies" error={errors.copies}>
-                {p => (
-                  <Input {...p} type="number" inputMode="numeric" min={1} max={50} value={copies} onChange={e => setCopies(e.target.value)} />
-                )}
-              </Field>
-              <Field label="Paper size">
-                {p => (
-                  <Select {...p} value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
-                    {PAPER_SIZES.map(s => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="Color">
-                {p => (
-                  <Select {...p} value={color} onChange={e => setColor(e.target.value as PrintColor)}>
-                    {(Object.keys(COLOR_LABEL) as PrintColor[]).map(c => (
-                      <option key={c} value={c}>
-                        {COLOR_LABEL[c]}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-              <Field label="Sides" className="col-span-2 sm:col-span-1">
-                {p => (
-                  <Select {...p} value={sides} onChange={e => setSides(e.target.value as PrintSides)}>
-                    {(Object.keys(SIDES_LABEL) as PrintSides[]).map(s => (
-                      <option key={s} value={s}>
-                        {SIDES_LABEL[s]}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-            </div>
-          </form>
-        </Card>
-
-        <Card tone="navy" aria-live="polite">
-          <span className="text-on-navy">Your request</span>
-          <div className="font-display text-h2 leading-tight font-bold text-white mt-2">
-            {pageCount > 0 && copyCount > 0
-              ? `${pageCount * copyCount} ${pageCount * copyCount === 1 ? 'page' : 'pages'} to print`
-              : 'Add your file'}
+      {justSent && (
+        <Section tone="success">
+          <div role="status" className="flex items-center gap-3">
+            <IconCircle tone="green">
+              <CheckCircle2 />
+            </IconCircle>
+            <p className="min-w-0">
+              <b className="block font-semibold text-ink">Sent! We'll let you know when it's ready.</b>
+              <span className="block text-meta text-muted">Tracking number {justSent.referenceNumber}</span>
+            </p>
           </div>
-          <p className="text-meta text-on-navy mt-2 mb-4">
-            {pageCount > 0 && copyCount > 0
-              ? `${pageCount} ${pageCount === 1 ? 'page' : 'pages'} × ${copyCount} ${copyCount === 1 ? 'copy' : 'copies'}, ${paperSize}, ${COLOR_LABEL[color].toLowerCase()}, ${SIDES_LABEL[sides].toLowerCase()}. `
-              : 'Upload your document and enter the number of pages. '}
-            Printing is free. Pick it up at the barangay hall when we tell you it's ready.
-          </p>
-          <Button variant="accent" fullWidth type="submit" form="print-form">
-            Submit print request
-          </Button>
-        </Card>
-      </div>
+        </Section>
+      )}
 
-      <Card className="mt-5">
-        <CardHeader title="My print requests" />
-        <DataTable<PrintRequest>
-          rows={mine}
-          rowKey={p => p.id}
-          columns={[
-            { header: 'Reference', cell: p => p.referenceNumber, className: 'whitespace-nowrap' },
-            { header: 'Details', cell: p => describe(p) },
-            { header: 'Submitted', cell: p => formatShortDateTime(p.submittedAt), className: 'whitespace-nowrap text-muted' },
-            { header: 'Status', cell: pill },
-          ]}
-          mobile={{ title: p => describe(p), status: pill, meta: p => p.referenceNumber }}
-          empty={<p className="text-meta text-muted py-2">You have no print requests yet.</p>}
+      <Section title="Your file">
+        <Field label="File" error={errors.file} help="PDF or Word, up to 10 MB." className="[&>label]:sr-only">
+          {p => <FileUpload {...p} accept=".pdf,.doc,.docx" files={file ? [file] : []} onChange={fs => onFile(fs[0] ?? null)} />}
+        </Field>
+        <div className="grid grid-cols-2 gap-x-3 sm:gap-x-5">
+          <Field label="Pages" error={errors.pages} help={autoCounted ? `We counted ${autoCounted}.` : undefined}>
+            {p => <Input {...p} type="number" inputMode="numeric" min={1} max={500} value={pages} onChange={e => setPages(e.target.value)} />}
+          </Field>
+          <Field label="Copies" error={errors.copies}>
+            {p => <Input {...p} type="number" inputMode="numeric" min={1} max={50} value={copies} onChange={e => setCopies(e.target.value)} />}
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Print options">
+        <Options<PaperSize>
+          label="Paper size"
+          value={paperSize}
+          onChange={setPaperSize}
+          cols="grid-cols-1 sm:grid-cols-3"
+          options={PAPER_SIZES.map(s => ({ value: s, label: s, sub: PAPER_HINT[s] }))}
         />
-      </Card>
-    </div>
+        <Options<PrintColor>
+          label="Color"
+          value={color}
+          onChange={setColor}
+          cols="grid-cols-2"
+          options={(Object.keys(COLOR_LABEL) as PrintColor[]).map(c => ({ value: c, label: COLOR_LABEL[c] }))}
+        />
+        <Options<PrintSides>
+          label="Print on"
+          value={sides}
+          onChange={setSides}
+          cols="grid-cols-2"
+          options={(Object.keys(SIDES_LABEL) as PrintSides[]).map(s => ({ value: s, label: SIDES_LABEL[s] }))}
+        />
+
+        <div className="mt-5 pt-4 border-t border-line-soft">
+          {hasErrors ? (
+            <p role="alert" className="font-semibold text-danger-fg">
+              Please fix the fields marked above.
+            </p>
+          ) : (
+            <p aria-live="polite" className="text-muted">
+              {ready ? (
+                <>
+                  <b className="font-semibold text-ink">{plural(totalPages, 'page', 'pages')}, free.</b> Pick up weekdays, 1:00 PM to 4:00 PM.
+                </>
+              ) : (
+                'Add your file and the number of pages.'
+              )}
+            </p>
+          )}
+          <FormActions>
+            <Button variant="brand" onClick={submit} icon={<Printer className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />}>
+              Send to print
+            </Button>
+          </FormActions>
+        </div>
+      </Section>
+
+      {mine.length > 0 && (
+        <Section title="My prints" flush>
+          <List>
+            {mine.map(p => (
+              <ListRow
+                key={p.id}
+                icon={
+                  <IconCircle>
+                    <Printer />
+                  </IconCircle>
+                }
+                title={<span className="block truncate">{p.fileName}</span>}
+                sub={
+                  <>
+                    {describe(p)} · {formatShortDateTime(p.submittedAt)}
+                    {p.status === 'rejected' && p.rejectionReason && <span className="block text-danger-fg">{p.rejectionReason}</span>}
+                  </>
+                }
+                trailing={<StatusPill tone={printStatus[p.status].tone}>{printStatus[p.status].label}</StatusPill>}
+              />
+            ))}
+          </List>
+        </Section>
+      )}
+    </Page>
   );
 };

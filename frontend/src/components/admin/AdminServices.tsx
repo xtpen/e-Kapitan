@@ -95,7 +95,7 @@ export const AdminServices: React.FC = () => {
   const detail = (s: ServiceItem) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy">{s.title}</h2>
+        <h2 className="text-h3 font-semibold text-navy-ink">{s.title}</h2>
         {pill(s)}
       </div>
       <p className="text-meta text-muted">{s.category}</p>
@@ -134,7 +134,7 @@ export const AdminServices: React.FC = () => {
 
   const formView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">{panel === 'add' ? 'Add service' : `Edit ${selected?.title}`}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add service' : `Edit ${selected?.title}`}</h2>
       <p className="text-meta text-muted">Residents see this on the Documents page and in the request form.</p>
       <Field label="Document name" error={errors.title}>
         {p => <Input {...p} value={form.title} onChange={e => set('title', e.target.value)} />}

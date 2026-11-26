@@ -1,28 +1,18 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ClipboardList } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ChevronDown } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { DocumentRequest, DocumentType } from '../../types';
-import {
-  Button,
-  Card,
-  Checkbox,
-  Field,
-  FileUpload,
-  IconTile,
-  Input,
-  PageHeader,
-  Select,
-  Stepper,
-  formatPeso,
-  todayISO,
-} from '../ui';
+import { Button, Checkbox, Field, FileUpload, Input, Select, Switch, formatPeso, todayISO } from '../ui';
+import { FormActions, IconCircle, Page, PageTitle, Section } from './kit';
 import { PUROKS } from '../../data/reference';
 
 interface DocumentRequestWizardProps {
   initialServiceId?: string;
 }
 
-const STEPS = ['Choose', 'Your details', 'Review'];
+/** One small screen per step. The last one is the short summary before sending. */
+const STEPS = ['About you', 'Pick-up day', 'Your ID', 'Check and send'] as const;
+type Step = 0 | 1 | 2 | 3;
 
 const PURPOSES = [
   'Employment',
@@ -33,30 +23,50 @@ const PURPOSES = [
   'Other',
 ];
 
+/** `value` is what staff see (unchanged); `label` is what residents read. */
 const WAIVERS = [
-  'First-Time Jobseeker (RA 11261)',
-  'Senior Citizen (RA 9994)',
-  'Registered Indigent Household',
-  'Person with Disability (RA 7277)',
+  { value: 'First-Time Jobseeker (RA 11261)', label: 'First-time jobseeker' },
+  { value: 'Senior Citizen (RA 9994)', label: 'Senior citizen' },
+  { value: 'Registered Indigent Household', label: 'Low-income (indigent) family' },
+  { value: 'Person with Disability (RA 7277)', label: 'Person with disability (PWD)' },
 ];
 
 const MAX_ID_BYTES = 5 * 1024 * 1024;
 const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
-const formatClaimDate = (iso: string) =>
+const formatPickUpDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+const plainTitle = (t: string) => t.replace(/\s*\(RA\s*\d+\)/i, '');
+const readyIn = (t: string) => {
+  const s = t
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/\s+upon validation/i, '')
+    .split(/\s+or\s+/i)[0]
+    .trim();
+  return /^same day$/i.test(s) ? 'Ready same day' : `Ready in ${s}`;
+};
+const freeNote = (t: string) => t.replace(/\s+under Republic Act\s*\d+/i, '').replace(/\s*\(RA\s*\d+\)/i, '');
 
 type Errors = Partial<Record<'name' | 'purpose' | 'otherPurpose' | 'claimDate' | 'mobile' | 'validId' | 'consent', string>>;
 
+/** Label / value row in the summary. */
+const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between gap-4 py-3 border-b border-line-soft last:border-b-0">
+    <dt className="text-meta text-muted shrink-0">{label}</dt>
+    <dd className="text-meta font-semibold text-ink text-right min-w-0 break-words">{children}</dd>
+  </div>
+);
+
 /**
- * Resident · Document request, steps 2 (Your details) and 3 (Review), then a confirmation.
- * Step 1 (Choose) is the Documents list. Mockup: "Resident · Document request". See DESIGN.md.
+ * Resident · Request a document (tab id `request_wizard`). Opened from the Documents list.
+ * A few fields per step, a short summary before sending, then a simple confirmation.
  */
 export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ initialServiceId }) => {
   const { services, currentUser, createDocumentRequest, setActiveTab } = useBarangay();
   const service = services.find(s => s.id === initialServiceId);
 
-  const [step, setStep] = useState<1 | 2>(1); // index into STEPS
+  const [step, setStep] = useState<Step>(0);
   const [submitted, setSubmitted] = useState<DocumentRequest | null>(null);
 
   const [name, setName] = useState(currentUser.name);
@@ -67,14 +77,14 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
   const [purok, setPurok] = useState(PUROKS[1]);
   const [validId, setValidId] = useState<File | null>(null);
   const [wantsWaiver, setWantsWaiver] = useState(false);
-  const [waiverReason, setWaiverReason] = useState(WAIVERS[0]);
+  const [waiverReason, setWaiverReason] = useState(WAIVERS[0].value);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const formRef = useRef<HTMLDivElement>(null);
 
   // Arrived here without choosing a document: go back to the list.
   useEffect(() => {
-    if (!service) setActiveTab('services');
+    if (!service) setActiveTab('documents');
   }, [service, setActiveTab]);
 
   // Move focus to the top of the step so screen readers and keyboards follow along.
@@ -88,47 +98,71 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
     formRef.current?.focus({ preventScroll: true });
   }, [step, submitted]);
 
-  const canWaive = !!service && service.fee > 0 && service.isFreeForEligible;
-  const fee = !service || (canWaive && wantsWaiver) ? 0 : service.fee;
-  const finalPurpose = purpose === 'Other' ? otherPurpose.trim() : purpose;
-
-  const feeText = useMemo(() => {
-    if (!service) return '';
-    if (service.fee === 0) return 'Free';
-    if (canWaive && wantsWaiver) return `Free if your ${waiverReason} waiver is confirmed at the hall`;
-    return `${formatPeso(fee)}, paid at the hall`;
-  }, [service, canWaive, wantsWaiver, waiverReason, fee]);
-
   if (!service) return null;
 
-  const validateDetails = (): Errors => {
+  const title = plainTitle(service.title);
+  const canWaive = service.fee > 0 && service.isFreeForEligible;
+  const fee = canWaive && wantsWaiver ? 0 : service.fee;
+  const finalPurpose = purpose === 'Other' ? otherPurpose.trim() : purpose;
+  const waiverLabel = WAIVERS.find(w => w.value === waiverReason)?.label ?? waiverReason;
+
+  const feeText =
+    service.fee === 0
+      ? 'Free'
+      : canWaive && wantsWaiver
+        ? `Free (${waiverLabel.toLowerCase()})`
+        : `${formatPeso(fee)}, pay at the hall`;
+
+  /* ---------- Validation, one step at a time (same rules as before) ---------- */
+  const validateStep = (s: Step): Errors => {
     const e: Errors = {};
-    if (!name.trim()) e.name = 'Enter your full name.';
-    if (purpose === 'Other' && !otherPurpose.trim()) e.otherPurpose = 'Tell us what the document is for.';
-    if (!claimDate) e.claimDate = 'Choose the day you want to claim it.';
-    else if (claimDate < todayISO()) e.claimDate = 'Choose today or a later date.';
-    else {
-      const day = new Date(`${claimDate}T00:00:00`).getDay();
-      if (day === 0 || day === 6) e.claimDate = 'Choose a weekday. The hall releases documents Monday to Friday.';
+    if (s === 0) {
+      if (!name.trim()) e.name = 'Enter your full name.';
+      const digits = mobile.replace(/[\s-]/g, '');
+      if (!digits) e.mobile = 'Enter your mobile number.';
+      else if (!/^09\d{9}$/.test(digits)) e.mobile = 'Enter an 11-digit number that starts with 09.';
     }
-    const digits = mobile.replace(/[\s-]/g, '');
-    if (!digits) e.mobile = 'Enter your mobile number.';
-    else if (!/^09\d{9}$/.test(digits)) e.mobile = 'Enter an 11-digit number that starts with 09.';
-    if (!validId) e.validId = 'Upload a photo or scan of a valid ID.';
-    else if (!ID_TYPES.includes(validId.type)) e.validId = 'Upload a JPG, PNG or PDF file.';
-    else if (validId.size > MAX_ID_BYTES) e.validId = 'Upload a file that is 5 MB or smaller.';
+    if (s === 1) {
+      if (purpose === 'Other' && !otherPurpose.trim()) e.otherPurpose = 'Tell us what the document is for.';
+      if (!claimDate) e.claimDate = 'Choose the day you want to pick it up.';
+      else if (claimDate < todayISO()) e.claimDate = 'Choose today or a later date.';
+      else {
+        const day = new Date(`${claimDate}T00:00:00`).getDay();
+        if (day === 0 || day === 6) e.claimDate = 'Choose a weekday (Monday to Friday).';
+      }
+    }
+    if (s === 2) {
+      if (!validId) e.validId = 'Upload a photo or scan of a valid ID.';
+      else if (!ID_TYPES.includes(validId.type)) e.validId = 'Upload a JPG, PNG or PDF file.';
+      else if (validId.size > MAX_ID_BYTES) e.validId = 'Upload a file that is 5 MB or smaller.';
+    }
     return e;
   };
 
-  const goToReview = () => {
-    const e = validateDetails();
+  const next = () => {
+    const e = validateStep(step);
     setErrors(e);
-    if (Object.keys(e).length === 0) setStep(2);
+    if (Object.keys(e).length === 0 && step < 3) setStep((step + 1) as Step);
+  };
+
+  const back = () => {
+    setErrors({});
+    if (step === 0) setActiveTab('documents');
+    else setStep((step - 1) as Step);
   };
 
   const submit = () => {
+    // Re-check every step in case something changed.
+    for (const s of [0, 1, 2] as Step[]) {
+      const e = validateStep(s);
+      if (Object.keys(e).length > 0) {
+        setErrors(e);
+        setStep(s);
+        return;
+      }
+    }
     if (!consent) {
-      setErrors({ consent: 'Check the box to agree before you submit.' });
+      setErrors({ consent: 'Tick the box to agree before you send.' });
       return;
     }
     const req = createDocumentRequest({
@@ -151,174 +185,126 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
     setSubmitted(req);
   };
 
-  const aside = (
-    <div className="grid gap-3 sm:gap-5">
-      <Card>
-        <IconTile className="mb-3.5 [&_svg]:w-6 [&_svg]:h-6">
-          <ClipboardList strokeWidth={1.8} />
-        </IconTile>
-        <h3 className="text-h3 font-semibold text-navy">Requirements</h3>
-        <ul className="text-meta text-muted mt-1.5 space-y-0.5">
-          {service.requirements.map(r => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      </Card>
-      <Card tone="callout">
-        <h3 className="text-h3 font-semibold text-navy">How to claim</h3>
-        <p className="text-meta text-muted mt-1.5">
-          Bring your reference number and ID to the barangay hall, 1:00 PM to 4:00 PM. Any fee is paid at the hall.
-        </p>
-      </Card>
-    </div>
-  );
-
-  const breadcrumb = (
-    <>
-      <button
-        type="button"
-        onClick={() => setActiveTab('services')}
-        className="text-primary-strong font-semibold hover:underline underline-offset-4 cursor-pointer"
-      >
-        Documents
-      </button>{' '}
-      / {service.title}
-    </>
-  );
-
   /* ---------- Confirmation ---------- */
   if (submitted) {
     return (
-      <div className="max-w-[1200px]">
-        <PageHeader breadcrumb={breadcrumb} title="Request submitted" />
-        <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
-          <Card padded="lg">
-            <div ref={formRef} tabIndex={-1} className="outline-none" role="status">
-              <IconTile className="mb-4 [&_svg]:w-7 [&_svg]:h-7">
-                <CheckCircle2 strokeWidth={1.8} />
-              </IconTile>
-              <h2 className="text-h3-lg font-semibold text-navy">We received your {service.title} request</h2>
-              <p className="text-meta text-muted mt-1">Your reference number is</p>
-              <p className="font-display text-h2 font-bold text-navy mt-1 tracking-wide">{submitted.referenceNumber}</p>
-              <p className="mt-4">
-                Staff will review it and notify you when it is ready. Bring this reference number and a valid ID when
-                you claim it on {formatClaimDate(claimDate)}.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2.5 mt-7">
-                <Button onClick={() => setActiveTab('tracking')}>View my requests</Button>
-                <Button variant="secondary" onClick={() => setActiveTab('services')}>
-                  Back to documents
-                </Button>
-              </div>
+      <Page>
+        <Section>
+          <div ref={formRef} tabIndex={-1} className="outline-none flex items-center gap-3" role="status">
+            <IconCircle tone="green" size="lg">
+              <CheckCircle2 />
+            </IconCircle>
+            <div className="min-w-0">
+              <h1 className="font-display text-[1.625rem] font-bold text-ink leading-tight">Sent!</h1>
+              <p className="text-muted">We'll text you when it's ready.</p>
             </div>
-          </Card>
-          {aside}
-        </div>
-      </div>
+          </div>
+          <dl className="mt-3">
+            <Row label="Tracking number">{submitted.referenceNumber}</Row>
+            <Row label="Pick up on">{formatPickUpDate(claimDate)}, 1:00 PM to 4:00 PM</Row>
+            <Row label="Bring">{fee > 0 ? `Your ID and ${formatPeso(fee)}` : 'Your ID'}</Row>
+          </dl>
+          <FormActions>
+            <Button variant="secondary" onClick={() => setActiveTab('home')}>
+              Done
+            </Button>
+            <Button variant="brand" onClick={() => setActiveTab('tracking')}>See my requests</Button>
+          </FormActions>
+        </Section>
+      </Page>
     );
   }
 
+  const hasErrors = Object.keys(errors).some(k => k !== 'consent');
+  const first = '[&>label]:mt-0';
+
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader
-        breadcrumb={breadcrumb}
-        title={`Request a ${service.title}`}
-        description={step === 1 ? 'Fill in your details. It takes about 3 minutes.' : 'Check your details before you submit.'}
-      />
+    <Page>
+      <PageTitle title={title} sub={`${service.fee === 0 ? 'Free' : formatPeso(service.fee)} · ${readyIn(service.processingTime)}`} />
 
-      <Stepper steps={STEPS} current={step} className="mb-6" />
+      <Section title={STEPS[step]}>
+        <div ref={formRef} tabIndex={-1} className="outline-none">
+          <form
+            noValidate
+            aria-label={STEPS[step]}
+            onSubmit={e => {
+              e.preventDefault();
+              if (step === 3) submit();
+              else next();
+            }}
+          >
+            {hasErrors && (
+              <p role="alert" className="mb-3 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
+                Please fix the fields marked below.
+              </p>
+            )}
 
-      <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
-        <Card padded="lg">
-          <div ref={formRef} tabIndex={-1} className="outline-none">
-            {step === 1 ? (
-              /* ---------- Step 2: Your details ---------- */
-              <form
-                noValidate
-                onSubmit={e => {
-                  e.preventDefault();
-                  goToReview();
-                }}
-              >
-                <h2 className="sr-only">Your details</h2>
-                {Object.keys(errors).length > 0 && (
-                  <p role="alert" className="mb-2 rounded-control bg-danger-bg text-danger-fg font-semibold px-4 py-3">
-                    Please fix the fields marked below.
-                  </p>
-                )}
-                <div className="grid sm:grid-cols-2 gap-x-5">
-                  <Field label="Full name" error={errors.name}>
-                    {p => <Input {...p} value={name} onChange={e => setName(e.target.value)} autoComplete="name" />}
-                  </Field>
-                  <Field label="Purpose">
-                    {p => (
-                      <Select {...p} value={purpose} onChange={e => setPurpose(e.target.value)}>
-                        {PURPOSES.map(x => (
-                          <option key={x}>{x}</option>
-                        ))}
-                      </Select>
-                    )}
-                  </Field>
-                  {purpose === 'Other' && (
-                    <Field label="What is it for?" error={errors.otherPurpose} className="sm:col-span-2">
-                      {p => <Input {...p} value={otherPurpose} onChange={e => setOtherPurpose(e.target.value)} />}
-                    </Field>
-                  )}
-                  <Field label="Preferred claiming date" error={errors.claimDate} help="Weekdays only.">
-                    {p => (
-                      <Input {...p} type="date" min={todayISO()} value={claimDate} onChange={e => setClaimDate(e.target.value)} />
-                    )}
-                  </Field>
-                  <Field label="Mobile number" error={errors.mobile} help="We send updates by SMS.">
-                    {p => (
-                      <Input
-                        {...p}
-                        type="tel"
-                        inputMode="numeric"
-                        autoComplete="tel"
-                        placeholder="09XX XXX XXXX"
-                        value={mobile}
-                        onChange={e => setMobile(e.target.value)}
-                      />
-                    )}
-                  </Field>
-                  <Field label="Purok" className="sm:col-span-2">
-                    {p => (
-                      <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
-                        {PUROKS.map(x => (
-                          <option key={x}>{x}</option>
-                        ))}
-                      </Select>
-                    )}
-                  </Field>
-                </div>
-
-                <Field label="Upload valid ID" error={errors.validId} help="JPG, PNG or PDF, up to 5 MB.">
+            {step === 0 && (
+              <>
+                <Field label="Full name" error={errors.name} className={first}>
+                  {p => <Input {...p} value={name} onChange={e => setName(e.target.value)} autoComplete="name" />}
+                </Field>
+                <Field label="Mobile number" error={errors.mobile} help="We text you when it's ready.">
                   {p => (
-                    <FileUpload
+                    <Input
                       {...p}
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      hint="or choose a photo or scan of your ID"
-                      files={validId ? [validId] : []}
-                      onChange={fs => setValidId(fs[0] ?? null)}
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      placeholder="09XX XXX XXXX"
+                      value={mobile}
+                      onChange={e => setMobile(e.target.value)}
                     />
                   )}
                 </Field>
+                <Field label="Purok">
+                  {p => (
+                    <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
+                      {PUROKS.map(x => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+              </>
+            )}
+
+            {step === 1 && (
+              <>
+                <Field label="What is it for?" className={first}>
+                  {p => (
+                    <Select {...p} value={purpose} onChange={e => setPurpose(e.target.value)}>
+                      {PURPOSES.map(x => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+                {purpose === 'Other' && (
+                  <Field label="Tell us what it is for" error={errors.otherPurpose}>
+                    {p => <Input {...p} value={otherPurpose} onChange={e => setOtherPurpose(e.target.value)} />}
+                  </Field>
+                )}
+                <Field label="Pick-up day" error={errors.claimDate} help="Weekdays, 1:00 PM to 4:00 PM.">
+                  {p => <Input {...p} type="date" min={todayISO()} value={claimDate} onChange={e => setClaimDate(e.target.value)} />}
+                </Field>
 
                 {canWaive && (
-                  <div className="mt-4">
-                    <Checkbox
-                      label="I qualify for a fee waiver"
-                      description="For first-time jobseekers, senior citizens, PWDs and registered indigent households. Staff confirm it at the hall."
+                  <div className="mt-3">
+                    <Switch
+                      label="I may get it free"
+                      description={`${freeNote(service.eligibleCriteria)}. Staff check at the hall.`}
                       checked={wantsWaiver}
-                      onChange={e => setWantsWaiver(e.target.checked)}
+                      onChange={setWantsWaiver}
                     />
                     {wantsWaiver && (
-                      <Field label="Waiver type">
+                      <Field label="Which one are you?" className="[&>label]:mt-1">
                         {p => (
                           <Select {...p} value={waiverReason} onChange={e => setWaiverReason(e.target.value)}>
-                            {WAIVERS.map(x => (
-                              <option key={x}>{x}</option>
+                            {WAIVERS.map(w => (
+                              <option key={w.value} value={w.value}>
+                                {w.label}
+                              </option>
                             ))}
                           </Select>
                         )}
@@ -326,62 +312,71 @@ export const DocumentRequestWizard: React.FC<DocumentRequestWizardProps> = ({ in
                     )}
                   </div>
                 )}
+              </>
+            )}
 
-                <div className="grid grid-cols-2 sm:flex sm:justify-between gap-2.5 mt-7">
-                  <Button variant="secondary" onClick={() => setActiveTab('services')}>
-                    Back
-                  </Button>
-                  <Button type="submit">Continue</Button>
-                </div>
-              </form>
-            ) : (
-              /* ---------- Step 3: Review ---------- */
-              <div>
-                <h2 className="text-h3-lg font-semibold text-navy">Review your request</h2>
-                <dl className="mt-3">
-                  {[
-                    ['Document', service.title],
-                    ['Full name', name],
-                    ['Purpose', finalPurpose],
-                    ['Claiming date', formatClaimDate(claimDate)],
-                    ['Mobile number', mobile],
-                    ['Purok', purok],
-                    ['Valid ID', validId?.name ?? ''],
-                    ['Fee', feeText],
-                  ].map(([k, v]) => (
-                    <div key={k} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-3 border-b border-line-soft last:border-b-0">
-                      <dt className="text-meta text-muted">{k}</dt>
-                      <dd className="text-meta font-semibold break-words">{v}</dd>
-                    </div>
-                  ))}
+            {step === 2 && (
+              <Field label="Photo of a valid ID" error={errors.validId} help="JPG, PNG or PDF, up to 5 MB. Bring the same ID." className={first}>
+                {p => (
+                  <FileUpload
+                    {...p}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    hint="Take a photo or choose a file"
+                    files={validId ? [validId] : []}
+                    onChange={fs => setValidId(fs[0] ?? null)}
+                  />
+                )}
+              </Field>
+            )}
+
+            {step === 3 && (
+              <>
+                <dl>
+                  <Row label="Document">{title}</Row>
+                  <Row label="Name">{name}</Row>
+                  <Row label="Mobile">{mobile}</Row>
+                  <Row label="Purok">{purok}</Row>
+                  <Row label="For">{finalPurpose}</Row>
+                  <Row label="Pick up on">{formatPickUpDate(claimDate)}</Row>
+                  <Row label="ID">{validId?.name ?? ''}</Row>
+                  <Row label="Cost">{feeText}</Row>
                 </dl>
 
-                <div className="mt-5">
-                  <Checkbox
-                    label="I agree to the processing of my personal data"
-                    description="Only authorized barangay staff can see it, as required by the Data Privacy Act of 2012."
-                    checked={consent}
-                    onChange={e => {
-                      setConsent(e.target.checked);
-                      if (e.target.checked) setErrors({});
-                    }}
-                    error={errors.consent}
-                  />
-                </div>
+                <details className="group mt-1">
+                  <summary className="inline-flex items-center gap-1.5 min-h-11 font-semibold text-meta text-navy-ink cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:underline underline-offset-4">
+                    What to bring
+                    <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" strokeWidth={2} aria-hidden="true" />
+                  </summary>
+                  <ul className="mb-1 text-meta text-ink list-disc pl-5 space-y-1">
+                    {service.requirements.map(r => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                </details>
 
-                <div className="grid grid-cols-2 sm:flex sm:justify-between gap-2.5 mt-7">
-                  <Button variant="secondary" onClick={() => setStep(1)}>
-                    Back
-                  </Button>
-                  <Button onClick={submit}>Submit request</Button>
-                </div>
-              </div>
+                <Checkbox
+                  className="mt-2"
+                  label="I agree to share these details with the hall"
+                  description="Only hall staff can see them."
+                  checked={consent}
+                  onChange={e => {
+                    setConsent(e.target.checked);
+                    if (e.target.checked) setErrors({});
+                  }}
+                  error={errors.consent}
+                />
+              </>
             )}
-          </div>
-        </Card>
 
-        {aside}
-      </div>
-    </div>
+            <FormActions>
+              <Button variant="secondary" onClick={back}>
+                Back
+              </Button>
+              <Button variant="brand" type="submit">{step === 3 ? 'Send request' : 'Continue'}</Button>
+            </FormActions>
+          </form>
+        </div>
+      </Section>
+    </Page>
   );
 };

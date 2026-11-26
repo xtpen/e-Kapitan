@@ -2,18 +2,13 @@ import React, { useState } from 'react';
 import { CircleAlert, CircleCheck, CircleX } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { DocumentRequest } from '../../types';
-import { Button, Card, Field, Input, PageHeader, formatShortDateTime } from '../ui';
-import { BARANGAY } from '../../config/barangay';
+import { Button, Field, Input, formatShortDateTime } from '../ui';
+import { FormActions, IconCircle, Page, PageTitle, Section } from '../resident/kit';
+import type { IconTone } from '../resident/kit';
 
 const ISSUED: DocumentRequest['status'][] = ['approved', 'ready_for_release', 'completed'];
 
-const BANNER_TONES = {
-  success: 'bg-success-bg text-success-fg',
-  warning: 'bg-warning-bg text-warning-fg',
-  danger: 'bg-danger-bg text-danger-fg',
-} as const;
-
-/** Prototype only: a seeded, issued document so the demo has something to verify. */
+/** Prototype only: a seeded, issued document so the demo has something to check. */
 const SAMPLE_CODE = 'VER-B4A-78921-99';
 
 type Outcome =
@@ -21,10 +16,18 @@ type Outcome =
   | { kind: 'not_issued'; doc: DocumentRequest }
   | { kind: 'not_found'; looksLikeReference: boolean };
 
+/** Label / value row in the result. */
+const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="flex justify-between gap-4 py-3 border-b border-line-soft last:border-b-0">
+    <dt className="text-meta text-muted shrink-0">{label}</dt>
+    <dd className="text-meta font-semibold text-ink text-right break-words min-w-0">{children}</dd>
+  </div>
+);
+
 /**
- * Verify a Document (public site footer + resident "More" group). No mockup; built from DESIGN.md patterns.
- * Checks the verification code printed on a barangay document. Request reference numbers
- * (REQ-…) are not accepted here, so nobody can look up a resident's name by guessing them.
+ * Check a document (public site + resident tab `qr_verify`).
+ * Checks the code printed on a document from the hall. Tracking numbers (REQ-…) are not accepted
+ * here, so nobody can look up a resident's name by guessing them.
  */
 export const DocumentVerification: React.FC = () => {
   const { documentRequests, officials } = useBarangay();
@@ -38,7 +41,7 @@ export const DocumentVerification: React.FC = () => {
   const verify = (raw: string) => {
     const clean = raw.trim().toUpperCase();
     if (!clean) {
-      setError('Enter the verification code printed on the document.');
+      setError('Type the code from the document.');
       setOutcome(null);
       return;
     }
@@ -49,131 +52,92 @@ export const DocumentVerification: React.FC = () => {
     else setOutcome({ kind: ISSUED.includes(doc.status) ? 'valid' : 'not_issued', doc });
   };
 
-  const row = (label: string, value: React.ReactNode) => (
-    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-3 border-b border-line-soft last:border-b-0">
-      <dt className="text-meta text-muted">{label}</dt>
-      <dd className="font-semibold break-words">{value}</dd>
-    </div>
-  );
-
-  const banner = (tone: 'success' | 'warning' | 'danger', icon: React.ReactNode, title: string, text: string) => (
-    <div className={`flex gap-3 rounded-control px-4 py-3 ${BANNER_TONES[tone]}`}>
-      <span className="shrink-0 [&_svg]:w-7 [&_svg]:h-7">{icon}</span>
-      <p>
-        <b className="block font-semibold text-base">{title}</b>
-        {text}
-      </p>
+  const head = (tone: IconTone, icon: React.ReactNode, title: string, text: string) => (
+    <div className="flex items-center gap-3">
+      <IconCircle tone={tone} size="lg">
+        {icon}
+      </IconCircle>
+      <div className="min-w-0">
+        <h2 className="text-[1.0625rem] font-semibold text-ink leading-tight">{title}</h2>
+        <p className="text-meta text-muted mt-0.5">{text}</p>
+      </div>
     </div>
   );
 
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader
-        title="Verify a Document"
-        description={`Check that a certificate or clearance was really issued by Barangay ${BARANGAY}.`}
-      />
+    <Page>
+      <PageTitle title="Check a document" sub="See if a paper from the hall is real." />
 
-      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 items-start">
-        <div className="grid gap-3 sm:gap-5">
-          <Card padded="lg">
-            <form
-              noValidate
-              onSubmit={e => {
-                e.preventDefault();
-                verify(code);
+      <Section>
+        <form
+          noValidate
+          aria-label="Check a document"
+          onSubmit={e => {
+            e.preventDefault();
+            verify(code);
+          }}
+        >
+          <Field label="Code on the document" error={error} help="It starts with VER, below the QR code." className="[&>label]:mt-0">
+            {p => (
+              <Input
+                {...p}
+                autoComplete="off"
+                autoCapitalize="characters"
+                placeholder="VER-XXX-00000-00"
+                value={code}
+                onChange={e => {
+                  setCode(e.target.value);
+                  setError(undefined);
+                }}
+              />
+            )}
+          </Field>
+          <FormActions>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCode(SAMPLE_CODE);
+                verify(SAMPLE_CODE);
               }}
             >
-              <Field
-                label="Verification code"
-                error={error}
-                help="It is printed under the QR code at the bottom of the document and starts with VER."
-                className="[&>label]:mt-0"
-              >
-                {p => (
-                  <Input
-                    {...p}
-                    autoComplete="off"
-                    placeholder="VER-XXX-00000-00"
-                    value={code}
-                    onChange={e => {
-                      setCode(e.target.value);
-                      setError(undefined);
-                    }}
-                  />
-                )}
-              </Field>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-5">
-                <Button type="submit" className="w-full sm:w-auto">
-                  Verify document
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCode(SAMPLE_CODE);
-                    verify(SAMPLE_CODE);
-                  }}
-                  className="text-meta font-semibold text-primary-strong hover:underline underline-offset-4 min-h-11 cursor-pointer"
-                >
-                  Try a sample code
-                </button>
-              </div>
-            </form>
-          </Card>
+              Try a sample
+            </Button>
+            <Button variant="brand" type="submit">Check</Button>
+          </FormActions>
+        </form>
+      </Section>
 
-          <div aria-live="polite">
-            {outcome?.kind === 'valid' && (
-              <Card>
-                {banner(
-                  'success',
-                  <CircleCheck strokeWidth={1.8} aria-hidden="true" />,
-                  'This document is valid',
-                  `It was issued by Barangay ${BARANGAY}. Check that the details below match the paper.`,
-                )}
-                <dl className="mt-4">
-                  {row('Document', outcome.doc.documentTitle)}
-                  {row('Issued to', outcome.doc.residentName)}
-                  {row('Address', `${outcome.doc.purok}, Barangay ${BARANGAY}, San Pablo City`)}
-                  {row('Purpose', outcome.doc.purpose || 'Not stated')}
-                  {row('Date', formatShortDateTime(outcome.doc.updatedAt))}
-                  {captain && row('Signed by', `${captain.name}, Punong Barangay`)}
-                  {row('Verification code', outcome.doc.verificationCode)}
+      <div aria-live="polite" className="empty:hidden">
+        {outcome && (
+          <Section>
+            {outcome.kind === 'valid' && (
+              <>
+                {head('green', <CircleCheck />, 'Real document', 'Make sure these details match the paper.')}
+                <dl className="mt-3">
+                  <Row label="Document">{outcome.doc.documentTitle}</Row>
+                  <Row label="Name">{outcome.doc.residentName}</Row>
+                  <Row label="Purok">{outcome.doc.purok}</Row>
+                  <Row label="For">{outcome.doc.purpose || 'Not stated'}</Row>
+                  <Row label="Date">{formatShortDateTime(outcome.doc.updatedAt)}</Row>
+                  {captain && <Row label="Signed by">{captain.name}</Row>}
+                  <Row label="Code">{outcome.doc.verificationCode}</Row>
                 </dl>
-              </Card>
+              </>
             )}
-            {outcome?.kind === 'not_issued' &&
-              banner(
-                'warning',
-                <CircleAlert strokeWidth={1.8} aria-hidden="true" />,
-                'This document has not been issued yet',
-                'The code belongs to a request the barangay is still processing. A paper with this code is not valid yet.',
-              )}
-            {outcome?.kind === 'not_found' &&
-              banner(
-                'danger',
-                <CircleX strokeWidth={1.8} aria-hidden="true" />,
-                `We could not find ${checked}`,
+            {outcome.kind === 'not_issued' &&
+              head('amber', <CircleAlert />, 'Not ready yet', 'This request is still being worked on. The paper is not valid yet.')}
+            {outcome.kind === 'not_found' &&
+              head(
+                'red',
+                <CircleX />,
+                'Not found',
                 outcome.looksLikeReference
-                  ? 'That looks like a request reference number. Enter the verification code printed on the document instead. It starts with VER.'
-                  : 'Check that you typed it exactly as printed. If it still does not match, the document may not be genuine. Contact the barangay hall.',
+                  ? 'That is a tracking number. Use the code that starts with VER.'
+                  : `We couldn't find ${checked}. Check the code and try again, or ask at the hall.`,
               )}
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:gap-5">
-          <Card tone="callout">
-            <h2 className="text-h3 font-semibold text-navy">Who uses this</h2>
-            <p className="text-meta text-ink mt-1">
-              Employers, banks, schools and offices that receive a barangay document and want to confirm it is genuine.
-            </p>
-          </Card>
-          <Card>
-            <h2 className="text-h3 font-semibold text-navy">Still unsure?</h2>
-            <p className="text-meta text-muted mt-1">
-              Call or visit the barangay hall, Monday to Friday, 8:00 AM to 5:00 PM. Bring the document or a clear photo of it.
-            </p>
-          </Card>
-        </div>
+          </Section>
+        )}
       </div>
-    </div>
+    </Page>
   );
 };

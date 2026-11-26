@@ -140,7 +140,7 @@ export const SmartQueueManagement: React.FC = () => {
                   <p className="text-label text-muted">{c.service}</p>
                 </div>
 
-                <div className="my-5 text-center py-4 bg-navy-deep/60 rounded-control border border-navy">
+                <div className="my-5 text-center py-4 bg-navy-deep/60 rounded-control border border-navy-ink">
                   <span className="text-3xl sm:text-4xl font-bold tracking-widest text-primary">
                     {currentServing ? currentServing.ticketNumber : '--'}
                   </span>
@@ -149,7 +149,7 @@ export const SmartQueueManagement: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-navy flex items-center justify-between">
+                <div className="pt-2 border-t border-navy-ink flex items-center justify-between">
                   <span className="text-label text-muted">Clerk: {c.clerk.split(' ')[0]}</span>
                   <button
                     onClick={() => {
@@ -214,7 +214,7 @@ export const SmartQueueManagement: React.FC = () => {
                         </span>
                       )}
                       {t.hasAppointment && (
-                        <span className="text-label font-bold uppercase px-2 py-0.5 rounded-full bg-info-bg text-navy border border-line">
+                        <span className="text-label font-bold uppercase px-2 py-0.5 rounded-full bg-info-bg text-navy-ink border border-line">
                           Appointment Pre-Booked
                         </span>
                       )}
@@ -256,7 +256,7 @@ export const SmartQueueManagement: React.FC = () => {
 
               <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
  activeTicket.status ==='in_service'?'bg-primary-tint text-primary-strong border border-primary-tint-line animate-pulse':
- activeTicket.status ==='called'?'bg-info-bg text-navy border border-line':
+ activeTicket.status ==='called'?'bg-info-bg text-navy-ink border border-line':
  activeTicket.status ==='waiting'?'bg-warning-bg text-warning-fg border border-warning-bg':
 'bg-surface-muted text-ink'
  }`}>
@@ -342,7 +342,7 @@ export const SmartQueueManagement: React.FC = () => {
                   onClick={() => {
                     alert(`Audio Chime Triggered: "Calling Ticket ${activeTicket.ticketNumber}, please proceed to Counter ${activeTicket.counterNumber || 1}"`);
                   }}
-                  className="py-2 px-3 bg-surface-muted hover:bg-info-bg hover:text-navy text-ink rounded-control text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="py-2 px-3 bg-surface-muted hover:bg-info-bg hover:text-navy-ink text-ink rounded-control text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4" />
                   <span>Repeat chime</span>
@@ -359,7 +359,7 @@ export const SmartQueueManagement: React.FC = () => {
 
       {/* Walk-in Ticket Issuance Modal */}
       {showWalkInModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 ">
           <div className="bg-surface rounded-card max-w-lg w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-line-soft">
               <div>
