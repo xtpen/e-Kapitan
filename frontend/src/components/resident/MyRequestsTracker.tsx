@@ -1,165 +1,116 @@
-import React, { useRef, useState } from 'react';
-import { ChevronRight, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, ChevronDown, ClipboardList, Copy } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { DocumentRequest, RequestStatus } from '../../types';
-import {
-  Button,
-  Card,
-  DataTable,
-  FilterChips,
-  Input,
-  PageHeader,
-  ProgressTimeline,
-  StatusPill,
-  formatPeso,
-  formatShortDateTime,
-  type TimelineStage,
-} from '../ui';
+import { Button, Expand, ProgressTimeline, StatusPill, formatPeso, formatShortDateTime, type TimelineStage } from '../ui';
 import { buildReportStages } from '../shared/reportStages';
-import { useResidentActivity, type ActivityKind, type ActivityRow } from './useResidentActivity';
+import { useResidentActivity, type ActivityRow } from './useResidentActivity';
+import { CLAIM_HOURS, KindIcon, requestProgress, timeAgo } from './requestProgress';
+import { EmptyState, List, Page, PageTitle, Section } from './kit';
 
-type Filter = 'all' | 'active' | ActivityKind;
+/* Older imports still point here; the helpers live in requestProgress.tsx. */
+export { CLAIM_HOURS, CLAIM_HOURS_INLINE, CLAIM_PLACE, ProgressBar, requestProgress } from './requestProgress';
+export type { RequestProgress } from './requestProgress';
 
-const KIND_LABEL: Record<ActivityKind, string> = {
-  document: 'Documents',
-  report: 'Reports',
-  printing: 'Printing',
-  court: 'Court',
-  appointment: 'Appointments',
-};
+/*
+ * Requests: one list of everything you asked for, ready ones first. Each row says what is
+ * happening in one line; tap it for the steps, the tracking number and the details.
+ */
 
-const OPEN_LABEL: Record<ActivityKind, string> = {
-  document: 'Go to Documents',
-  report: 'Go to Complaints & Reports',
-  printing: 'Go to Printing',
-  court: 'Go to Court Reservation',
-  appointment: 'Go to Appointments',
-};
+type Filter = 'all' | 'active' | 'ready' | 'done';
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'active', label: 'Ongoing' },
+  { id: 'ready', label: 'Ready' },
+  { id: 'done', label: 'Done' },
+];
 
 const longDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-const COLOR_LABEL = { black_and_white: 'Black and white', color: 'Color' } as const;
-const SIDES_LABEL = { one_sided: 'One-sided', two_sided: 'Two-sided' } as const;
-
-/** Document progress: Received → Under review → Approved → Ready for pickup → Claimed. */
+/** Document steps in plain words. */
 const documentStages = (d: DocumentRequest): TimelineStage[] => {
   const order: RequestStatus[] = ['submitted', 'under_review', 'approved', 'ready_for_release', 'completed'];
-  const labels = ['Received', 'Under review', 'Approved', 'Ready for pickup', 'Claimed'];
-  const tones: TimelineStage['tone'][] = ['success', 'info', 'success', 'success', 'success'];
-  if (d.status === 'returned') {
+  const labels = ['Sent', 'Being checked', 'Approved', 'Ready to pick up', 'Picked up'];
+  if (d.status === 'returned' || d.status === 'rejected') {
     return [
-      { label: 'Received', tone: 'success', reached: true, detail: formatShortDateTime(d.submittedAt) },
-      { label: 'Under review', tone: 'info', reached: true },
-      { label: 'Returned for correction', tone: 'warning', reached: true, detail: formatShortDateTime(d.updatedAt), note: d.staffNotes },
-    ];
-  }
-  if (d.status === 'rejected') {
-    return [
-      { label: 'Received', tone: 'success', reached: true, detail: formatShortDateTime(d.submittedAt) },
-      { label: 'Under review', tone: 'info', reached: true },
-      { label: 'Not approved', tone: 'danger', reached: true, detail: formatShortDateTime(d.updatedAt), note: d.rejectionReason },
+      { label: 'Sent', tone: 'success', reached: true, detail: formatShortDateTime(d.submittedAt) },
+      { label: 'Being checked', tone: 'info', reached: true },
+      d.status === 'returned'
+        ? { label: 'Needs a fix from you', tone: 'warning', reached: true, detail: formatShortDateTime(d.updatedAt), note: d.staffNotes }
+        : { label: 'Not approved', tone: 'danger', reached: true, detail: formatShortDateTime(d.updatedAt), note: d.rejectionReason },
     ];
   }
   const current = order.indexOf(d.status);
   return order.map((s, i) => ({
     label: labels[i],
-    tone: tones[i],
+    tone: i === 1 ? 'info' : 'success',
     reached: i <= current,
     detail: i === 0 ? formatShortDateTime(d.submittedAt) : i === current ? formatShortDateTime(d.updatedAt) : undefined,
     note: i === current && d.staffNotes ? d.staffNotes : undefined,
   }));
 };
 
-const Details: React.FC<{ rows: [string, React.ReactNode][] }> = ({ rows }) => (
-  <dl className="mt-4">
+const Pairs: React.FC<{ rows: [string, React.ReactNode][] }> = ({ rows }) => (
+  <dl className="divide-y divide-line-soft">
     {rows.map(([k, v]) => (
-      <div key={k} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-2.5 border-b border-line-soft last:border-b-0">
-        <dt className="text-meta text-muted">{k}</dt>
-        <dd className="text-meta font-semibold break-words">{v}</dd>
+      <div key={k} className="flex justify-between gap-4 py-2.5 text-meta">
+        <dt className="text-muted">{k}</dt>
+        <dd className="font-semibold text-ink text-right break-words min-w-0">{v}</dd>
       </div>
     ))}
   </dl>
 );
 
-/** Resident · My Requests. No mockup; built from DESIGN.md patterns (list + detail). */
+const OPEN_LABEL: Record<ActivityRow['kind'], string> = {
+  document: 'Documents',
+  report: 'Open my reports',
+  printing: 'Open printing',
+  court: 'Open my bookings',
+  appointment: 'Open my visits',
+};
+
 export const MyRequestsTracker: React.FC = () => {
-  const {
-    documentRequests,
-    incidents,
-    printRequests,
-    courtReservations,
-    courtSlots,
-    appointments,
-    setActiveTab,
-    setSelectedDocumentForPrint,
-  } = useBarangay();
+  const { documentRequests, incidents, printRequests, courtReservations, courtSlots, appointments, setActiveTab, setSelectedDocumentForPrint } =
+    useBarangay();
   const { rows } = useResidentActivity();
-
+  const sources = { documentRequests, incidents, printRequests, courtReservations, appointments };
   const [filter, setFilter] = useState<Filter>('all');
-  const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const detailRef = useRef<HTMLDivElement>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const kinds = (Object.keys(KIND_LABEL) as ActivityKind[]).filter(k => rows.some(r => r.kind === k));
-  const count = (f: Filter) =>
-    f === 'all' ? rows.length : f === 'active' ? rows.filter(r => r.isActive).length : rows.filter(r => r.kind === f).length;
+  const matches = (r: ActivityRow, f: Filter) =>
+    f === 'all' ? true : f === 'active' ? r.isActive && !r.isReadyToClaim : f === 'ready' ? r.isReadyToClaim : !r.isActive;
+  const shown = rows.filter(r => matches(r, filter)).sort((a, b) => Number(b.isReadyToClaim) - Number(a.isReadyToClaim));
 
-  const q = query.trim().toLowerCase();
-  const shown = rows.filter(
-    r =>
-      (filter === 'all' || (filter === 'active' ? r.isActive : r.kind === filter)) &&
-      (!q || r.reference.toLowerCase().includes(q) || r.service.toLowerCase().includes(q)),
-  );
-  const selected = shown.find(r => r.id === selectedId) ?? shown[0];
-
-  const select = (r: ActivityRow) => {
-    setSelectedId(r.id);
-    setCopied(false);
-    if (window.matchMedia('(max-width: 1023px)').matches) {
-      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    }
-  };
-
-  const copyReference = async (ref: string) => {
+  const copy = async (ref: string) => {
     try {
       await navigator.clipboard.writeText(ref);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setCopied(ref);
+      setTimeout(() => setCopied(c => (c === ref ? null : c)), 2500);
     } catch {
-      setCopied(false);
+      /* clipboard blocked: the number is on screen */
     }
   };
 
-  const pill = (r: ActivityRow) => <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>;
-
-  /* ---------- Detail panel per kind ---------- */
-  const renderDetail = (r: ActivityRow) => {
-    let body: React.ReactNode = null;
-    let extraAction: React.ReactNode = null;
+  const details = (r: ActivityRow) => {
+    let timeline: React.ReactNode = null;
+    let info: [string, React.ReactNode][] = [];
+    let action: React.ReactNode = null;
 
     if (r.kind === 'document') {
       const d = documentRequests.find(x => x.id === r.id);
       if (d) {
-        const free = d.isFreeDueToExemption || d.fee === 0;
-        body = (
-          <>
-            <ProgressTimeline className="mt-4" stages={documentStages(d)} />
-            <Details
-              rows={[
-                ['Purpose', d.purpose],
-                ['Claiming date', d.appointmentDate ? longDate(d.appointmentDate) : 'When we notify you'],
-                ['Fee', free ? `Free${d.exemptionReason ? ` (${d.exemptionReason})` : ''}` : `${formatPeso(d.fee)}, paid at the hall`],
-                ['Submitted', formatShortDateTime(d.submittedAt)],
-              ]}
-            />
-          </>
-        );
+        timeline = <ProgressTimeline stages={documentStages(d)} />;
+        info = [
+          ['For', d.purpose],
+          ['Pick up', d.appointmentDate ? longDate(d.appointmentDate) : 'We will tell you when'],
+          ['Fee', d.isFreeDueToExemption || d.fee === 0 ? 'Free' : `${formatPeso(d.fee)}, pay at the hall`],
+        ];
         if (d.status === 'approved' || d.status === 'ready_for_release' || d.status === 'completed') {
-          extraAction = (
+          action = (
             <Button variant="secondary" size="sm" onClick={() => setSelectedDocumentForPrint(d)}>
-              View certificate
+              See the certificate
             </Button>
           );
         }
@@ -167,174 +118,167 @@ export const MyRequestsTracker: React.FC = () => {
     } else if (r.kind === 'report') {
       const i = incidents.find(x => x.id === r.id);
       if (i) {
-        body = (
-          <>
-            <ProgressTimeline className="mt-4" stages={buildReportStages(i)} />
-            <Details
-              rows={[
-                ['Concern', i.category],
-                ['Location', i.location],
-                ['Filed', formatShortDateTime(i.submittedAt)],
-              ]}
-            />
-          </>
-        );
+        timeline = <ProgressTimeline stages={buildReportStages(i)} />;
+        info = [
+          ['About', i.category],
+          ['Where', i.location],
+        ];
       }
     } else if (r.kind === 'printing') {
       const p = printRequests.find(x => x.id === r.id);
-      if (p) {
-        body = (
-          <Details
-            rows={[
-              ['File', p.fileName],
-              ['Pages × copies', `${p.pages} × ${p.copies}`],
-              ['Options', `${p.paperSize}, ${COLOR_LABEL[p.color].toLowerCase()}, ${SIDES_LABEL[p.sides].toLowerCase()}`],
-              ['Cost', 'Free'],
-              ['Submitted', formatShortDateTime(p.submittedAt)],
-              ...(p.rejectionReason ? ([['Reason', p.rejectionReason]] as [string, string][]) : []),
-            ]}
-          />
-        );
-      }
+      if (p)
+        info = [
+          ['File', p.fileName],
+          ['Pages', `${p.pages} × ${p.copies} ${p.copies === 1 ? 'copy' : 'copies'}`],
+          ['Cost', 'Free'],
+          ...(p.rejectionReason ? ([['Why', p.rejectionReason]] as [string, string][]) : []),
+        ];
     } else if (r.kind === 'court') {
       const c = courtReservations.find(x => x.id === r.id);
-      if (c) {
-        body = (
-          <Details
-            rows={[
-              ['Date', longDate(c.date)],
-              ['Time', courtSlots.find(s => s.id === c.slotId)?.label ?? c.slotId],
-              ['Activity', c.activity],
-              ['Submitted', formatShortDateTime(c.submittedAt)],
-              ...(c.notes ? ([['Note from staff', c.notes]] as [string, string][]) : []),
-            ]}
-          />
-        );
-      }
-    } else if (r.kind === 'appointment') {
+      if (c)
+        info = [
+          ['Day', longDate(c.date)],
+          ['Time', courtSlots.find(s => s.id === c.slotId)?.label ?? c.slotId],
+          ['For', c.activity],
+          ...(c.notes ? ([['Note', c.notes]] as [string, string][]) : []),
+        ];
+    } else {
       const a = appointments.find(x => x.id === r.id);
-      if (a) {
-        body = (
-          <Details
-            rows={[
-              ['Service', a.serviceTitle],
-              ['Date', longDate(a.date)],
-              ['Time', a.timeSlot],
-            ]}
-          />
-        );
-      }
+      if (a)
+        info = [
+          ['For', a.serviceTitle],
+          ['Day', longDate(a.date)],
+          ['Time', a.timeSlot],
+        ];
     }
 
     return (
-      <Card aria-live="polite">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-meta text-muted">{KIND_LABEL[r.kind]}</p>
-            <h2 className="text-h3 font-semibold text-navy leading-snug">{r.service}</h2>
+      <div className="px-4 sm:px-5 pb-4 grid gap-4">
+        {r.isReadyToClaim && (
+          <p className="rounded-control bg-success-bg text-success-fg text-meta px-3 py-2.5">
+            Pick it up {CLAIM_HOURS.toLowerCase()} at the barangay hall. Bring a valid ID.
+          </p>
+        )}
+        <div className="flex items-center justify-between gap-3 rounded-control bg-surface-muted pl-3 pr-1 py-1">
+          <span className="text-meta min-w-0">
+            <span className="text-muted">Tracking no. </span>
+            <b className="font-semibold text-ink">{r.reference}</b>
+          </span>
+          <button
+            type="button"
+            onClick={() => copy(r.reference)}
+            aria-label={copied === r.reference ? 'Copied' : `Copy tracking number ${r.reference}`}
+            className="shrink-0 inline-flex items-center gap-1.5 min-h-10 px-3 rounded-control text-meta font-semibold text-navy-ink hover:bg-surface cursor-pointer"
+          >
+            {copied === r.reference ? <Check className="w-4 h-4" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+            {copied === r.reference ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+        {timeline}
+        {info.length > 0 && <Pairs rows={info} />}
+        {(action || r.kind !== 'document') && (
+          <div className="flex flex-wrap gap-2">
+            {action}
+            {r.kind !== 'document' && (
+              <Button variant="outline" size="sm" onClick={() => setActiveTab(r.tab)}>
+                {OPEN_LABEL[r.kind]}
+              </Button>
+            )}
           </div>
-          {pill(r)}
-        </div>
-        <p className="mt-2 text-meta">
-          Reference <b className="font-semibold">{r.reference}</b>
-        </p>
-        {body}
-        <div className="flex flex-wrap gap-2.5 mt-5">
-          {extraAction}
-          <Button variant="secondary" size="sm" onClick={() => copyReference(r.reference)}>
-            {copied ? 'Copied' : 'Copy reference'}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setActiveTab(r.tab)}>
-            {OPEN_LABEL[r.kind]}
-            <ChevronRight className="w-4 h-4" aria-hidden="true" />
-          </Button>
-        </div>
-        <span className="sr-only" role="status">
-          {copied ? `Reference ${r.reference} copied` : ''}
-        </span>
-      </Card>
+        )}
+      </div>
     );
   };
 
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader
-        title="My Requests"
-        description="Everything you have asked from the barangay, in one place."
+    <Page>
+      <PageTitle
+        title="Requests"
+        sub="Tap one to see where it is."
         action={
-          <Button size="sm" onClick={() => setActiveTab('services')}>
-            Request a document
+          <Button variant="brand" size="sm" onClick={() => setActiveTab('services')}>
+            New request
           </Button>
         }
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <FilterChips
-          className="flex-1"
-          value={filter}
-          onChange={f => {
-            setFilter(f);
-            setSelectedId(null);
-          }}
-          chips={[
-            { id: 'all' as Filter, label: 'All', count: count('all') },
-            { id: 'active' as Filter, label: 'Active', count: count('active') },
-            ...kinds.map(k => ({ id: k as Filter, label: KIND_LABEL[k], count: count(k) })),
-          ]}
-        />
-        <label className="relative sm:w-64 shrink-0">
-          <span className="sr-only">Search by reference or service</span>
-          <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
-          <Input
-            type="search"
-            placeholder="Search reference"
-            className="pl-11"
-            value={query}
-            onChange={e => {
-              setQuery(e.target.value);
-              setSelectedId(null);
-            }}
-          />
-        </label>
+      {/* Filter */}
+      <div role="tablist" aria-label="Show" className="grid grid-cols-4 gap-1 p-1 rounded-control bg-surface-muted">
+        {FILTERS.map(f => {
+          const n = rows.filter(r => matches(r, f.id)).length;
+          const on = filter === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => {
+                setFilter(f.id);
+                setOpenId(null);
+              }}
+              className={`min-h-10 rounded-lg text-meta font-semibold cursor-pointer transition-[background-color,color,box-shadow] duration-150
+                ${on ? 'bg-surface text-navy-ink shadow-[0_1px_2px_rgb(0_0_0/0.12)]' : 'text-muted hover:text-ink'}`}
+            >
+              {f.label} <span className="tabular-nums font-normal opacity-70">{n}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5 items-start">
-        <Card>
-          <DataTable<ActivityRow>
-            rows={shown}
-            rowKey={r => r.id}
-            onRowClick={select}
-            isSelected={r => r.id === selected?.id}
-            rowLabel={r => `Show details of ${r.reference}, ${r.service}`}
-            columns={[
-              { header: 'Reference', cell: r => r.reference, className: 'whitespace-nowrap' },
-              { header: 'Service', cell: r => r.service },
-              { header: 'Updated', cell: r => formatShortDateTime(r.when), className: 'whitespace-nowrap text-muted' },
-              { header: 'Status', cell: pill },
-            ]}
-            mobile={{ title: r => r.service, status: pill, meta: r => r.reference }}
-            empty={
-              <div className="py-6 text-center">
-                <p className="font-semibold">{q ? `Nothing matches "${query.trim()}".` : 'No requests here yet.'}</p>
-                <p className="text-meta text-muted mt-1">
-                  {q ? 'Check the reference number and try again.' : 'Your requests will show up here once you make one.'}
-                </p>
-              </div>
+      <Section flush>
+        {shown.length === 0 ? (
+          <EmptyState
+            icon={<ClipboardList />}
+            title={filter === 'all' ? 'No requests yet' : 'Nothing here'}
+            sub={filter === 'all' ? 'What you ask the barangay for shows up here.' : undefined}
+            action={
+              filter === 'all' ? (
+                <Button variant="brand" size="sm" onClick={() => setActiveTab('services')}>
+                  See services
+                </Button>
+              ) : undefined
             }
           />
-        </Card>
-
-        <div ref={detailRef} className="scroll-mt-24">
-          {selected ? (
-            renderDetail(selected)
-          ) : (
-            <Card>
-              <h2 className="text-h3 font-semibold text-navy">Request details</h2>
-              <p className="text-meta text-muted mt-1">Choose a request to see its progress.</p>
-            </Card>
-          )}
-        </div>
-      </div>
-    </div>
+        ) : (
+          <List>
+            {shown.map(r => {
+              const open = openId === r.id;
+              return (
+                <div key={r.id} className={r.isReadyToClaim ? 'bg-success-bg/40' : ''}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(open ? null : r.id)}
+                    aria-expanded={open}
+                    aria-controls={`req-${r.id}`}
+                    className="w-full min-h-16 flex items-center gap-3 px-4 sm:px-5 py-3 text-left cursor-pointer hover:bg-surface-muted/60 transition-colors"
+                  >
+                    <KindIcon kind={r.kind} ready={r.isReadyToClaim} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-ink leading-snug">{r.service}</span>
+                      <span className="block text-meta text-muted leading-snug mt-0.5">
+                        {requestProgress(r, sources)?.next ?? timeAgo(r.when)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 flex items-center gap-2">
+                      <span className="hidden sm:inline-flex">
+                        <StatusPill tone={r.status.tone}>{r.status.label}</StatusPill>
+                      </span>
+                      <ChevronDown
+                        className={`w-5 h-5 text-muted transition-transform duration-300 ease-out-strong ${open ? 'rotate-180' : ''}`}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </button>
+                  <div id={`req-${r.id}`}>
+                    <Expand show={open}>{details(r)}</Expand>
+                  </div>
+                </div>
+              );
+            })}
+          </List>
+        )}
+      </Section>
+    </Page>
   );
 };

@@ -172,7 +172,7 @@ export const ResidentRecordsDirectory: React.FC = () => {
             placeholder="Search name, ID, or household..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface focus:outline-navy"
+            className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-line rounded-control text-xs sm:text-sm focus:bg-surface focus:outline-navy-ink"
           />
         </div>
 
@@ -221,12 +221,12 @@ export const ResidentRecordsDirectory: React.FC = () => {
                 }}
                 className={`p-4 rounded-control border transition-all cursor-pointer ${
  isSelected
- ?'border-navy bg-info-bg/70 ring-1 ring-navy'
+ ?'border-navy-ink bg-info-bg/70 ring-1 ring-navy-ink'
  :'border-line bg-surface hover:border-field-line'
  }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-navy bg-info-bg px-2 py-0.5 rounded">
+                  <span className="text-xs font-bold text-navy-ink bg-info-bg px-2 py-0.5 rounded">
                     {res.residentNumber}
                   </span>
                   <span className="text-xs text-muted">HH: {res.householdId}</span>
@@ -269,12 +269,12 @@ export const ResidentRecordsDirectory: React.FC = () => {
             {/* Header Profile Info */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-card bg-info-bg text-navy flex items-center justify-center font-bold text-xl font-heading ">
+                <div className="w-14 h-14 rounded-card bg-info-bg text-navy-ink flex items-center justify-center font-bold text-xl font-heading ">
                   {activeResident.firstName[0]}{activeResident.lastName[0]}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-navy">{activeResident.residentNumber}</span>
+                    <span className="text-xs font-bold text-navy-ink">{activeResident.residentNumber}</span>
                     <span className="text-label bg-primary-tint text-primary-strong px-2 py-0.5 rounded-full font-bold">
                       Verified Resident
                     </span>
@@ -422,7 +422,7 @@ export const ResidentRecordsDirectory: React.FC = () => {
 
       {/* Add Resident Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 overflow-y-auto">
           <div className="bg-surface rounded-card max-w-xl w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95 my-auto">
             <div className="flex items-center justify-between pb-2 border-b border-line-soft">
               <h3 className="text-lg font-bold text-ink font-heading">
@@ -583,7 +583,7 @@ export const ResidentRecordsDirectory: React.FC = () => {
 
       {/* Duplicate Review Modal */}
       {showDuplicateModal && (
-        <div className="fixed inset-0 bg-navy/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-scrim/60 z-50 flex items-center justify-center p-4">
           <div className="bg-surface rounded-card w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-float animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-line-soft flex items-center justify-between sticky top-0 bg-surface z-10">
               <div className="flex items-center gap-3">
@@ -666,7 +666,7 @@ export const ResidentRecordsDirectory: React.FC = () => {
                 </div>
               </div>
               
-              <div className="mt-4 p-3 rounded-lg bg-info-bg border border-line text-xs text-navy">
+              <div className="mt-4 p-3 rounded-lg bg-info-bg border border-line text-xs text-navy-ink">
                 <strong>AI Analysis:</strong> 92% Name Similarity. Identical birth date and purok. Highly likely to be the same individual re-registered by a family member.
               </div>
             </div>

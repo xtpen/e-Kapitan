@@ -19,7 +19,7 @@ const Copy: React.FC<{ index: number }> = ({ index }) => {
   return (
     <div>
       <Reveal y={10} className="flex items-center gap-3">
-        <span className="w-11 h-11 rounded-tile grid place-items-center bg-navy-tint text-navy">
+        <span className="w-11 h-11 rounded-tile grid place-items-center bg-navy-tint text-navy-ink">
           <Icon className="w-5 h-5" strokeWidth={1.8} />
         </span>
         <span className="text-caption font-semibold uppercase tracking-[0.1em] text-muted">
@@ -27,7 +27,7 @@ const Copy: React.FC<{ index: number }> = ({ index }) => {
         </span>
       </Reveal>
       <Reveal delay={60} y={16}>
-        <h3 className="mt-5 text-[1.75rem] sm:text-[2.25rem] lg:text-[2.625rem] leading-[1.1] font-semibold text-navy tracking-[-0.01em] text-balance">{f.title}</h3>
+        <h3 className="mt-5 text-[1.75rem] sm:text-[2.25rem] lg:text-[2.625rem] leading-[1.1] font-semibold text-navy-ink tracking-[-0.01em] text-balance">{f.title}</h3>
       </Reveal>
       <Reveal as="p" delay={120} y={12} className="mt-4 text-muted text-[1.125rem] lg:text-[1.1875rem] leading-relaxed max-w-[34rem]">
         {f.text}

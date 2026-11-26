@@ -109,7 +109,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onOpenWalkInModa
         {/* Counter Queue */}
         <div 
           onClick={() => setActiveTab('staff_queue')}
-          className="bg-surface rounded-card p-5 border border-line hover:border-navy transition-all cursor-pointer"
+          className="bg-surface rounded-card p-5 border border-line hover:border-navy-ink transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Live Queue Waiting</span>
@@ -155,7 +155,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onOpenWalkInModa
         {/* Civil Registry */}
         <div 
           onClick={() => setActiveTab('staff_residents')}
-          className="bg-surface rounded-card p-5 border border-line hover:border-navy transition-all cursor-pointer"
+          className="bg-surface rounded-card p-5 border border-line hover:border-navy-ink transition-all cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-muted uppercase tracking-wider">Registered Population</span>
@@ -229,8 +229,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ onOpenWalkInModa
                     <span className="text-xs font-bold text-ink">{doc.referenceNumber}</span>
                     <span className={`text-label font-bold uppercase px-2 py-0.5 rounded-full ${
  doc.status ==='completed'?'bg-primary-tint text-primary-strong':
- doc.status ==='ready_for_release'?'bg-info-bg text-navy':
- doc.status ==='approved'?'bg-info-bg text-navy':
+ doc.status ==='ready_for_release'?'bg-info-bg text-navy-ink':
+ doc.status ==='approved'?'bg-info-bg text-navy-ink':
 'bg-warning-bg text-warning-fg'
  }`}>
                       {doc.status.replace('_', ' ')}

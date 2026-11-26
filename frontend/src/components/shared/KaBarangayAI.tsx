@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquareText, Send } from 'lucide-react';
-import { useBarangay } from '../../context/BarangayContext';
-import { Button, Card, PageHeader } from '../ui';
-import { BARANGAY } from '../../config/barangay';
+import { MessageCircle, Send } from 'lucide-react';
+import { IconCircle, Page, PageTitle, Section } from '../resident/kit';
 
 interface ChatMessage {
   id: string;
@@ -12,27 +10,18 @@ interface ChatMessage {
   source?: 'gemini-ai' | 'knowledge-base';
 }
 
-
-const WELCOME =
-  `Mabuhay! Ako si **Ka-Barangay AI**, ang inyong gabay sa mga serbisyo ng Barangay ${BARANGAY}, San Pablo City.\n\n` +
-  'Magtanong tungkol sa mga dokumento (Clearance, Residency, Indigency), requirements, bayarin, o oras ng barangay hall. You can also ask in English.';
+const WELCOME = "Hi! I'm **Kap**. Ask me about papers, fees or office hours. English or Tagalog is fine.";
 
 /** Used when the assistant service can't be reached. Only facts already stated elsewhere in the app. */
 const OFFLINE_REPLY =
-  `**Gabay sa serbisyo ng Barangay ${BARANGAY}:**\n\n` +
-  '• **Barangay Clearance:** ₱50.00. Libre para sa first-time jobseekers (RA 11261). Dalhin ang valid ID.\n' +
-  '• **Certificate of Residency:** Dalhin ang patunay ng tirahan sa barangay.\n' +
-  '• **Certificate of Indigency:** Libre. Para sa medical o financial aid.\n' +
-  '• **Kunin ang dokumento:** Lunes hanggang Biyernes, 1:00 PM hanggang 4:00 PM sa Barangay Hall.\n' +
-  '• **Opisina:** Lunes hanggang Biyernes, 8:00 AM hanggang 5:00 PM.';
+  "**I can't connect right now. Here are the basics:**\n\n" +
+  '• **Barangay Clearance:** ₱50.00. Free for first-time job seekers. Bring a valid ID.\n' +
+  '• **Certificate of Residency:** Bring proof that you live in the barangay.\n' +
+  '• **Certificate of Indigency:** Free. For medical or money help.\n' +
+  '• **Pick up documents:** Weekdays, 1:00 PM to 4:00 PM at the barangay hall.\n' +
+  '• **Hall hours:** Weekdays, 8:00 AM to 5:00 PM.';
 
-const SUGGESTED = [
-  'What do I need for a barangay clearance?',
-  'How can I request a certificate of residency?',
-  'Is the certificate of indigency free?',
-  'How do I report a noise complaint?',
-  'What are the barangay office hours?',
-];
+const SUGGESTED = ['What do I bring for a clearance?', 'Is the indigency certificate free?', 'When is the hall open?', 'How do I report noise?'];
 
 const now = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -51,14 +40,17 @@ const RichText: React.FC<{ text: string }> = ({ text }) => (
   </>
 );
 
+const KapIcon: React.FC<{ pulse?: boolean }> = ({ pulse }) => (
+  <IconCircle tone="blue" size="sm" className={pulse ? 'animate-pulse' : ''}>
+    <MessageCircle />
+  </IconCircle>
+);
+
 /**
- * Ask Kap: the Ka-Barangay AI assistant, for guests and residents. No mockup; built from DESIGN.md patterns.
+ * Ask Kap: a simple chat for guests and residents.
  * Answers come from /api/ai-assistant, with a fixed offline reply if it can't be reached.
  */
 export const KaBarangayAI: React.FC = () => {
-  const { setActiveTab, currentRole } = useBarangay();
-  const isGuest = currentRole === 'guest';
-
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 'msg-1', sender: 'assistant', text: WELCOME, time: now(), source: 'knowledge-base' },
   ]);
@@ -100,136 +92,95 @@ export const KaBarangayAI: React.FC = () => {
     inputRef.current?.focus();
   };
 
-  const shortcuts = isGuest
-    ? [
-        { label: 'Report a concern', tab: 'file_report' },
-        { label: 'Track your request', tab: 'report_status' },
-      ]
-    : [
-        { label: 'Request a document', tab: 'services' },
-        { label: 'File a report', tab: 'complaints' },
-      ];
-
-  const suggestions = (
-    <ul className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible -mx-1 px-1 pb-1 lg:pb-0">
-      {SUGGESTED.map(q => (
-        <li key={q} className="shrink-0 lg:shrink">
-          <button
-            type="button"
-            onClick={() => send(q)}
-            disabled={loading}
-            className="w-full text-left min-h-11 px-4 py-2 rounded-control border-[1.5px] border-line bg-surface text-meta font-semibold text-navy hover:bg-navy-tint whitespace-nowrap lg:whitespace-normal cursor-pointer disabled:cursor-not-allowed disabled:text-muted"
-          >
-            {q}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
+  const showSuggestions = messages.length === 1 && !loading;
 
   return (
-    <div className="max-w-[1200px]">
-      <PageHeader
-        title="Ask Kap"
-        description="Ka-Barangay AI answers questions on requirements, fees and office hours. English, Tagalog or Taglish."
-      />
+    <Page>
+      <PageTitle title="Ask Kap" sub="Quick answers about papers, fees and hours." />
 
-      <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start">
-        {/* Chat */}
-        <section
-          aria-label="Chat with Kap"
-          className="bg-surface border border-line rounded-card flex flex-col h-[calc(100dvh-260px)] min-h-[440px] lg:h-[620px] overflow-hidden"
-        >
-          <div ref={listRef} className="flex-1 overflow-y-auto p-4 sm:p-6 grid content-start gap-4" aria-live="polite" aria-label="Conversation">
-            {messages.map(m => {
-              const mine = m.sender === 'user';
-              return (
-                <div key={m.id} className={`flex items-start gap-2.5 ${mine ? 'justify-end' : ''}`}>
-                  {!mine && (
-                    <div aria-hidden="true" className="w-9 h-9 shrink-0 rounded-full grid place-items-center bg-primary-tint text-primary-strong">
-                      <MessageSquareText className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] sm:max-w-[75%] ${mine ? 'text-right' : ''}`}>
-                    <span className="sr-only">{mine ? 'You said:' : 'Kap said:'}</span>
-                    <div
-                      className={`inline-block text-left px-4 py-3 rounded-tile whitespace-pre-line
-                        ${mine ? 'bg-navy text-white rounded-tr-sm' : 'bg-surface border border-line rounded-tl-sm'}`}
-                    >
-                      <RichText text={m.text} />
-                    </div>
-                    <p className="text-label text-muted mt-1 px-1">
-                      {m.time}
-                      {!mine && m.source === 'gemini-ai' && ' · AI answer, check with the hall'}
-                    </p>
+      <Section
+        flush
+        className="flex flex-col h-[calc(100dvh-270px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-240px)] min-h-[400px] lg:max-h-[820px]"
+      >
+        {/* Messages */}
+        <div ref={listRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 grid content-start gap-3" aria-live="polite" aria-label="Conversation">
+          {messages.map(m => {
+            const mine = m.sender === 'user';
+            return (
+              <div key={m.id} className={`flex items-end gap-2 ${mine ? 'justify-end' : ''}`}>
+                {!mine && <KapIcon />}
+                <div className={`max-w-[85%] sm:max-w-[75%] ${mine ? 'text-right' : ''}`}>
+                  <span className="sr-only">{mine ? 'You said:' : 'Kap said:'}</span>
+                  <div
+                    className={`inline-block text-left px-4 py-2.5 rounded-2xl whitespace-pre-line
+                      ${mine ? 'bg-navy text-white rounded-br-md' : 'bg-surface-muted text-ink rounded-bl-md'}`}
+                  >
+                    <RichText text={m.text} />
                   </div>
+                  <p className="text-caption text-muted mt-1 px-1">
+                    {m.time}
+                    {!mine && m.source === 'gemini-ai' && ' · Check with the hall to be sure.'}
+                  </p>
                 </div>
-              );
-            })}
-            {loading && (
-              <p role="status" className="flex items-center gap-2.5 text-meta text-muted">
-                <span aria-hidden="true" className="w-9 h-9 rounded-full grid place-items-center bg-primary-tint text-primary-strong">
-                  <MessageSquareText className="w-5 h-5 animate-pulse" strokeWidth={1.8} />
-                </span>
-                Kap is looking that up…
-              </p>
-            )}
-          </div>
+              </div>
+            );
+          })}
 
-          {/* Suggestions sit above the input on phones and tablets */}
-          <div className="lg:hidden border-t border-line-soft px-4 pt-3">{suggestions}</div>
-
-          <form
-            className="border-t border-line p-3 sm:p-4 flex gap-2.5"
-            onSubmit={e => {
-              e.preventDefault();
-              send();
-            }}
-          >
-            <label htmlFor="kap-input" className="sr-only">
-              Your question
-            </label>
-            <input
-              id="kap-input"
-              ref={inputRef}
-              autoComplete="off"
-              placeholder="Example: Magkano ang barangay clearance?"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              className="flex-1 min-w-0 min-h-12 px-3.5 py-3 bg-surface text-ink text-base rounded-control border-[1.5px] border-field-line placeholder:text-muted/80 focus:outline-none focus:border-navy focus:ring-[3px] focus:ring-navy/20"
-            />
-            <Button type="submit" disabled={!input.trim() || loading} icon={<Send className="w-5 h-5" aria-hidden="true" />}>
-              <span className="hidden sm:inline">Send</span>
-              <span className="sr-only sm:hidden">Send</span>
-            </Button>
-          </form>
-        </section>
-
-        {/* Aside */}
-        <div className="grid gap-3 sm:gap-5">
-          <Card className="hidden lg:block">
-            <h2 className="text-h3 font-semibold text-navy mb-3">Try asking</h2>
-            {suggestions}
-          </Card>
-          <Card tone="callout">
-            <h2 className="text-h3 font-semibold text-navy">Information only</h2>
-            <p className="text-meta text-ink mt-1">
-              Kap gives general guidance. It cannot issue documents or make decisions. For anything official, visit the barangay hall,
-              Monday to Friday, 8:00 AM to 5:00 PM.
-            </p>
-          </Card>
-          <Card>
-            <h2 className="text-h3 font-semibold text-navy mb-3">Ready to go ahead?</h2>
-            <div className="grid gap-2.5">
-              {shortcuts.map(s => (
-                <Button key={s.tab} variant="secondary" fullWidth onClick={() => setActiveTab(s.tab)}>
-                  {s.label}
-                </Button>
+          {showSuggestions && (
+            <ul aria-label="Suggested questions" className="flex flex-wrap gap-2 pl-10">
+              {SUGGESTED.map(q => (
+                <li key={q}>
+                  <button
+                    type="button"
+                    onClick={() => send(q)}
+                    className="min-h-11 px-4 py-2 rounded-full border-[1.5px] border-line bg-surface text-meta font-semibold text-navy-ink text-left cursor-pointer transition-colors hover:border-navy-ink"
+                  >
+                    {q}
+                  </button>
+                </li>
               ))}
+            </ul>
+          )}
+
+          {loading && (
+            <div role="status" className="flex items-end gap-2">
+              <KapIcon pulse />
+              <span className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-surface-muted text-muted">Kap is typing…</span>
             </div>
-          </Card>
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Input, pinned to the bottom of the card */}
+        <form
+          className="flex items-center gap-2 px-3 sm:px-4 py-3 border-t border-line-soft"
+          onSubmit={e => {
+            e.preventDefault();
+            send();
+          }}
+        >
+          <label htmlFor="kap-input" className="sr-only">
+            Your question
+          </label>
+          <input
+            id="kap-input"
+            ref={inputRef}
+            autoComplete="off"
+            placeholder="Type your question"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            className="flex-1 min-w-0 min-h-12 px-4 py-3 bg-surface-muted text-ink text-base rounded-full border-[1.5px] border-transparent placeholder:text-muted focus:outline-none focus:border-navy-ink focus:ring-[3px] focus:ring-navy-ink/20"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            aria-label="Send"
+            className="w-12 h-12 shrink-0 rounded-full grid place-items-center bg-navy text-white cursor-pointer transition-[background-color,scale] duration-150 active:scale-95
+              disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed"
+          >
+            <Send className="w-5 h-5" aria-hidden="true" />
+          </button>
+        </form>
+      </Section>
+    </Page>
   );
 };

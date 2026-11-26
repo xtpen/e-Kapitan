@@ -24,7 +24,7 @@ export const PublicAnnouncements: React.FC = () => {
                   <StatusPill tone={announcementTone(a)}>{a.category}</StatusPill>
                   <span className="text-meta text-muted">{longAnnouncementDate(a.date)}</span>
                 </div>
-                <h2 className="text-h3 font-semibold text-navy mt-3">{a.title}</h2>
+                <h2 className="text-h3 font-semibold text-navy-ink mt-3">{a.title}</h2>
                 <p className="mt-1.5 whitespace-pre-line">{a.content}</p>
                 {a.targetPurok && <p className="text-meta text-muted mt-3">For: {a.targetPurok}</p>}
               </Card>

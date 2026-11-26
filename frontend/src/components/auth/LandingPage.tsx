@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUp,
@@ -177,7 +177,7 @@ const SectionHeading: React.FC<{ label: string; title: string; text?: string; id
       {label}
     </Reveal>
     <Reveal delay={60} y={16}>
-      <h2 id={id} className="mt-3 text-[1.75rem] sm:text-[2.25rem] leading-[1.12] font-semibold text-navy tracking-[-0.015em] text-balance">
+      <h2 id={id} className="mt-3 text-[1.75rem] sm:text-[2.25rem] leading-[1.12] font-semibold text-navy-ink tracking-[-0.015em] text-balance">
         {title}
       </h2>
     </Reveal>
@@ -189,6 +189,55 @@ const SectionHeading: React.FC<{ label: string; title: string; text?: string; id
   </div>
 );
 
+/**
+ * One question. The answer's row grows from 0fr to 1fr (a height animation that works in every
+ * browser) while the text fades in; closing plays the same in reverse. Closed answers are inert.
+ */
+const FaqItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className="border-b border-hairline">
+      <h3>
+        <button
+          type="button"
+          id={`${id}-q`}
+          aria-expanded={open}
+          aria-controls={`${id}-a`}
+          onClick={() => setOpen(o => !o)}
+          className="group w-full flex items-center justify-between gap-4 min-h-14 py-4 text-left cursor-pointer text-[1.0625rem] font-semibold text-navy-ink"
+        >
+          {q}
+          <span
+            aria-hidden="true"
+            className={`w-8 h-8 shrink-0 rounded-full grid place-items-center transition-[rotate,background-color,color] duration-300 ease-out-strong
+              ${open ? 'rotate-180 bg-navy text-white' : 'bg-mist text-navy-ink group-hover:bg-navy-tint'}`}
+          >
+            <ChevronDown className="w-4 h-4" />
+          </span>
+        </button>
+      </h3>
+      <div
+        id={`${id}-a`}
+        role="region"
+        aria-labelledby={`${id}-q`}
+        inert={!open}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out-strong motion-reduce:transition-none
+          ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <p
+            className={`text-meta text-muted pb-5 pr-12 leading-relaxed transition-[opacity,translate] duration-300 ease-out-strong motion-reduce:transition-none
+              ${open ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}
+          >
+            {a}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Container: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
   <div className={`max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>
 );
@@ -199,7 +248,7 @@ const FooterLink: React.FC<{ onClick: () => void; children: React.ReactNode; dis
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="min-h-10 text-meta text-muted hover:text-navy cursor-pointer transition-colors text-left"
+      className="min-h-10 text-meta text-muted hover:text-navy-ink cursor-pointer transition-colors text-left"
     >
       {children}
     </button>
@@ -215,6 +264,17 @@ export const LandingPage: React.FC = () => {
   const { bar, scrolled } = useScrollProgress();
   useScrollMemory();
   const reduceMotion = useReducedMotion();
+
+  // Is the hero's Sign up on screen? While it is, the header doesn't repeat it.
+  const heroCta = useRef<HTMLDivElement>(null);
+  const [heroCtaInView, setHeroCtaInView] = useState(true);
+  useEffect(() => {
+    const el = heroCta.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setHeroCtaInView(e.isIntersecting), { rootMargin: '-72px 0px 0px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Phone menu: focus its first link on open; Escape or a wider screen closes it.
   const [menuOpen, setMenuOpen] = useState(false);
@@ -258,7 +318,7 @@ export const LandingPage: React.FC = () => {
           <Container className="h-16 sm:h-[72px] flex items-center gap-2 sm:gap-3">
             <a href="#top" className="flex items-center gap-2.5 min-h-11 rounded-control mr-auto lg:mr-0" aria-label="eKapitan, back to top">
               <LogoMark size={36} animate />
-              <span className="font-display text-xl font-bold text-navy">eKapitan</span>
+              <span className="font-display text-xl font-bold text-navy-ink">eKapitan</span>
             </a>
             <nav aria-label="Page" className="hidden lg:flex items-center gap-1 mx-auto">
               {NAV.map(([label, id]) => (
@@ -266,36 +326,36 @@ export const LandingPage: React.FC = () => {
                   key={id}
                   type="button"
                   onClick={() => scrollToId(id)}
-                  className="min-h-11 px-3 rounded-control text-meta font-semibold text-muted hover:text-navy hover:bg-mist cursor-pointer transition-colors"
+                  className="min-h-11 px-3 rounded-control text-meta font-semibold text-muted hover:text-navy-ink hover:bg-mist cursor-pointer transition-colors"
                 >
                   {label}
                 </button>
               ))}
             </nav>
-            <button
-              type="button"
-              onClick={() => go('guest')}
-              disabled={!!busy}
-              className="hidden xl:inline-flex items-center min-h-11 px-3 rounded-control text-meta font-semibold text-navy hover:bg-mist cursor-pointer
-                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.97] disabled:text-muted"
-            >
-              {guestLabel}
-            </button>
             <span className="hidden sm:contents">
               <Button variant="outline" size="sm" onClick={() => setAuth('login')}>
                 Sign in
               </Button>
             </span>
-            <Button variant="brand" size="sm" onClick={() => setAuth('register')}>
-              Sign up
-            </Button>
+            {/* Sign up only joins the header once the hero's own Sign up has scrolled out of view */}
+            <span
+              inert={heroCtaInView}
+              className={`grid transition-[grid-template-columns,opacity,margin] duration-300 ease-out-strong
+                ${heroCtaInView ? 'grid-cols-[0fr] opacity-0 -ml-2 sm:-ml-3' : 'grid-cols-[1fr] opacity-100'}`}
+            >
+              <span className="min-w-0 overflow-clip [overflow-clip-margin:6px]">
+                <Button variant="brand" size="sm" className="whitespace-nowrap" onClick={() => setAuth('register')}>
+                  Sign up
+                </Button>
+              </span>
+            </span>
             <button
               type="button"
               onClick={() => setMenuOpen(o => !o)}
               aria-expanded={menuOpen}
               aria-controls="landing-menu"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              className="lg:hidden -mr-2 w-11 h-11 grid place-items-center rounded-control text-navy hover:bg-mist cursor-pointer
+              className="lg:hidden -mr-2 w-11 h-11 grid place-items-center rounded-control text-navy-ink hover:bg-mist cursor-pointer
                 transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.94]"
             >
               {menuOpen ? <X className="w-6 h-6" strokeWidth={2} aria-hidden="true" /> : <Menu className="w-6 h-6" strokeWidth={2} aria-hidden="true" />}
@@ -310,7 +370,7 @@ export const LandingPage: React.FC = () => {
                   key="scrim"
                   aria-hidden="true"
                   onClick={() => setMenuOpen(false)}
-                  className="lg:hidden fixed inset-x-0 bottom-0 top-16 sm:top-[72px] bg-navy/25"
+                  className="lg:hidden fixed inset-x-0 bottom-0 top-16 sm:top-[72px] bg-scrim/25"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, transition: { duration: 0.2 } }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
@@ -335,7 +395,7 @@ export const LandingPage: React.FC = () => {
                               setMenuOpen(false);
                               requestAnimationFrame(() => scrollToId(id));
                             }}
-                            className="w-full min-h-13 py-3 flex items-center justify-between text-left text-[1.0625rem] font-semibold text-navy cursor-pointer"
+                            className="w-full min-h-13 py-3 flex items-center justify-between text-left text-[1.0625rem] font-semibold text-navy-ink cursor-pointer"
                           >
                             {label}
                             <ArrowRight className="w-4 h-4 text-muted" aria-hidden="true" />
@@ -383,7 +443,7 @@ export const LandingPage: React.FC = () => {
           <Container className="min-h-[calc(100svh-64px)] sm:min-h-[calc(100svh-72px)] py-10 sm:py-14 lg:pt-10 lg:pb-20 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] content-center gap-10 lg:gap-12 items-center">
             <div className="min-w-0">
               <Reveal y={0} rootMargin="0px">
-                <h1 className="text-[2.625rem] sm:text-[3.5rem] lg:text-[3.625rem] xl:text-[4.125rem] leading-[1.04] lg:whitespace-nowrap font-bold text-navy tracking-[-0.02em]">
+                <h1 className="text-[2.625rem] sm:text-[3.5rem] lg:text-[3.625rem] xl:text-[4.125rem] leading-[1.04] lg:whitespace-nowrap font-bold text-navy-ink tracking-[-0.02em]">
                   <span className="block overflow-hidden pb-1">
                     <span className="reveal-line">Your barangay,</span>
                   </span>
@@ -401,32 +461,36 @@ export const LandingPage: React.FC = () => {
                 and ask questions, then follow every request until it is ready.
               </Reveal>
 
-              <Reveal delay={260} y={10} rootMargin="0px" className="mt-9 grid sm:flex gap-3">
-                <Button variant="brand" onClick={() => setAuth('register')}>
-                  Sign up
-                </Button>
-                <Button variant="outline" onClick={() => setAuth('login')}>
-                  Sign in
-                </Button>
+              <div ref={heroCta}>
+                <Reveal delay={260} y={10} rootMargin="0px" className="mt-9 grid sm:flex gap-3">
+                  <Button variant="brand" onClick={() => setAuth('register')}>
+                    Sign up
+                  </Button>
+                  <Button variant="outline" onClick={() => go('guest')} disabled={!!busy}>
+                    {guestLabel}
+                  </Button>
+                </Reveal>
+              </div>
+              <Reveal as="p" delay={320} y={8} rootMargin="0px" className="mt-3 text-meta text-muted">
+                Guests can report, track, verify and read announcements without an account.
               </Reveal>
 
-              <Reveal as="p" delay={320} y={8} rootMargin="0px" className="mt-5 text-meta">
-                <span className="text-muted">Not a resident? </span>
+              {/* Phones: the header has no room for Sign in, so returning residents find it here */}
+              <Reveal as="p" delay={340} y={8} rootMargin="0px" className="sm:hidden mt-2 text-meta">
+                <span className="text-muted">Already have an account? </span>
                 <button
                   type="button"
-                  onClick={() => go('guest')}
-                  disabled={!!busy}
-                  className="group inline-flex items-center gap-1 min-h-11 font-semibold text-navy underline-offset-4 hover:underline cursor-pointer disabled:text-muted"
+                  onClick={() => setAuth('login')}
+                  className="inline-flex items-center min-h-11 font-semibold text-navy-ink underline-offset-4 hover:underline cursor-pointer"
                 >
-                  {guestLabel}
-                  <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" aria-hidden="true" />
+                  Sign in
                 </button>
               </Reveal>
 
               <ul className="mt-8 pt-6 border-t border-hairline flex flex-wrap gap-x-6 gap-y-2 text-meta text-muted">
                 {PROMISES.map((p, i) => (
                   <Reveal as="li" key={p} delay={380 + i * 50} y={6} rootMargin="0px" className="inline-flex items-center gap-2">
-                    <Check className="w-4 h-4 text-navy" strokeWidth={2.5} aria-hidden="true" />
+                    <Check className="w-4 h-4 text-navy-ink" strokeWidth={2.5} aria-hidden="true" />
                     {p}
                   </Reveal>
                 ))}
@@ -442,10 +506,10 @@ export const LandingPage: React.FC = () => {
           <button
             type="button"
             onClick={() => scrollToId('features')}
-            className="group hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-2 px-3 py-1 text-meta font-semibold text-muted hover:text-navy cursor-pointer transition-colors animate-fade [animation-delay:1200ms]"
+            className="group hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-2 px-3 py-1 text-meta font-semibold text-muted hover:text-navy-ink cursor-pointer transition-colors animate-fade [animation-delay:1200ms]"
           >
             Scroll to explore
-            <span className="w-10 h-10 rounded-full grid place-items-center border border-hairline bg-surface transition-[border-color,background-color] duration-200 group-hover:border-navy/40 group-hover:bg-navy-tint">
+            <span className="w-10 h-10 rounded-full grid place-items-center border border-hairline bg-surface transition-[border-color,background-color] duration-200 group-hover:border-navy-ink/40 group-hover:bg-navy-tint">
               <ChevronDown className="w-5 h-5 nudge" aria-hidden="true" />
             </span>
           </button>
@@ -486,23 +550,23 @@ export const LandingPage: React.FC = () => {
                         disabled={!!busy}
                         className="group w-full h-full text-left bg-surface border border-hairline rounded-card p-5 sm:p-6 flex items-center gap-4 sm:gap-5 cursor-pointer
                           transition-[translate,box-shadow,border-color,scale] duration-200 ease-out-strong
-                          hover:-translate-y-0.5 hover:shadow-float hover:border-navy/25 active:scale-[0.99]"
+                          hover:-translate-y-0.5 hover:shadow-float hover:border-navy-ink/25 active:scale-[0.99]"
                       >
                         <span
                           aria-hidden="true"
-                          className="w-12 h-12 shrink-0 rounded-tile grid place-items-center bg-navy-tint text-navy transition-[background-color,color,rotate] duration-200 ease-out-strong
+                          className="w-12 h-12 shrink-0 rounded-tile grid place-items-center bg-navy-tint text-navy-ink transition-[background-color,color,rotate] duration-200 ease-out-strong
                             group-hover:bg-navy group-hover:text-white group-hover:-rotate-3"
                         >
                           <Icon className="w-5 h-5" strokeWidth={1.8} />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <b className="block font-display text-h3 font-semibold text-navy">{g.title}</b>
+                          <b className="block font-display text-h3 font-semibold text-navy-ink">{g.title}</b>
                           <span className="block text-meta text-muted mt-1">{g.text}</span>
                         </span>
                         <span
                           aria-hidden="true"
-                          className="w-10 h-10 shrink-0 rounded-full grid place-items-center border border-hairline text-navy
-                            transition-[background-color,color,border-color] duration-200 ease-out-strong group-hover:bg-navy group-hover:text-white group-hover:border-navy"
+                          className="w-10 h-10 shrink-0 rounded-full grid place-items-center border border-hairline text-navy-ink
+                            transition-[background-color,color,border-color] duration-200 ease-out-strong group-hover:bg-navy group-hover:text-white group-hover:border-navy-ink"
                         >
                           <ArrowRight className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" />
                         </span>
@@ -530,11 +594,11 @@ export const LandingPage: React.FC = () => {
                   const Icon = b.icon;
                   return (
                     <Reveal as="li" key={b.title} delay={(i % 2) * 70} y={12} className="flex gap-4 py-5 border-b border-hairline">
-                      <span className="w-9 h-9 shrink-0 rounded-lg grid place-items-center bg-navy-tint text-navy">
+                      <span className="w-9 h-9 shrink-0 rounded-lg grid place-items-center bg-navy-tint text-navy-ink">
                         <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
                       </span>
                       <span>
-                        <b className="block text-[1.0625rem] font-semibold text-navy">{b.title}</b>
+                        <b className="block text-[1.0625rem] font-semibold text-navy-ink">{b.title}</b>
                         <span className="block text-meta text-muted mt-1">{b.text}</span>
                       </span>
                     </Reveal>
@@ -555,7 +619,7 @@ export const LandingPage: React.FC = () => {
                       {/* The number fills navy as the step arrives */}
                       <span
                         aria-hidden="true"
-                        className="w-11 h-11 shrink-0 rounded-full grid place-items-center border-2 border-navy text-navy bg-surface font-display font-semibold
+                        className="w-11 h-11 shrink-0 rounded-full grid place-items-center border-2 border-navy-ink text-navy-ink bg-surface font-display font-semibold
                           transition-colors duration-500 ease-out-strong group-data-[shown=true]/step:bg-navy group-data-[shown=true]/step:text-white"
                         style={{ transitionDelay: `${i * 140 + 200}ms` }}
                       >
@@ -564,7 +628,7 @@ export const LandingPage: React.FC = () => {
                       {/* Connector draws toward the next step; it un-draws when you scroll back past it */}
                       {i < STEPS.length - 1 && <span aria-hidden="true" className="hidden md:block flex-1 h-px ml-4 bg-navy/25 reveal-draw" />}
                     </div>
-                    <h3 className="text-h3 font-semibold text-navy">{s.title}</h3>
+                    <h3 className="text-h3 font-semibold text-navy-ink">{s.title}</h3>
                     <p className="text-meta text-muted mt-2 max-w-[20rem]">{s.text}</p>
                   </Reveal>
                 ))}
@@ -579,15 +643,7 @@ export const LandingPage: React.FC = () => {
               <div className="mt-10 max-w-[48rem] mx-auto border-t border-hairline">
                 {FAQS.map((f, i) => (
                   <Reveal key={f.q} delay={i * 50} y={10}>
-                    <details className="faq-item group border-b border-hairline">
-                      <summary className="flex items-center justify-between gap-4 min-h-14 py-4 cursor-pointer list-none text-[1.0625rem] font-semibold text-navy [&::-webkit-details-marker]:hidden">
-                        {f.q}
-                        <span className="w-8 h-8 shrink-0 rounded-full grid place-items-center bg-mist text-navy transition-[rotate,background-color] duration-200 ease-out-strong group-open:rotate-180 group-hover:bg-navy-tint">
-                          <ChevronDown className="w-4 h-4" aria-hidden="true" />
-                        </span>
-                      </summary>
-                      <p className="text-meta text-muted pb-5 pr-12 leading-relaxed">{f.a}</p>
-                    </details>
+                    <FaqItem q={f.q} a={f.a} />
                   </Reveal>
                 ))}
               </div>
@@ -615,34 +671,20 @@ export const LandingPage: React.FC = () => {
 
         {/* ---------- Footer ---------- */}
         <footer className="border-t border-hairline">
-          <Container className="py-12 grid gap-x-6 gap-y-10 grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <Container className="py-12 grid gap-x-6 gap-y-10 grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]">
             <Reveal y={12} className="col-span-2 lg:col-span-1 max-w-[22rem]">
               <div className="flex items-center gap-2.5">
                 <LogoMark size={32} />
-                <span className="font-display text-lg font-bold text-navy">eKapitan</span>
+                <span className="font-display text-lg font-bold text-navy-ink">eKapitan</span>
               </div>
-              <p className="mt-4 font-semibold text-navy">{TAGLINE}</p>
+              <p className="mt-4 font-semibold text-navy-ink">{TAGLINE}</p>
               <p className="mt-1 text-meta text-muted">
                 Request documents, report concerns and book barangay facilities online, then pick everything up at the hall.
               </p>
             </Reveal>
-            <Reveal delay={60} y={12}>
-              <nav aria-labelledby="footer-start">
-                <h2 id="footer-start" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
-                  Get started
-                </h2>
-                <ul className="mt-3 grid">
-                  <FooterLink onClick={() => setAuth('register')}>Sign up</FooterLink>
-                  <FooterLink onClick={() => setAuth('login')}>Sign in</FooterLink>
-                  <FooterLink onClick={() => go('guest')} disabled={!!busy}>
-                    {guestLabel}
-                  </FooterLink>
-                </ul>
-              </nav>
-            </Reveal>
             <Reveal delay={110} y={12}>
               <nav aria-labelledby="footer-guest">
-                <h2 id="footer-guest" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
+                <h2 id="footer-guest" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy-ink font-sans">
                   No account needed
                 </h2>
                 <ul className="mt-3 grid">
@@ -656,7 +698,7 @@ export const LandingPage: React.FC = () => {
             </Reveal>
             <Reveal delay={150} y={12}>
               <nav aria-labelledby="footer-page">
-                <h2 id="footer-page" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy font-sans">
+                <h2 id="footer-page" className="text-caption font-semibold uppercase tracking-[0.1em] text-navy-ink font-sans">
                   On this page
                 </h2>
                 <ul className="mt-3 grid">
@@ -675,7 +717,7 @@ export const LandingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="group inline-flex items-center gap-1.5 min-h-11 text-caption font-semibold text-muted hover:text-navy cursor-pointer transition-colors"
+                className="group inline-flex items-center gap-1.5 min-h-11 text-caption font-semibold text-muted hover:text-navy-ink cursor-pointer transition-colors"
               >
                 <ArrowUp className="w-4 h-4 transition-transform duration-150 ease-out-strong group-hover:-translate-y-0.5" aria-hidden="true" /> Back to top
               </button>

@@ -5,7 +5,7 @@ type Tone = 'default' | 'callout' | 'navy';
 const tones: Record<Tone, string> = {
   default: 'bg-surface border-line',
   callout: 'bg-primary-tint border-primary-tint-line',
-  navy: 'bg-navy border-navy text-white',
+  navy: 'bg-navy border-navy-ink text-white',
 };
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -34,7 +34,7 @@ export interface CardHeaderProps {
 /** Title row inside a card: h3 on the left, optional action on the right. */
 export const CardHeader: React.FC<CardHeaderProps> = ({ title, action, className = '' }) => (
   <div className={`flex items-center justify-between gap-3 mb-3 ${className}`}>
-    <h3 className="text-h3 font-semibold text-navy">{title}</h3>
+    <h3 className="text-h3 font-semibold text-navy-ink">{title}</h3>
     {action}
   </div>
 );

@@ -193,7 +193,7 @@ export const TrackRequest: React.FC = () => {
           <div aria-live="polite">
             {result === null && (
               <Card>
-                <h2 className="text-h3 font-semibold text-navy">We could not find that reference number</h2>
+                <h2 className="text-h3 font-semibold text-navy-ink">We could not find that reference number</h2>
                 <p className="text-meta text-muted mt-1">
                   Check that you typed it exactly as it appears on your receipt or text message, including the dashes.
                 </p>
@@ -203,7 +203,7 @@ export const TrackRequest: React.FC = () => {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h2 className="text-h3 font-semibold text-navy">{result.reference}</h2>
+                    <h2 className="text-h3 font-semibold text-navy-ink">{result.reference}</h2>
                     <p className="text-meta text-muted">{result.what}</p>
                   </div>
                   {pill(result)}
@@ -221,13 +221,13 @@ export const TrackRequest: React.FC = () => {
 
         <div className="grid gap-3 sm:gap-5">
           <Card tone="callout">
-            <h2 className="text-h3 font-semibold text-navy">Lost your reference number?</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink">Lost your reference number?</h2>
             <p className="text-meta text-ink mt-1">
               Visit the barangay hall with a valid ID, Monday to Friday, 8:00 AM to 5:00 PM. Staff can look it up for you.
             </p>
           </Card>
           <Card>
-            <h2 className="text-h3 font-semibold text-navy">Have a concern?</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink">Have a concern?</h2>
             <p className="text-meta text-muted mt-1 mb-4">File a report and you will get a tracking number right away.</p>
             <Button variant="secondary" onClick={() => setActiveTab('file_report')}>
               Report a concern

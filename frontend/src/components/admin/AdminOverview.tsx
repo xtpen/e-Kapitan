@@ -151,7 +151,7 @@ export const AdminOverview: React.FC = () => {
     <div className="max-w-[1200px]">
       {/* ---------- Mobile ---------- */}
       <div className="md:hidden">
-        <h1 className="text-2xl font-bold text-navy">Today at the barangay</h1>
+        <h1 className="text-2xl font-bold text-navy-ink">Today at the barangay</h1>
         <p className="text-meta text-muted mt-1 mb-3.5">{dayLabel}</p>
         <div className="grid grid-cols-2 gap-2.5">
           {[
@@ -162,7 +162,7 @@ export const AdminOverview: React.FC = () => {
           ].map(([label, value]) => (
             <Card key={label as string}>
               <span className="text-meta text-muted">{label}</span>
-              <div className="font-display text-[1.875rem] leading-none font-bold text-navy mt-1.5">{value}</div>
+              <div className="font-display text-[1.875rem] leading-none font-bold text-navy-ink mt-1.5">{value}</div>
             </Card>
           ))}
         </div>
@@ -190,7 +190,7 @@ export const AdminOverview: React.FC = () => {
 
         <div className="grid lg:grid-cols-[1.3fr_1fr] gap-5 mt-5 items-start">
           <Card>
-            <h2 className="text-h3 font-semibold text-navy mb-4">Transactions by service</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink mb-4">Transactions by service</h2>
             <BarChart
               data={chartData}
               unit="transactions"

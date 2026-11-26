@@ -31,7 +31,7 @@ const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const Tile: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="w-8 h-8 rounded-lg grid place-items-center bg-navy-tint text-navy [&_svg]:w-4 [&_svg]:h-4">{children}</span>
+  <span className="w-8 h-8 rounded-lg grid place-items-center bg-navy-tint text-navy-ink [&_svg]:w-4 [&_svg]:h-4">{children}</span>
 );
 
 /** Court calendar, reduced to its shape: open, booked and the chosen day. */
@@ -44,7 +44,7 @@ const CourtCard: React.FC = () => {
         <Tile>
           <CircleDot strokeWidth={1.8} />
         </Tile>
-        <b className="font-display text-navy">Court</b>
+        <b className="font-display text-navy-ink">Court</b>
         <span className="ml-auto text-label font-semibold text-muted">Nov</span>
       </div>
       <div className="grid grid-cols-7 gap-1.5">
@@ -55,7 +55,7 @@ const CourtCard: React.FC = () => {
           />
         ))}
       </div>
-      <div className="mt-3 h-9 rounded-control border-2 border-navy bg-navy-tint" />
+      <div className="mt-3 h-9 rounded-control border-2 border-navy-ink bg-navy-tint" />
     </Card>
   );
 };
@@ -80,7 +80,7 @@ const ReportCard: React.FC = () => (
     </div>
     <div className="mt-3 flex items-center justify-between gap-2">
       <span className="text-label font-semibold text-muted">Report</span>
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-tint text-navy px-2.5 py-0.5 text-label font-semibold">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-tint text-navy-ink px-2.5 py-0.5 text-label font-semibold">
         <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-current" />
         Under review
       </span>

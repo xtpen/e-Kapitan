@@ -99,7 +99,7 @@ export const AdminAuditLogs: React.FC = () => {
           {selected && (
             <Card aria-live="polite">
               {pill(selected)}
-              <h2 className="text-h3 font-semibold text-navy mt-2">{selected.action}</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink mt-2">{selected.action}</h2>
               <dl className="mt-3 @container">
                 {[
                   ['Time', formatShortDateTime(selected.timestamp)],

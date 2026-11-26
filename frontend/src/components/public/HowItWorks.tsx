@@ -61,7 +61,7 @@ export const HowItWorks: React.FC = () => {
               >
                 {i + 1}
               </span>
-              <h2 className="text-h3 font-semibold text-navy">{s.title}</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">{s.title}</h2>
               <p className="text-meta text-muted mt-1.5">{s.text}</p>
             </Card>
           </li>
@@ -70,7 +70,7 @@ export const HowItWorks: React.FC = () => {
 
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-5 items-start mt-5">
         <Card>
-          <h2 className="text-h3 font-semibold text-navy mb-2">Common questions</h2>
+          <h2 className="text-h3 font-semibold text-navy-ink mb-2">Common questions</h2>
           <div className="divide-y divide-line-soft">
             {FAQS.map(f => (
               <details key={f.q} className="group py-1">
@@ -86,14 +86,14 @@ export const HowItWorks: React.FC = () => {
 
         <div className="grid gap-3 sm:gap-5">
           <Card tone="callout">
-            <h2 className="text-h3 font-semibold text-navy">Ready to start?</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink">Ready to start?</h2>
             <p className="text-meta text-ink mt-1 mb-4">Residents of the barangay can register in about 5 minutes.</p>
             <Button fullWidth onClick={register}>
               Sign up
             </Button>
           </Card>
           <Card>
-            <h2 className="text-h3 font-semibold text-navy">Not a resident?</h2>
+            <h2 className="text-h3 font-semibold text-navy-ink">Not a resident?</h2>
             <p className="text-meta text-muted mt-1 mb-4">You can still report a concern and track it.</p>
             <Button variant="secondary" fullWidth onClick={() => setActiveTab('file_report')}>
               Report a concern

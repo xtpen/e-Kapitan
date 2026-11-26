@@ -149,12 +149,12 @@ export const useResidentActivity = () => {
 
     docs.forEach(d => {
       const when = d.updatedAt || d.submittedAt;
-      if (d.status === 'ready_for_release') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is ready.`, 'Claim it with a valid ID.');
-      else if (d.status === 'approved') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} approved.`, 'We will tell you when it is ready to claim.');
-      else if (d.status === 'under_review') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is being reviewed.`, 'Barangay staff are checking your request.');
-      else if (d.status === 'returned') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} needs a correction.`, d.staffNotes ?? 'Open the request to see what to fix.');
+      if (d.status === 'ready_for_release') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is ready.`, 'Pick it up at the barangay hall. Bring a valid ID.');
+      else if (d.status === 'approved') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} approved.`, 'We will tell you when it is ready to pick up.');
+      else if (d.status === 'under_review') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is being checked.`, 'The barangay is checking your details.');
+      else if (d.status === 'returned') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} needs a fix from you.`, d.staffNotes ?? 'Open the request to see what to fix.');
       else if (d.status === 'rejected') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} was not approved.`, d.rejectionReason ?? 'Open the request to see why.');
-      else if (d.status === 'submitted') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} request received.`, 'Awaiting review.');
+      else if (d.status === 'submitted') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} request received.`, 'Waiting for the barangay to check it.');
     });
     prints.forEach(p => {
       if (p.status === 'ready_for_pickup') add(p.id, p.status, 'printing', 'printing', p.submittedAt, 'Your printing is ready.', `${p.referenceNumber}. Pick it up at the barangay hall.`);
@@ -162,17 +162,17 @@ export const useResidentActivity = () => {
       else if (p.status === 'rejected') add(p.id, p.status, 'printing', 'printing', p.submittedAt, 'Print request not accepted.', p.rejectionReason ?? p.referenceNumber);
     });
     courts.forEach(c => {
-      if (c.status === 'pending') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request received.', 'Awaiting approval.');
+      if (c.status === 'pending') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request received.', 'Waiting for the barangay to say yes.');
       else if (c.status === 'approved') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court reservation approved.', `${courtDate(c.date)}, ${slotStart(c.slotId)}.`);
       else if (c.status === 'declined') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request declined.', c.notes ?? c.referenceNumber);
       else if (c.status === 'cancelled') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court booking cancelled.', c.notes ?? c.referenceNumber);
     });
     reports.forEach(i => {
       const when = i.statusHistory[i.statusHistory.length - 1]?.updatedAt ?? i.submittedAt;
-      if (i.status === 'received') add(i.id, i.status, 'reports', 'complaints', when, 'Report received.', `${i.referenceNumber}. Staff will review it soon.`);
-      else if (i.status === 'assigned') add(i.id, i.status, 'reports', 'complaints', when, 'Report assigned.', 'A staff member is reviewing it.');
+      if (i.status === 'received') add(i.id, i.status, 'reports', 'complaints', when, 'Report received.', `${i.referenceNumber}. The barangay will look at it soon.`);
+      else if (i.status === 'assigned') add(i.id, i.status, 'reports', 'complaints', when, 'Someone is on your report.', 'The barangay is looking into it.');
       else if (i.status === 'in_progress' || i.status === 'hearing_scheduled') add(i.id, i.status, 'reports', 'complaints', when, 'Action taken on your report.', i.referenceNumber);
-      else if (i.status === 'resolved') add(i.id, i.status, 'reports', 'complaints', when, 'Report resolved.', i.title);
+      else if (i.status === 'resolved') add(i.id, i.status, 'reports', 'complaints', when, 'Your report is fixed.', i.title);
     });
     notifications.sort((a, b) => b.sortKey - a.sortKey);
 

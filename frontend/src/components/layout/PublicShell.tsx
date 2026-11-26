@@ -124,7 +124,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
         <button type="button" onClick={() => run({ kind: 'tab', tab: 'guest_home' })} className="flex items-center gap-3.5 text-left cursor-pointer">
           <LogoDisc />
           <span>
-            <b className="block font-display text-xl leading-tight font-bold text-navy">eKapitan</b>
+            <b className="block font-display text-xl leading-tight font-bold text-navy-ink">eKapitan</b>
             <span className="text-caption text-muted">Barangay {BARANGAY}, San Pablo City</span>
           </span>
         </button>
@@ -152,7 +152,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="xl:hidden inline-flex items-center gap-2 min-h-12 px-4 rounded-control border-[1.5px] border-line font-semibold text-navy cursor-pointer"
+          className="xl:hidden inline-flex items-center gap-2 min-h-12 px-4 rounded-control border-[1.5px] border-line font-semibold text-navy-ink cursor-pointer"
         >
           <Menu className="w-5 h-5" aria-hidden="true" /> Menu
         </button>
@@ -230,7 +230,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
               onClick={() => run(item.action)}
               aria-current={active ? 'page' : undefined}
               className={`flex flex-col items-center justify-center gap-0.5 text-caption font-semibold cursor-pointer
-                ${active ? 'text-navy shadow-[inset_0_3px_0_var(--color-primary)]' : 'text-muted'}`}
+                ${active ? 'text-navy-ink shadow-[inset_0_3px_0_var(--color-primary)]' : 'text-muted'}`}
             >
               <Icon className="w-5 h-5" strokeWidth={1.8} aria-hidden={true} />
               {item.label}
@@ -243,7 +243,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
       {drawerOpen &&
         createPortal(
           <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-            <div className="absolute inset-0 bg-navy/50" onClick={() => setDrawerOpen(false)} />
+            <div className="absolute inset-0 bg-scrim/50" onClick={() => setDrawerOpen(false)} />
             <div className="absolute inset-y-0 right-0 w-[86%] max-w-[320px] bg-surface border-l border-line overflow-y-auto px-4 py-4">
               <div className="flex items-center justify-between mb-2 px-1">
                 <span className="font-semibold text-ink">Menu</span>
@@ -252,7 +252,7 @@ export const PublicShell: React.FC<{ children: React.ReactNode }> = ({ children 
                   onClick={() => setDrawerOpen(false)}
                   aria-label="Close menu"
                   autoFocus
-                  className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy cursor-pointer"
+                  className="w-11 h-11 grid place-items-center rounded-control border-[1.5px] border-line text-navy-ink cursor-pointer"
                 >
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>

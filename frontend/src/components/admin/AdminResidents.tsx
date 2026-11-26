@@ -268,7 +268,7 @@ export const AdminResidents: React.FC = () => {
     return (
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-h3 font-semibold text-navy">{fullName(r)}</h2>
+          <h2 className="text-h3 font-semibold text-navy-ink">{fullName(r)}</h2>
           {statusPill(r)}
         </div>
         <p className="text-meta text-muted">{r.residentNumber}</p>
@@ -455,7 +455,7 @@ export const AdminResidents: React.FC = () => {
 
   const addView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">Add resident</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">Add resident</h2>
       <p className="text-meta text-muted">The system checks for possible duplicates after saving. It never merges records on its own.</p>
       {formFields(true)}
       <div className="grid grid-cols-2 gap-2.5 mt-5">
@@ -469,7 +469,7 @@ export const AdminResidents: React.FC = () => {
 
   const editView = (r: Resident) => (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">Edit {fullName(r)}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">Edit {fullName(r)}</h2>
       <p className="text-meta text-muted">
         Name, birthdate and sex can't be changed here. Correct those with a supporting document at the hall.
       </p>
@@ -498,7 +498,7 @@ export const AdminResidents: React.FC = () => {
 
   const duplicatesView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">Possible duplicates</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">Possible duplicates</h2>
       <p className="text-meta text-muted">
         The system only suggests matches. A staff member decides, and the decision is recorded.
       </p>
@@ -715,7 +715,7 @@ export const AdminResidents: React.FC = () => {
                   : detailView(selected)
                 : (
                   <Card>
-                    <h2 className="text-h3 font-semibold text-navy">Resident details</h2>
+                    <h2 className="text-h3 font-semibold text-navy-ink">Resident details</h2>
                     <p className="text-meta text-muted mt-1">Choose a resident to see their record.</p>
                   </Card>
                 )}

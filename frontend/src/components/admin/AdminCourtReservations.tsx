@@ -176,7 +176,7 @@ export const AdminCourtReservations: React.FC = () => {
   const dayCard = (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy">{longDay(day)}</h2>
+        <h2 className="text-h3 font-semibold text-navy-ink">{longDay(day)}</h2>
         {closed ? <StatusPill tone="danger">Closed</StatusPill> : isPast ? <StatusPill tone="neutral">Past</StatusPill> : null}
       </div>
       {closed && <p className="text-meta text-muted mt-0.5">Reason: {closed.reason}</p>}
@@ -260,7 +260,7 @@ export const AdminCourtReservations: React.FC = () => {
   return (
     <div className="max-w-[1200px]">
       <div className="md:hidden mb-4">
-        <h1 className="text-2xl font-bold text-navy">Court approvals</h1>
+        <h1 className="text-2xl font-bold text-navy-ink">Court approvals</h1>
         <p className="text-meta text-muted mt-1">
           {pending.length} {pending.length === 1 ? 'request' : 'requests'} waiting
         </p>
@@ -268,7 +268,7 @@ export const AdminCourtReservations: React.FC = () => {
       <div className="hidden md:block">
         <div className="mb-6 flex flex-wrap justify-between items-end gap-4">
           <div>
-            <h1 className="text-h1 leading-tight font-bold text-navy">Court Reservations</h1>
+            <h1 className="text-h1 leading-tight font-bold text-navy-ink">Court Reservations</h1>
             <p className="text-meta text-muted mt-1">Approve requests and manage the court calendar.</p>
           </div>
           <Button

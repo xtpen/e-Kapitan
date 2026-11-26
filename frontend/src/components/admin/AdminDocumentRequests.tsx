@@ -117,7 +117,7 @@ export const AdminDocumentRequests: React.FC = () => {
     return (
       <Card aria-live="polite">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-h3 font-semibold text-navy">{d.referenceNumber}</h2>
+          <h2 className="text-h3 font-semibold text-navy-ink">{d.referenceNumber}</h2>
           {pill(d)}
         </div>
         <p className="text-meta text-muted">{d.documentTitle}</p>
@@ -368,7 +368,7 @@ export const AdminDocumentRequests: React.FC = () => {
             renderDetail(selected)
           ) : (
             <Card>
-              <h2 className="text-h3 font-semibold text-navy">Request details</h2>
+              <h2 className="text-h3 font-semibold text-navy-ink">Request details</h2>
               <p className="text-meta text-muted mt-1">Choose a request to review it.</p>
             </Card>
           )}

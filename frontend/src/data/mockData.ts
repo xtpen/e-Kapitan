@@ -48,14 +48,14 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     id: 'certificate_of_residency',
     title: 'Certificate of Residency',
     category: 'Certification',
-    description: 'Attests that the individual has been a bona fide resident of Barangay 4A for at least 6 months. Required for school enrollment, utility connections, and bank requirements.',
+    description: 'Attests that the individual has been a resident of the barangay for at least 6 months. Required for school enrollment, utility connections, and bank requirements.',
     fee: 30,
     isFreeForEligible: true,
     eligibleCriteria: 'Free for registered indigent residents and public school students',
     processingTime: '10-20 minutes',
     requirements: [
       'Proof of billing under applicant’s name (Meralco, Manila Water, Internet) OR HOA / Landlord certification',
-      'Valid ID showing address in Barangay 4A'
+      'Valid ID showing your address in the barangay'
     ],
     validityMonths: 6,
     availableOnline: true,
@@ -80,7 +80,7 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     id: 'business_clearance',
     title: 'Barangay Business Clearance',
     category: 'Permit',
-    description: 'Mandatory clearance for commercial establishments, sari-sari stores, and home-based businesses operating within the territorial jurisdiction of Barangay 4A.',
+    description: 'Mandatory clearance for commercial establishments, sari-sari stores, and home-based businesses operating within the barangay.',
     fee: 350,
     isFreeForEligible: false,
     eligibleCriteria: 'Based on registered gross capital',
@@ -399,7 +399,7 @@ export const INITIAL_DOCUMENT_REQUESTS: DocumentRequest[] = [
     verificationCode: 'VER-B4A-44312-01',
     requirementsSubmitted: [
       { name: 'College Transcript / Diploma', submitted: true, verified: true },
-      { name: 'Proof of Residency in Barangay 4A', submitted: true, verified: true },
+      { name: 'Proof of residency', submitted: true, verified: true },
       { name: 'Signed Oath of Undertaking', submitted: true, verified: true }
     ]
   },
@@ -738,7 +738,7 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     id: 'anc-001',
     title: 'Bantay Bagyo: Weather Advisory & Flood Gate Status',
     category: 'Advisory',
-    content: 'PAGASA has hoisted Tropical Cyclone Wind Signal No. 1 over Metro Manila. The Barangay 4A Disaster Risk Reduction and Management Council (BDRRMC) is on Blue Alert. Pumping stations on Riverside are 100% operational. Emergency hotline: (02) 8642-1111.',
+    content: 'PAGASA has hoisted Tropical Cyclone Wind Signal No. 1 over Metro Manila. The Barangay Disaster Risk Reduction and Management Council (BDRRMC) is on Blue Alert. Pumping stations on Riverside are 100% operational. Emergency hotline: (02) 8642-1111.',
     date: '2026-09-09',
     author: 'Barangay Disaster Risk Reduction Committee',
     isUrgent: true,
@@ -748,7 +748,7 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
     id: 'anc-002',
     title: 'Free Pneumococcal & Flu Vaccination for Senior Citizens',
     category: 'Health',
-    content: 'All registered Senior Citizens (60 years old and above) of Barangay 4A are invited to the Barangay Health Center this coming Friday, 8:00 AM to 3:00 PM. Please bring your Senior Citizen ID and immunization booklet.',
+    content: 'All registered Senior Citizens (60 years old and above) in the barangay are invited to the Barangay Health Center this coming Friday, 8:00 AM to 3:00 PM. Please bring your Senior Citizen ID and immunization booklet.',
     date: '2026-09-08',
     author: 'Barangay Health Center',
     isUrgent: false,
@@ -809,7 +809,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBaseItem[] = [
     id: 'kb-001',
     category: 'Clearance',
     question: 'What are the requirements for Barangay Clearance?',
-    answer: 'To get a Barangay Clearance, prepare: 1) Valid Government ID or Student ID with your Barangay 4A address, 2) Community Tax Certificate (Cedula) for the current year, and 3) 1x1 or 2x2 ID picture. Fee is ₱50.00 for employment, ₱100.00 for business, or 100% FREE for First-Time Jobseekers under Republic Act 11261.',
+    answer: 'To get a Barangay Clearance, prepare: 1) Valid Government ID or Student ID with your address in the barangay, 2) Community Tax Certificate (Cedula) for the current year, and 3) 1x1 or 2x2 ID picture. Fee is ₱50.00 for employment, ₱100.00 for business, or 100% FREE for First-Time Jobseekers under Republic Act 11261.',
     keywords: ['clearance', 'trabaho', 'cedula', 'requirements', 'fee'],
     lastUpdated: '2026-09-01'
   },
@@ -832,7 +832,7 @@ export const INITIAL_KNOWLEDGE_BASE: KnowledgeBaseItem[] = [
   {
     id: 'kb-004',
     category: 'Office Hours',
-    question: 'What are the operating hours of Barangay 4A Hall?',
+    question: 'What are the operating hours of the barangay hall?',
     answer: 'Barangay Hall is open Monday to Friday from 8:00 AM to 5:00 PM. Cut-off for on-site queue ticketing is 4:30 PM. For 24/7 emergencies, disaster response, and Tanod dispatch, our hotline is (02) 8642-1111.',
     keywords: ['hours', 'oras', 'bukas', 'schedule', 'weekend', 'hotline'],
     lastUpdated: '2026-09-01'

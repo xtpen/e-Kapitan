@@ -62,7 +62,7 @@ export const AdminChatbotKnowledge: React.FC = () => {
   const detail = (k: KnowledgeBaseItem) => (
     <Card aria-live="polite">
       <StatusPill tone="info">{k.category}</StatusPill>
-      <h2 className="text-h3 font-semibold text-navy mt-2">{k.question}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink mt-2">{k.question}</h2>
       <p className="mt-3 whitespace-pre-line">{k.answer}</p>
       {k.keywords.length > 0 && (
         <p className="flex flex-wrap gap-1.5 mt-3" aria-label="Keywords">
@@ -109,7 +109,7 @@ export const AdminChatbotKnowledge: React.FC = () => {
 
   const formView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy">{panel === 'add' ? 'Add answer' : 'Edit answer'}</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add answer' : 'Edit answer'}</h2>
       <p className="text-meta text-muted">Write in plain language. Include fees, hours and what to bring when they apply.</p>
       <Field label="Topic" error={errors.category} help="Pick one already used, or type a new one.">
         {p => (

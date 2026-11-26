@@ -15,7 +15,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, brea
     {breadcrumb && <p className="text-meta text-muted mb-1.5">{breadcrumb}</p>}
     <div className="flex flex-wrap justify-between items-end gap-4">
       <div>
-        <h1 className="text-2xl sm:text-h1 leading-tight font-bold text-navy">{title}</h1>
+        <h1 className="text-2xl sm:text-h1 leading-tight font-bold text-navy-ink">{title}</h1>
         {description && <p className="text-meta text-muted mt-1">{description}</p>}
       </div>
       {action}

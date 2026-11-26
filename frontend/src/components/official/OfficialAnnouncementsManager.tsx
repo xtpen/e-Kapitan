@@ -79,7 +79,7 @@ export const OfficialAnnouncementsManager: React.FC = () => {
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className={`text-label font-bold uppercase px-2.5 py-0.5 rounded-full ${
- anc.isUrgent ?'bg-danger-bg text-danger-fg border border-danger-bg':'bg-info-bg text-navy'
+ anc.isUrgent ?'bg-danger-bg text-danger-fg border border-danger-bg':'bg-info-bg text-navy-ink'
  }`}>
                   {anc.category} {anc.isUrgent && '• URGENT ALERT'}
                 </span>
@@ -105,7 +105,7 @@ export const OfficialAnnouncementsManager: React.FC = () => {
 
       {/* Publish Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 ">
           <div className="bg-surface rounded-card max-w-lg w-full p-6 border border-line shadow-float space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-line-soft">
               <h3 className="text-base font-bold text-ink font-heading">

@@ -54,7 +54,7 @@ export const OfficialsDirectory: React.FC = () => {
                     </div>
                   )}
                   <div className="min-w-0">
-                    <h2 className="text-h3 font-semibold text-navy leading-snug">{o.name}</h2>
+                    <h2 className="text-h3 font-semibold text-navy-ink leading-snug">{o.name}</h2>
                     <p className="text-meta text-muted">{o.position}</p>
                     {o.status === 'On Leave (Absent)' && (
                       <StatusPill tone="warning" className="mt-1.5">

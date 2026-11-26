@@ -18,13 +18,14 @@ import {
   Users2,
 } from 'lucide-react';
 import { BarangayProvider, useBarangay } from './context/BarangayContext';
+import { PreferencesProvider } from './context/PreferencesContext';
 // Loaded at startup: data, login, the two shells and app chrome.
 import { AppShell } from './components/layout/AppShell';
 import { PublicShell } from './components/layout/PublicShell';
 import { ToastContainer } from './components/layout/ToastContainer';
 import { PageSkeleton, skeletonFor } from './components/layout/PageSkeleton';
 import { LandingPage } from './components/auth/LandingPage';
-import { residentBottomNav, residentNavGroups } from './components/resident/residentNav';
+import { ResidentShell } from './components/layout/ResidentShell';
 import { useResidentActivity } from './components/resident/useResidentActivity';
 import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
 
@@ -61,6 +62,9 @@ const PrintingView = lazyNamed(() => import('./components/resident/PrintingView'
 const CourtReservationView = lazyNamed(() => import('./components/resident/CourtReservationView'), 'CourtReservationView');
 const ProfileView = lazyNamed(() => import('./components/resident/ProfileView'), 'ProfileView');
 const NotificationsView = lazyNamed(() => import('./components/resident/NotificationsView'), 'NotificationsView');
+const SettingsView = lazyNamed(() => import('./components/resident/SettingsView'), 'SettingsView');
+const ServicesHub = lazyNamed(() => import('./components/resident/ServicesHub'), 'ServicesHub');
+const AccountView = lazyNamed(() => import('./components/resident/AccountView'), 'AccountView');
 
 // Admin portal
 const AdminOverview = lazyNamed(() => import('./components/admin/AdminOverview'), 'AdminOverview');
@@ -103,7 +107,7 @@ const MainAppContent: React.FC = () => {
   const [selectedServiceForWizard, setSelectedServiceForWizard] = useState<any | null>(null);
   // Starts true: the first paint is the page's skeleton, never page → skeleton → page.
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const { unreadCount: residentUnread } = useResidentActivity();
+  const { unreadCount: residentUnread, readyCount: residentReady } = useResidentActivity();
 
   // Large text mode scales the root font size, so every rem-based size grows with it.
   useEffect(() => {
@@ -150,6 +154,10 @@ const MainAppContent: React.FC = () => {
       case 'home':
         return <ResidentDashboard />;
       case 'services':
+        return <ServicesHub />;
+      case 'account':
+        return <AccountView />;
+      case 'documents':
         return (
           <ServicesDirectory 
             onSelectService={(service) => {
@@ -182,6 +190,8 @@ const MainAppContent: React.FC = () => {
         return <ProfileView />;
       case 'notifications':
         return <NotificationsView />;
+      case 'settings':
+        return <SettingsView />;
 
       // Staff Views
       case 'dashboard':
@@ -274,14 +284,15 @@ const MainAppContent: React.FC = () => {
     <div className="relative">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={`${activeTab}-${currentRole}-${isPageLoading ? 'skeleton' : 'loaded'}`}
-          className={isPageLoading ? undefined : 'page-enter'}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] } }}
-          exit={{ opacity: 0, transition: { duration: 0.1 } }}
+          key={`${activeTab}-${currentRole}`}
+          initial={{ opacity: 0, transform: 'translateY(8px)' }}
+          animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.28, ease: [0.23, 1, 0.32, 1] } }}
+          exit={{ opacity: 0, transform: 'translateY(-4px)', transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } }}
         >
-          {/* The skeleton also covers the moment a screen's code is still downloading. */}
-          <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
+          <div key={isPageLoading ? 'skeleton' : 'loaded'} className={isPageLoading ? 'animate-fade' : 'page-enter'}>
+            {/* The skeleton also covers the moment a screen's code is still downloading. */}
+            <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>
@@ -324,14 +335,9 @@ const MainAppContent: React.FC = () => {
     return (
       <>
         <ToastContainer />
-        <AppShell
-          groups={residentNavGroups}
-          bottomNav={residentBottomNav}
-          notificationsTab="notifications"
-          unreadCount={residentUnread}
-        >
+        <ResidentShell unreadCount={residentUnread} readyCount={residentReady}>
           {pageTransition}
-        </AppShell>
+        </ResidentShell>
         {printModal}
       </>
     );
@@ -365,7 +371,7 @@ const MainAppContent: React.FC = () => {
  ? currentRole ==='staff'
  ?'text-info-fg bg-info-bg'
  : currentRole ==='official'
- ?'text-navy bg-info-bg'
+ ?'text-navy-ink bg-info-bg'
  :'text-ink bg-surface-muted'// Guest active state
  :'text-muted hover:text-ink hover:bg-surface-muted'
  }`}
@@ -477,7 +483,9 @@ const MainAppWrapper: React.FC = () => {
 export default function App() {
   return (
     <BarangayProvider>
-      <MainAppWrapper />
+      <PreferencesProvider>
+        <MainAppWrapper />
+      </PreferencesProvider>
     </BarangayProvider>
   );
 }

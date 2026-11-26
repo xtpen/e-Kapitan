@@ -15,6 +15,6 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, iconTone
   <Card>
     {icon && <IconTile tone={iconTone} className="mb-3.5">{icon}</IconTile>}
     <span className="text-meta text-muted">{label}</span>
-    <div className="font-display text-stat leading-none font-bold text-navy mt-2">{value}</div>
+    <div className="font-display text-stat leading-none font-bold text-navy-ink mt-2">{value}</div>
   </Card>
 );
