@@ -71,6 +71,10 @@ interface BarangayContextType {
   largeTextMode: boolean;
   setLargeTextMode: (val: boolean | ((prev: boolean) => boolean)) => void;
 
+  /** Development only: made-up records on or off. */
+  sampleData: boolean;
+  setSampleData: (on: boolean) => void;
+
   // Data
   services: ServiceItem[];
   residents: Resident[];
@@ -90,6 +94,8 @@ interface BarangayContextType {
   createDocumentRequest: (data: Partial<DocumentRequest>) => DocumentRequest;
   updateDocumentRequestStatus: (id: string, status: RequestStatus, staffNotes?: string, rejectionReason?: string) => void;
   assignDocumentRequest: (id: string, staffName: string) => void;
+  /** Resident fixes a request that staff returned, and sends it again for checking. */
+  resubmitDocumentRequest: (id: string, changes: { purpose?: string; contactNumber?: string; appointmentDate?: string; newIdFileName?: string; note?: string }) => void;
   /** Names of active staff, for "Assigned to" lists. */
   barangayStaff: string[];
   /** Active staff who have access to one area (e.g. only staff who handle documents). */
@@ -202,6 +208,31 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
   }
 };
 
+/** Development only: whether the app shows made-up records (on unless turned off). */
+const SAMPLE_DATA_KEY = 'ekapitan:dev-sample-data';
+const savedSampleData = () => {
+  if (!import.meta.env.DEV) return true; // the real app keeps today's behaviour until a backend replaces it
+  try {
+    return localStorage.getItem(SAMPLE_DATA_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+};
+
+const SAMPLE_APPOINTMENTS: Appointment[] = [
+  {
+    id: 'apt-001',
+    residentName: 'Eduardo Villanueva Reyes Sr.',
+    residentId: 'res-003',
+    contactNumber: '0918-222-4411',
+    serviceTitle: 'Certificate of Residency',
+    date: '2026-09-10',
+    timeSlot: '09:00 AM - 10:00 AM',
+    status: 'confirmed',
+    referenceNumber: 'APT-2026-0044',
+  },
+];
+
 export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('citizen');
@@ -210,36 +241,29 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Starts from the Settings page's saved text size, so Large text survives a reload.
   const [largeTextMode, setLargeTextMode] = useState<boolean>(savedTextSizeIsLarge);
 
+  // Development only: sample data on or off (Display & language → Developer). Off empties
+  // everything a resident creates, to see the app as a brand-new resident would.
+  const [sampleData, setSampleDataState] = useState<boolean>(savedSampleData);
+  const sample = <T,>(rows: T[]): T[] => (sampleData ? rows : []);
+
   // Data states
   const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
   const [residents, setResidents] = useState<Resident[]>(INITIAL_RESIDENTS);
   const [households] = useState<Household[]>(INITIAL_HOUSEHOLDS);
   const [duplicateFlags, setDuplicateFlags] = useState<DuplicateRecordFlag[]>(INITIAL_DUPLICATE_FLAGS);
   const [officials, setOfficials] = useState<Official[]>(INITIAL_OFFICIALS);
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>(INITIAL_DOCUMENT_REQUESTS);
-  const [queueTickets, setQueueTickets] = useState<QueueTicket[]>(INITIAL_QUEUE);
-  const [incidents, setIncidents] = useState<IncidentReport[]>(INITIAL_INCIDENTS);
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 'apt-001',
-      residentName: 'Eduardo Villanueva Reyes Sr.',
-      residentId: 'res-003',
-      contactNumber: '0918-222-4411',
-      serviceTitle: 'Certificate of Residency',
-      date: '2026-09-10',
-      timeSlot: '09:00 AM - 10:00 AM',
-      status: 'confirmed',
-      referenceNumber: 'APT-2026-0044'
-    }
-  ]);
-  const [printRequests, setPrintRequests] = useState<PrintRequest[]>(INITIAL_PRINT_REQUESTS);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>(() => sample(INITIAL_DOCUMENT_REQUESTS));
+  const [queueTickets, setQueueTickets] = useState<QueueTicket[]>(() => sample(INITIAL_QUEUE));
+  const [incidents, setIncidents] = useState<IncidentReport[]>(() => sample(INITIAL_INCIDENTS));
+  const [appointments, setAppointments] = useState<Appointment[]>(() => sample(SAMPLE_APPOINTMENTS));
+  const [printRequests, setPrintRequests] = useState<PrintRequest[]>(() => sample(INITIAL_PRINT_REQUESTS));
   const [courtSlots] = useState<CourtSlot[]>(COURT_SLOTS);
-  const [courtReservations, setCourtReservations] = useState<CourtReservation[]>(INITIAL_COURT_RESERVATIONS);
+  const [courtReservations, setCourtReservations] = useState<CourtReservation[]>(() => sample(INITIAL_COURT_RESERVATIONS));
   const [courtClosures, setCourtClosures] = useState<CourtClosure[]>(INITIAL_COURT_CLOSURES);
   const [personnel, setPersonnel] = useState<Personnel[]>(INITIAL_PERSONNEL);
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
   const [smsUpdates, setSmsUpdates] = useState<boolean>(true);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => sample(INITIAL_ANNOUNCEMENTS));
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBaseItem[]>(INITIAL_KNOWLEDGE_BASE);
   const [priorityCriteria, setPriorityCriteria] = useState<PriorityCriteriaConfig[]>(INITIAL_PRIORITY_CRITERIA);
@@ -260,6 +284,26 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const setSampleData = (on: boolean) => {
+    if (!import.meta.env.DEV) return;
+    try {
+      localStorage.setItem(SAMPLE_DATA_KEY, on ? 'on' : 'off');
+    } catch {
+      /* lasts for this visit */
+    }
+    const pick = <T,>(rows: T[]): T[] => (on ? rows : []);
+    setSampleDataState(on);
+    setDocumentRequests(pick(INITIAL_DOCUMENT_REQUESTS));
+    setQueueTickets(pick(INITIAL_QUEUE));
+    setIncidents(pick(INITIAL_INCIDENTS));
+    setAppointments(pick(SAMPLE_APPOINTMENTS));
+    setPrintRequests(pick(INITIAL_PRINT_REQUESTS));
+    setCourtReservations(pick(INITIAL_COURT_RESERVATIONS));
+    setAnnouncements(pick(INITIAL_ANNOUNCEMENTS));
+    setReadNotificationIds([]);
+    addToast(on ? 'Sample data on' : 'Sample data off', on ? 'Showing made-up records.' : 'Showing an empty, new account.', 'info');
   };
 
   const logAudit = (action: string, category: 'Records' | 'Documents' | 'Queue' | 'Security' | 'Configuration', details: string) => {
@@ -384,6 +428,34 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const ref = documentRequests.find((r) => r.id === id)?.referenceNumber ?? id;
     logAudit(`Updated Document Status to ${statusLabels[status]}`, 'Documents', `Request ${ref}. Staff: ${currentUser.name}`);
     addToast(`${ref}: ${statusLabels[status].toLowerCase()}`, 'The resident will see the update in My Requests.', 'success');
+  };
+
+  const resubmitDocumentRequest = (
+    id: string,
+    changes: { purpose?: string; contactNumber?: string; appointmentDate?: string; newIdFileName?: string; note?: string },
+  ) => {
+    const now = new Date().toLocaleString('en-US', { hour12: true, month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    setDocumentRequests(prev =>
+      prev.map(req =>
+        req.id === id
+          ? {
+              ...req,
+              purpose: changes.purpose ?? req.purpose,
+              contactNumber: changes.contactNumber ?? req.contactNumber,
+              appointmentDate: changes.appointmentDate ?? req.appointmentDate,
+              // A new ID photo replaces the old one and goes back to unverified.
+              requirementsSubmitted: changes.newIdFileName
+                ? req.requirementsSubmitted.map(r => (/id/i.test(r.name) ? { ...r, submitted: true, verified: false } : r))
+                : req.requirementsSubmitted,
+              status: 'submitted',
+              updatedAt: now,
+              staffNotes: changes.note ? `Resident: ${changes.note}` : undefined,
+            }
+          : req,
+      ),
+    );
+    const ref = documentRequests.find(r => r.id === id)?.referenceNumber ?? id;
+    logAudit('Resident fixed and resent a returned request', 'Documents', `Request ${ref}`);
   };
 
   const assignDocumentRequest = (id: string, staffName: string) => {
@@ -874,6 +946,8 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <BarangayContext.Provider
       value={{
+        sampleData,
+        setSampleData,
         isAuthenticated,
         setIsAuthenticated,
         currentRole,
@@ -900,6 +974,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createDocumentRequest,
         updateDocumentRequestStatus,
         assignDocumentRequest,
+        resubmitDocumentRequest,
         barangayStaff: personnel.filter((p) => p.status === 'active').map((p) => p.name),
         staffFor: (area: AccessArea) => personnel.filter((p) => p.status === 'active' && p.access.includes(area)).map((p) => p.name),
         personnel,

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarDays, Check, CheckCircle2, ChevronDown, FileText, Handshake } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
+import { useLanguage, useT } from '../../i18n';
 import type { Appointment } from '../../types';
 import { Button, Calendar, StatusPill, appointmentStatus, formatPeso, toISODate, todayISO, type DayState } from '../ui';
 import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
@@ -22,8 +23,10 @@ const BOOKING_WINDOW_DAYS = 60;
 const OTHER_SERVICES: { value: string; label: string }[] = [{ value: 'Lupon / Barangay mediation desk', label: 'Settle a dispute' }];
 
 const parseISO = (iso: string) => new Date(`${iso}T00:00:00`);
-const longDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-const shortDate = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const longDate = (iso: string, locale = 'en-US') =>
+  parseISO(iso).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
+const shortDate = (iso: string, locale = 'en-US') =>
+  parseISO(iso).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 /** The hall is open on weekdays only. */
 const isWeekend = (iso: string) => {
   const day = parseISO(iso).getDay();
@@ -37,11 +40,11 @@ const slotStartHour = (slot: string) => {
   return (Number(m[1]) % 12) + (m[3].toUpperCase() === 'PM' ? 12 : 0) + Number(m[2]) / 60;
 };
 /** "09:30 AM - 10:30 AM" → "9:30 to 10:30 AM"; "11:30 AM - 12:30 PM" keeps both periods. */
-const slotLabel = (slot: string) => {
+const slotLabel = (slot: string, toWord = 'to') => {
   const [from, to] = slot.split(' - ').map(t => t.replace(/^0/, ''));
   if (!to) return slot;
   const [fromTime, fromPeriod] = from.split(' ');
-  return to.endsWith(fromPeriod) ? `${fromTime} to ${to}` : `${from} to ${to}`;
+  return to.endsWith(fromPeriod) ? `${fromTime} ${toWord} ${to}` : `${from} ${toWord} ${to}`;
 };
 
 type Errors = Partial<Record<'date' | 'slot', string>>;
@@ -50,8 +53,11 @@ type Errors = Partial<Record<'date' | 'slot', string>>;
 export const AppointmentsView: React.FC = () => {
   const { currentUser, residents, services, appointments, bookAppointment, setActiveTab } = useBarangay();
   const resident = residents.find(r => r.id === currentUser.residentId);
+  const t = useT();
+  const locale = useLanguage() === 'fil' ? 'fil-PH' : 'en-US';
+  const slotText = (slot: string) => slotLabel(slot, t('to'));
 
-  const options = [...services.map(s => ({ value: s.title, label: s.title })), ...OTHER_SERVICES];
+  const options = [...services.map(s => ({ value: s.title, label: s.title })), ...OTHER_SERVICES.map(o => ({ ...o, label: t(o.label) }))];
   const [service, setService] = useState<string>(options[0]?.value ?? '');
   const chosen = services.find(s => s.title === service);
 
@@ -127,11 +133,11 @@ export const AppointmentsView: React.FC = () => {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Errors = {};
-    if (!date) errs.date = 'Pick a day.';
-    else if (date < today) errs.date = 'Pick today or a later day.';
-    else if (isWeekend(date)) errs.date = 'The hall is open Monday to Friday. Pick a weekday.';
-    if (!timeSlot) errs.slot = 'Pick a time.';
-    else if (date && !slotOpen(date, timeSlot)) errs.slot = 'That time was just taken. Pick another one.';
+    if (!date) errs.date = t('Pick a day.');
+    else if (date < today) errs.date = t('Pick today or a later day.');
+    else if (isWeekend(date)) errs.date = t('The hall is open Monday to Friday. Pick a weekday.');
+    if (!timeSlot) errs.slot = t('Pick a time.');
+    else if (date && !slotOpen(date, timeSlot)) errs.slot = t('That time was just taken. Pick another one.');
     setErrors(errs);
     if (Object.keys(errs).length || !timeSlot || !date) return;
 
@@ -160,16 +166,16 @@ export const AppointmentsView: React.FC = () => {
         </IconCircle>
       }
       title={labelFor(a.serviceTitle)}
-      sub={`${shortDate(a.date)}, ${slotLabel(a.timeSlot)}`}
-      trailing={<StatusPill tone={appointmentStatus[a.status].tone}>{appointmentStatus[a.status].label}</StatusPill>}
+      sub={`${shortDate(a.date, locale)}, ${slotText(a.timeSlot)}`}
+      trailing={<StatusPill tone={appointmentStatus[a.status].tone}>{t(appointmentStatus[a.status].label)}</StatusPill>}
     />
   );
 
   return (
     <Page>
-      <PageTitle title="Visit the hall" sub="Book a time so you don't wait in line." />
+      <PageTitle title={t('Visit the hall')} sub={t("Book a time so you don't wait in line.")} />
 
-      <Section title="What do you need?" id="visit-need-title">
+      <Section title={t('What do you need?')} id="visit-need-title">
         <div role="radiogroup" aria-labelledby="visit-need-title" className="grid gap-2">
           {options.map(o => {
             const Icon = services.some(s => s.title === o.value) ? FileText : Handshake;
@@ -179,12 +185,12 @@ export const AppointmentsView: React.FC = () => {
 
         <details className="group mt-3">
           <summary className="min-h-11 inline-flex items-center gap-1.5 cursor-pointer font-semibold text-meta text-navy-ink list-none [&::-webkit-details-marker]:hidden">
-            What to bring
+            {t('What to bring')}
             <ChevronDown aria-hidden="true" className="w-4 h-4 transition-transform group-open:rotate-180" />
           </summary>
           <div className="pt-1 text-meta text-ink grid gap-1.5">
             <ul className="grid gap-1.5">
-              {(chosen ? chosen.requirements : ['A valid ID', 'Any papers about your concern']).map(req => (
+              {(chosen ? chosen.requirements : [t('A valid ID'), t('Any papers about your concern')]).map(req => (
                 <li key={req} className="flex gap-2.5">
                   <Check className="w-4 h-4 mt-0.5 shrink-0 text-success-fg" strokeWidth={2.2} aria-hidden="true" />
                   <span>{req}</span>
@@ -193,7 +199,10 @@ export const AppointmentsView: React.FC = () => {
             </ul>
             {chosen && (
               <p className="text-muted">
-                Fee: <b className="font-semibold text-ink">{chosen.fee > 0 ? `${formatPeso(chosen.fee)}, paid at the hall` : 'Free'}</b>
+                {t('Fee:')}{' '}
+                <b className="font-semibold text-ink">
+                  {chosen.fee > 0 ? t('{fee}, paid at the hall', { fee: formatPeso(chosen.fee) }) : t('Free')}
+                </b>
               </p>
             )}
             {chosen?.availableOnline && (
@@ -202,14 +211,14 @@ export const AppointmentsView: React.FC = () => {
                 onClick={() => setActiveTab('documents')}
                 className="justify-self-start min-h-11 font-semibold text-navy-ink hover:underline underline-offset-4 cursor-pointer"
               >
-                Or request it online
+                {t('Or request it online')}
               </button>
             )}
           </div>
         </details>
       </Section>
 
-      <Section title="Pick a day">
+      <Section title={t('Pick a day')}>
         <Calendar
           month={month}
           onMonthChange={setMonth}
@@ -222,14 +231,14 @@ export const AppointmentsView: React.FC = () => {
         {errors.date && <p className="text-meta text-danger-fg mt-2">{errors.date}</p>}
       </Section>
 
-      <Section title={date ? longDate(date) : 'Pick a time'} id="visit-time-title" className="scroll-mt-24">
+      <Section title={date ? longDate(date, locale) : t('Pick a time')} id="visit-time-title" className="scroll-mt-24">
         <form noValidate onSubmit={submit}>
           {!date ? (
-            <p className="text-muted">Pick a green day first.</p>
+            <p className="text-muted">{t('Pick a green day first.')}</p>
           ) : (
             <div
               role="radiogroup"
-              aria-label="Time"
+              aria-label={t('Time')}
               aria-describedby={errors.slot ? 'visit-slot-error' : undefined}
               className="grid grid-cols-2 gap-2"
             >
@@ -238,8 +247,8 @@ export const AppointmentsView: React.FC = () => {
                 return (
                   <Choice
                     key={s}
-                    label={slotLabel(s)}
-                    sub={open ? undefined : isTaken(date, s) ? 'Booked' : 'Closed'}
+                    label={slotText(s)}
+                    sub={open ? undefined : isTaken(date, s) ? t('Booked') : t('Closed')}
                     disabled={!open}
                     selected={timeSlot === s}
                     onSelect={() => {
@@ -251,7 +260,7 @@ export const AppointmentsView: React.FC = () => {
               })}
             </div>
           )}
-          {date && openCount === 0 && <p className="text-meta text-muted mt-2">No times left on this day.</p>}
+          {date && openCount === 0 && <p className="text-meta text-muted mt-2">{t('No times left on this day.')}</p>}
           {errors.slot && (
             <p id="visit-slot-error" className="text-meta text-danger-fg mt-2">
               {errors.slot}
@@ -260,7 +269,7 @@ export const AppointmentsView: React.FC = () => {
 
           <FormActions>
             <Button type="submit" variant="brand" disabled={!date || openCount === 0}>
-              Book my visit
+              {t('Book my visit')}
             </Button>
           </FormActions>
         </form>
@@ -273,23 +282,23 @@ export const AppointmentsView: React.FC = () => {
               <CheckCircle2 />
             </IconCircle>
             <p className="text-ink">
-              <b className="font-semibold">You're booked.</b> {longDate(justBooked.date)}, {slotLabel(justBooked.timeSlot)}. Show tracking
-              number <b className="font-semibold whitespace-nowrap">{justBooked.referenceNumber}</b> at the hall.
+              <b className="font-semibold">{t("You're booked.")}</b> {longDate(justBooked.date, locale)}, {slotText(justBooked.timeSlot)}.{' '}
+              {t('Show tracking number')} <b className="font-semibold whitespace-nowrap">{justBooked.referenceNumber}</b> {t('at the hall.')}
             </p>
           </div>
         </Section>
       )}
 
-      <Section title="My visits" flush>
+      <Section title={t('My visits')} flush>
         {upcoming.length === 0 ? (
-          <EmptyState icon={<CalendarDays />} title="Nothing booked yet" />
+          <EmptyState icon={<CalendarDays />} title={t('Nothing booked yet')} />
         ) : (
           <List>{upcoming.map(visitRow)}</List>
         )}
         {past.length > 0 && (
           <details className="border-t border-line-soft">
             <summary className="min-h-12 flex items-center px-4 sm:px-5 cursor-pointer font-semibold text-meta text-navy-ink">
-              Past visits ({past.length})
+              {t('Past visits ({n})', { n: past.length })}
             </summary>
             <List className="border-t border-line-soft">{past.map(visitRow)}</List>
           </details>

@@ -5,6 +5,8 @@ import { ArrowLeft, Bell, Check, CheckCircle2, CircleAlert, ClipboardList, FileC
 import { Button, Checkbox, Expand, Field, FileUpload, Input, LogoMark, PasswordInput } from '../ui';
 import { TAGLINE } from '../../config/brand';
 import type { AuthScreen } from '../public/publicNav';
+import { LegalSheet } from '../legal/LegalSheet';
+import type { LegalDocId } from '../legal/legalDocs';
 
 export type Role = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
 
@@ -143,6 +145,21 @@ export interface AuthDialogProps {
  * scroll. Prototype auth: any sign-in works; an email containing "admin", "staff" or
  * "captain"/"official" opens that role for the demo.
  */
+/** A link inside the consent checkbox's label: opens the document without ticking the box. */
+const LegalLink: React.FC<{ onOpen: () => void; children: React.ReactNode }> = ({ onOpen, children }) => (
+  <button
+    type="button"
+    onClick={e => {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpen();
+    }}
+    className="font-semibold text-navy-ink underline underline-offset-2 hover:no-underline cursor-pointer"
+  >
+    {children}
+  </button>
+);
+
 export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, onClose, onEnter, busy }) => {
   const phone = usePhoneLayout();
   const reduceMotion = useReducedMotion();
@@ -167,7 +184,12 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
   const [regAddress, setRegAddress] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regId, setRegId] = useState<File | null>(null);
-  const [regErrors, setRegErrors] = useState<Partial<Record<'name' | 'mobile' | 'address' | 'password' | 'id', string>>>({});
+  const [regErrors, setRegErrors] = useState<Partial<Record<'name' | 'mobile' | 'address' | 'password' | 'id' | 'agree', string>>>({});
+  const [regAgree, setRegAgree] = useState(false);
+  // A legal document read on top of the form; Escape closes it first, not the whole dialog.
+  const [legal, setLegal] = useState<LegalDocId | null>(null);
+  const legalOpen = useRef(false);
+  legalOpen.current = !!legal;
   const [registered, setRegistered] = useState<string | null>(null);
 
   // While open: lock page scroll, close on Escape, and give focus back to the trigger afterwards.
@@ -177,7 +199,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
     const html = document.documentElement;
     const prevOverflow = html.style.overflow;
     html.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !legalOpen.current && onClose();
     document.addEventListener('keydown', onKey);
     // Focus the panel, not the first field: on phones that would pop the keyboard over the sheet.
     requestAnimationFrame(() => panelRef.current?.focus({ preventScroll: true }));
@@ -258,6 +280,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
     if (!regId) errs.id = 'Upload a photo or scan of a valid ID.';
     else if (!ID_TYPES.includes(regId.type)) errs.id = 'Upload a JPG, PNG or PDF file.';
     else if (regId.size > MAX_ID_BYTES) errs.id = 'Upload a file that is 5 MB or smaller.';
+    if (!regAgree) errs.agree = 'Agree to the terms and the privacy notice to continue.';
     setRegErrors(errs);
     if (Object.keys(errs).length) return;
     setDir(1);
@@ -325,6 +348,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
   const viewKey = `${screen}-${loginMode}-${regStep}-${registered ? 'done' : 'form'}`;
 
   return createPortal(
+    <>
     <AnimatePresence>
       {open && screen && (
         <div key="auth" className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
@@ -590,6 +614,23 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
                               />
                             )}
                           </Field>
+                          <Checkbox
+                            className="mt-4"
+                            checked={regAgree}
+                            onChange={e => setRegAgree(e.target.checked)}
+                            error={regErrors.agree}
+                            label={
+                              <span className="font-normal text-ink">
+                                I agree to the <LegalLink onOpen={() => setLegal('terms')}>Terms and Conditions</LegalLink> and the{' '}
+                                <LegalLink onOpen={() => setLegal('privacy_notice')}>Data Privacy Notice</LegalLink>.
+                              </span>
+                            }
+                            description={
+                              <>
+                                See how we protect your information in the <LegalLink onOpen={() => setLegal('privacy_policy')}>Privacy Policy</LegalLink>.
+                              </>
+                            }
+                          />
                           <div className="grid grid-cols-[auto_1fr] gap-3 mt-6">
                             <Button
                               variant="outline"
@@ -651,7 +692,9 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    <LegalSheet id={open ? legal : null} onClose={() => setLegal(null)} />
+    </>,
     document.body,
   );
 };

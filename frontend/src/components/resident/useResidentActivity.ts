@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useBarangay } from '../../context/BarangayContext';
+import { usePreferences } from '../../context/PreferencesContext';
+import { translate } from '../../i18n';
 import { appointmentStatus, courtStatus, documentStatus, incidentStatus, printStatus, type StatusInfo } from '../ui';
 
 /** One row in "My recent requests", whatever the service. */
@@ -56,8 +58,10 @@ export const useResidentActivity = () => {
     courtSlots,
     readNotificationIds,
   } = useBarangay();
+  const lang = usePreferences().prefs.language;
 
   return useMemo(() => {
+    const t = (text: string, vars?: Record<string, string | number>) => translate(lang, text, vars);
     const isMine = (residentId?: string, name?: string) =>
       (!!currentUser.residentId && residentId === currentUser.residentId) || name === currentUser.name;
 
@@ -68,7 +72,7 @@ export const useResidentActivity = () => {
     const courts = courtReservations.filter(c => isMine(c.residentId, c.residentName));
     const slotStart = (id: string) => (courtSlots.find(s => s.id === id)?.short ?? id);
     const courtDate = (iso: string) =>
-      new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      new Date(`${iso}T00:00:00`).toLocaleDateString(lang === 'fil' ? 'fil-PH' : 'en-US', { month: 'short', day: 'numeric' });
 
     const rows: ActivityRow[] = [
       ...docs.map(d => ({
@@ -100,7 +104,7 @@ export const useResidentActivity = () => {
         kind: 'printing' as const,
         when: p.submittedAt,
         reference: p.referenceNumber,
-        service: `Printing, ${p.pages * p.copies} ${p.pages * p.copies === 1 ? 'page' : 'pages'}`,
+        service: t(p.pages * p.copies === 1 ? 'Printing, {n} page' : 'Printing, {n} pages', { n: p.pages * p.copies }),
         status: printStatus[p.status],
         tab: 'printing',
         sortKey: toTime(p.submittedAt),
@@ -112,7 +116,7 @@ export const useResidentActivity = () => {
         kind: 'court' as const,
         when: c.submittedAt,
         reference: c.referenceNumber,
-        service: `Court, ${courtDate(c.date)}, ${slotStart(c.slotId)}`,
+        service: t('Court, {date}, {time}', { date: courtDate(c.date), time: slotStart(c.slotId) }),
         status: courtStatus[c.status],
         tab: 'court',
         sortKey: toTime(c.submittedAt),
@@ -149,30 +153,30 @@ export const useResidentActivity = () => {
 
     docs.forEach(d => {
       const when = d.updatedAt || d.submittedAt;
-      if (d.status === 'ready_for_release') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is ready.`, 'Pick it up at the barangay hall. Bring a valid ID.');
-      else if (d.status === 'approved') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} approved.`, 'We will tell you when it is ready to pick up.');
-      else if (d.status === 'under_review') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} is being checked.`, 'The barangay is checking your details.');
-      else if (d.status === 'returned') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} needs a fix from you.`, d.staffNotes ?? 'Open the request to see what to fix.');
-      else if (d.status === 'rejected') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} was not approved.`, d.rejectionReason ?? 'Open the request to see why.');
-      else if (d.status === 'submitted') add(d.id, d.status, 'documents', 'tracking', when, `${d.documentTitle} request received.`, 'Waiting for the barangay to check it.');
+      if (d.status === 'ready_for_release') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} is ready.', { doc: d.documentTitle }), t('Pick it up at the barangay hall. Bring a valid ID.'));
+      else if (d.status === 'approved') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} approved.', { doc: d.documentTitle }), t('We will tell you when it is ready to pick up.'));
+      else if (d.status === 'under_review') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} is being checked.', { doc: d.documentTitle }), t('The barangay is checking your details.'));
+      else if (d.status === 'returned') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} needs a fix from you.', { doc: d.documentTitle }), d.staffNotes ?? t('Open the request to see what to fix.'));
+      else if (d.status === 'rejected') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} was not approved.', { doc: d.documentTitle }), d.rejectionReason ?? t('Open the request to see why.'));
+      else if (d.status === 'submitted') add(d.id, d.status, 'documents', 'tracking', when, t('{doc} request received.', { doc: d.documentTitle }), t('Waiting for the barangay to check it.'));
     });
     prints.forEach(p => {
-      if (p.status === 'ready_for_pickup') add(p.id, p.status, 'printing', 'printing', p.submittedAt, 'Your printing is ready.', `${p.referenceNumber}. Pick it up at the barangay hall.`);
-      else if (p.status === 'processing') add(p.id, p.status, 'printing', 'printing', p.submittedAt, 'Your file is being printed.', p.referenceNumber);
-      else if (p.status === 'rejected') add(p.id, p.status, 'printing', 'printing', p.submittedAt, 'Print request not accepted.', p.rejectionReason ?? p.referenceNumber);
+      if (p.status === 'ready_for_pickup') add(p.id, p.status, 'printing', 'printing', p.submittedAt, t('Your printing is ready.'), t('{ref}. Pick it up at the barangay hall.', { ref: p.referenceNumber }));
+      else if (p.status === 'processing') add(p.id, p.status, 'printing', 'printing', p.submittedAt, t('Your file is being printed.'), p.referenceNumber);
+      else if (p.status === 'rejected') add(p.id, p.status, 'printing', 'printing', p.submittedAt, t('Print request not accepted.'), p.rejectionReason ?? p.referenceNumber);
     });
     courts.forEach(c => {
-      if (c.status === 'pending') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request received.', 'Waiting for the barangay to say yes.');
-      else if (c.status === 'approved') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court reservation approved.', `${courtDate(c.date)}, ${slotStart(c.slotId)}.`);
-      else if (c.status === 'declined') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court request declined.', c.notes ?? c.referenceNumber);
-      else if (c.status === 'cancelled') add(c.id, c.status, 'court', 'court', c.submittedAt, 'Court booking cancelled.', c.notes ?? c.referenceNumber);
+      if (c.status === 'pending') add(c.id, c.status, 'court', 'court', c.submittedAt, t('Court request received.'), t('Waiting for the barangay to say yes.'));
+      else if (c.status === 'approved') add(c.id, c.status, 'court', 'court', c.submittedAt, t('Court reservation approved.'), `${courtDate(c.date)}, ${slotStart(c.slotId)}.`);
+      else if (c.status === 'declined') add(c.id, c.status, 'court', 'court', c.submittedAt, t('Court request declined.'), c.notes ?? c.referenceNumber);
+      else if (c.status === 'cancelled') add(c.id, c.status, 'court', 'court', c.submittedAt, t('Court booking cancelled.'), c.notes ?? c.referenceNumber);
     });
     reports.forEach(i => {
       const when = i.statusHistory[i.statusHistory.length - 1]?.updatedAt ?? i.submittedAt;
-      if (i.status === 'received') add(i.id, i.status, 'reports', 'complaints', when, 'Report received.', `${i.referenceNumber}. The barangay will look at it soon.`);
-      else if (i.status === 'assigned') add(i.id, i.status, 'reports', 'complaints', when, 'Someone is on your report.', 'The barangay is looking into it.');
-      else if (i.status === 'in_progress' || i.status === 'hearing_scheduled') add(i.id, i.status, 'reports', 'complaints', when, 'Action taken on your report.', i.referenceNumber);
-      else if (i.status === 'resolved') add(i.id, i.status, 'reports', 'complaints', when, 'Your report is fixed.', i.title);
+      if (i.status === 'received') add(i.id, i.status, 'reports', 'complaints', when, t('Report received.'), t('{ref}. The barangay will look at it soon.', { ref: i.referenceNumber }));
+      else if (i.status === 'assigned') add(i.id, i.status, 'reports', 'complaints', when, t('Someone is on your report.'), t('The barangay is looking into it.'));
+      else if (i.status === 'in_progress' || i.status === 'hearing_scheduled') add(i.id, i.status, 'reports', 'complaints', when, t('Action taken on your report.'), i.referenceNumber);
+      else if (i.status === 'resolved') add(i.id, i.status, 'reports', 'complaints', when, t('Your report is fixed.'), i.title);
     });
     notifications.sort((a, b) => b.sortKey - a.sortKey);
 
@@ -183,5 +187,5 @@ export const useResidentActivity = () => {
       notifications,
       unreadCount: notifications.filter(n => n.unread).length,
     };
-  }, [currentUser, documentRequests, incidents, appointments, printRequests, courtReservations, courtSlots, readNotificationIds]);
+  }, [currentUser, documentRequests, incidents, appointments, printRequests, courtReservations, courtSlots, readNotificationIds, lang]);
 };

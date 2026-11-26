@@ -1,13 +1,17 @@
-import React from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion, type PanInfo } from 'motion/react';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
+import { useT } from '../../i18n';
 
 /*
- * Toast pop-ups (all roles). See DESIGN.md section 5.17.
- * White card with a tone-colored icon and a matching left edge on the icon tile,
- * bottom-right on desktop, above the bottom nav on phones.
+ * Toasts (all roles). See DESIGN.md section 5.17.
+ * Phones: they drop in from the top, like phone notifications, so they never cover the bottom
+ * bar; swipe up or sideways to dismiss. Desktop: bottom right, slide in from the right.
+ * A thin bar along the bottom shows the time left (toasts close after 4.5s).
  */
+
+const LIFETIME_MS = 4500;
 
 const TONE = {
   success: { icon: CheckCircle2, tile: 'bg-success-bg text-success-fg', bar: 'bg-success-fg', label: 'Success' },
@@ -16,15 +20,42 @@ const TONE = {
   error: { icon: AlertCircle, tile: 'bg-danger-bg text-danger-fg', bar: 'bg-danger-fg', label: 'Error' },
 } as const;
 
+const usePhone = () => {
+  const q = '(max-width: 767px)';
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(q).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(q);
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return phone;
+};
+
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useBarangay();
   const reduce = useReducedMotion();
+  const phone = usePhone();
+  const t = useT();
+
+  // Spring for arrivals: quick, a touch of settle, no wobble.
+  const spring = { type: 'spring' as const, stiffness: 520, damping: 38, mass: 0.9 };
+  const enter = reduce ? { opacity: 0 } : phone ? { opacity: 0, y: -28, scale: 0.97 } : { opacity: 0, x: 40, scale: 0.98 };
+  const leave = reduce ? { opacity: 0 } : phone ? { opacity: 0, y: -20, scale: 0.97 } : { opacity: 0, x: 48 };
+
+  const onDragEnd = (id: string) => (_: unknown, info: PanInfo) => {
+    const far = Math.abs(info.offset.x) > 80 || info.offset.y < -40;
+    const fast = Math.abs(info.velocity.x) > 500 || info.velocity.y < -400;
+    if (far || fast) removeToast(id);
+  };
 
   return (
     <div
       role="region"
       aria-label="Notifications"
-      className="fixed z-[100] pointer-events-none left-4 right-4 bottom-[84px] md:left-auto md:right-6 md:bottom-6 md:w-[380px] flex flex-col gap-2.5"
+      data-no-gesture
+      className="fixed z-[100] pointer-events-none left-3 right-3 top-[max(0.75rem,env(safe-area-inset-top))]
+        md:top-auto md:left-auto md:right-6 md:bottom-6 md:w-[380px] flex flex-col md:flex-col-reverse gap-2.5"
     >
       <AnimatePresence initial={false}>
         {toasts.map(toast => {
@@ -34,32 +65,43 @@ export const ToastContainer: React.FC = () => {
             <motion.div
               key={toast.id}
               layout={!reduce}
-              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={reduce ? { opacity: 0 } : { opacity: 0, x: 24 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              initial={enter}
+              animate={{ opacity: 1, x: 0, y: 0, scale: 1, transition: reduce ? { duration: 0.15 } : spring }}
+              exit={{ ...leave, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
+              drag={reduce ? false : phone ? true : 'x'}
+              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              dragElastic={phone ? { top: 0.9, bottom: 0.05, left: 0.9, right: 0.9 } : 0.9}
+              onDragEnd={onDragEnd(toast.id)}
               role={toast.type === 'error' ? 'alert' : 'status'}
-              className="pointer-events-auto relative overflow-hidden flex items-start gap-3 bg-surface border border-line rounded-card shadow-float pl-4 pr-1.5 py-3"
+              className="pointer-events-auto relative overflow-hidden flex items-start gap-3 bg-surface border border-line rounded-card shadow-float pl-3 pr-1 py-2.5 touch-pan-y cursor-grab active:cursor-grabbing"
             >
-              <span aria-hidden="true" className={`absolute left-0 inset-y-0 w-1 ${tone.bar}`} />
               <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${tone.tile}`}>
-                <Icon className="w-5 h-5" strokeWidth={1.8} />
+                <Icon className="w-5 h-5" strokeWidth={1.9} />
               </span>
-              <div className="flex-1 min-w-0 pt-0.5">
+              {/* The whole message, wrapping inside the toast (never cut off). */}
+              <div className="flex-1 min-w-0 py-0.5 break-words">
                 <p className="font-semibold text-ink leading-snug">
                   <span className="sr-only">{tone.label}: </span>
-                  {toast.title}
+                  {t(toast.title)}
                 </p>
-                {toast.description && <p className="text-meta text-muted mt-0.5 leading-snug">{toast.description}</p>}
+                {toast.description && <p className="text-meta text-muted leading-snug mt-0.5">{t(toast.description)}</p>}
               </div>
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                aria-label="Dismiss"
-                className="w-11 h-11 -my-1 grid place-items-center rounded-control text-muted hover:text-ink hover:bg-surface-muted cursor-pointer shrink-0"
+                aria-label={t('Dismiss')}
+                className="w-10 h-10 grid place-items-center rounded-control text-muted hover:text-ink hover:bg-surface-muted cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
+              {/* Time left */}
+              {!reduce && (
+                <span
+                  aria-hidden="true"
+                  className={`absolute left-0 bottom-0 h-[3px] w-full origin-left opacity-60 ${tone.bar}`}
+                  style={{ animation: `toast-timer ${LIFETIME_MS}ms linear forwards` }}
+                />
+              )}
             </motion.div>
           );
         })}

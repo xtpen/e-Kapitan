@@ -5,6 +5,7 @@ import { Button } from '../ui';
 import { useResidentActivity, type NotificationCategory, type ResidentNotification } from './useResidentActivity';
 import { timeAgo } from './requestProgress';
 import { EmptyState, IconCircle, List, ListRow, Page, PageTitle, Section, type IconTone } from './kit';
+import { useLanguage, useT } from '../../i18n';
 
 /*
  * Notifications: "New" and "Earlier". Each row is one update about your request; tapping it
@@ -21,6 +22,8 @@ const KIND: Record<NotificationCategory, { icon: React.ReactNode; tone: IconTone
 export const NotificationsView: React.FC = () => {
   const { setActiveTab, markNotificationsRead } = useBarangay();
   const { notifications, unreadCount } = useResidentActivity();
+  const t = useT();
+  const lang = useLanguage();
   const fresh = notifications.filter(n => n.unread);
   const earlier = notifications.filter(n => !n.unread);
 
@@ -34,10 +37,10 @@ export const NotificationsView: React.FC = () => {
       key={n.id}
       icon={<IconCircle tone={KIND[n.category].tone}>{KIND[n.category].icon}</IconCircle>}
       title={n.title}
-      sub={`${n.detail} · ${timeAgo(n.when)}`}
+      sub={`${n.detail} · ${timeAgo(n.when, undefined, lang)}`}
       highlight={n.unread}
       chevron={false}
-      trailing={n.unread ? <span aria-label="New" className="w-2.5 h-2.5 rounded-full bg-navy-ink" /> : undefined}
+      trailing={n.unread ? <span aria-label={t('New')} className="w-2.5 h-2.5 rounded-full bg-navy-ink" /> : undefined}
       onClick={() => open(n)}
     />
   );
@@ -45,12 +48,12 @@ export const NotificationsView: React.FC = () => {
   return (
     <Page>
       <PageTitle
-        title="Notifications"
-        sub={unreadCount ? `${unreadCount} new` : 'You are all caught up.'}
+        title={t('Notifications')}
+        sub={unreadCount ? t('{count} new', { count: unreadCount }) : t('You are all caught up.')}
         action={
           unreadCount > 0 ? (
             <Button variant="outline" size="sm" onClick={() => markNotificationsRead(fresh.map(n => n.id))}>
-              Mark all read
+              {t('Mark all read')}
             </Button>
           ) : undefined
         }
@@ -58,17 +61,17 @@ export const NotificationsView: React.FC = () => {
 
       {notifications.length === 0 ? (
         <Section>
-          <EmptyState icon={<Bell />} title="No notifications yet" sub="Updates about your requests show up here." />
+          <EmptyState icon={<Bell />} title={t('No notifications yet')} sub={t('Updates about your requests show up here.')} />
         </Section>
       ) : (
         <>
           {fresh.length > 0 && (
-            <Section flush title="New" id="notif-new">
+            <Section flush title={t('New')} id="notif-new">
               <List>{fresh.map(row)}</List>
             </Section>
           )}
           {earlier.length > 0 && (
-            <Section flush title="Earlier" id="notif-earlier">
+            <Section flush title={t('Earlier')} id="notif-earlier">
               <List>{earlier.map(row)}</List>
             </Section>
           )}

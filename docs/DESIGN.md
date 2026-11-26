@@ -185,7 +185,15 @@ All tokens are defined in the `@theme` block of `frontend/src/index.css` (owned 
 ### 4.2 Navigation per role (exact labels and order)
 
 **Resident** (own frame, `layout/ResidentShell.tsx`; every page is built from `resident/kit.tsx`; rules in `docs/RESIDENT_UX_BRIEF.md`)
-- Four places: **Home · Services · Requests · Account**; the bell (top right) opens Notifications. A service app, not a social one: no feed, posts or composer.
+- Four places: **Home · Services · Requests · Account**; the bell (top right) opens Notifications.
+- **Icons only**: Home · Services · **Ask Kap** (middle) · Requests · Account (House, LayoutGrid, MessageCircleMore, ListTodo, CircleUserRound), each with an accessible name. Phones: a bar fixed along the bottom edge; the active place sits in a navy pill that springs between tabs. Desktop: the same icons centred in the top bar (Account is the avatar). Ask Kap is a place, not a floating shortcut: always in the same spot, never covering content or the Requests + button. Where pages sit is defined once in `layout/residentNav.ts`.
+- **Back returns to the page you came from**: every page is a browser history entry (`residentNav.ts` historyPush / historyMoved / peekBack), so the top-bar Back, the phone's back button and back gesture all agree. Dragging from the left edge pulls the page away with the finger while the previous page slides in underneath; past a third of the screen it goes back, otherwise it springs back.
+- **Active place**: the icon fills with a navy tint and a small navy dot slides under it. Ask Kap uses the BotMessageSquare icon.
+- **Guided tour** (`resident/GuidedTour.tsx`, on by default, Settings → Guided tour): the first time each main page opens, a spotlight steps through its parts (data-tour targets) with one sentence each; Back / Next / Skip; "Show the tour again" resets it.
+- **Moving between pages** (resident, `App.tsx` residentStack): inner pages slide in from the right on top of the page they came from, which slides back and dims; Back slides them off to reveal it again; switching places slides sideways in the matching direction. Skeletons show only on a page's first visit in a session (and on pull to refresh). Toasts show their whole message and never trigger page swipes.
+- **Phone gestures**: swipe left or right on a place to move to the next one (the page follows the finger), pull down at the top of a page to refresh (custom indicator; the browser's own pull-to-refresh is turned off), swipe in from the left edge to go back on inner pages, light haptics on supporting Android phones. Toasts drop in from the top on phones (swipe to dismiss) and slide in from the right on desktop, with a time-left bar. Theme, contrast and text-size changes cross-fade (`.theme-anim`).
+- **Requests**: status tabs (All · Ongoing · Ready · Done) with a sliding underline, a Filter sheet (type, newest/oldest) with removable chips, results grouped by type, and a round + (floating on phones) for a new request.
+- **Account** is a menu of categories: Personal details · Account & security (sign-in details, change password, forgot password, devices, privacy) · Display & accessibility · Notifications · Help & questions · Ask Kap · Barangay (announcements, officials, check a document) · Sign out. A service app, not a social one: no feed, posts or composer.
 - Phones: top bar with the logo (inner pages: "← Services" etc.) and the bell; bottom bar with the four places. Active place: navy icon (heavier stroke) and label, plus a short 3px bar on the top edge that slides between tabs. Badges sit on a fixed 24px icon box (top-right corner): green count of things ready to pick up on Requests, red count of new notifications on the bell.
 - Desktop: one top bar, logo, then Home · Services · Requests as a text menu (active one underlined), bell and avatar menu on the right.
 - Home: greeting, Needs your attention (ready / needs a fix), What do you need? (six services), In progress; Announcements headlines and pick-up hours beside it on desktop.
@@ -420,6 +428,9 @@ All grids collapse to a single column below 1024px, in source order.
 - **Press feedback**: every `Button` scales to 0.97 while pressed (150ms). Custom pressable elements should do the same (`active:scale-[0.97]`).
 - **Dialogs**: centered on ≥ 640px (fade + scale from 0.96, 240ms in, 150ms out); a bottom sheet on phones (slide up, 420ms drawer curve). Lock page scroll, close on Escape and backdrop tap, make the page behind `inert`, and focus the panel, not the first field (that would pop the phone keyboard). Reference: `auth/AuthDialog.tsx`.
 - **Mobile**: no tap highlight, `touch-action: manipulation` on controls, and no text selection on long-press of buttons (all in `index.css` base). Inputs stay at 16px so iOS never zooms.
+- **Leaving pages**: a resident page sliding away is `inert` and `aria-hidden` (`LeavingInert` in `App.tsx`), so a screen reader only ever finds one page and one `h1`.
+- **Language**: residents can switch to Filipino (`prefs.language`, sets `<html lang>`). See `RESIDENT_UX_BRIEF.md` for how to add phrases.
+- **Checked (Nov 2026)**: every resident page has one `h1`, named buttons, labelled fields and image alt text, has no sideways scroll at 1440px, and passes AA contrast in dark mode. Still to do: a pass with TalkBack/VoiceOver on a real phone.
 
 ---
 

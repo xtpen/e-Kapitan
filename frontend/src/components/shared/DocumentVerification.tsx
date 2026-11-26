@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CircleAlert, CircleCheck, CircleX } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { DocumentRequest } from '../../types';
+import { useT } from '../../i18n';
 import { Button, Field, Input, formatShortDateTime } from '../ui';
 import { FormActions, IconCircle, Page, PageTitle, Section } from '../resident/kit';
 import type { IconTone } from '../resident/kit';
@@ -31,6 +32,7 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
  */
 export const DocumentVerification: React.FC = () => {
   const { documentRequests, officials } = useBarangay();
+  const t = useT();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -41,7 +43,7 @@ export const DocumentVerification: React.FC = () => {
   const verify = (raw: string) => {
     const clean = raw.trim().toUpperCase();
     if (!clean) {
-      setError('Type the code from the document.');
+      setError(t('Type the code from the document.'));
       setOutcome(null);
       return;
     }
@@ -66,18 +68,18 @@ export const DocumentVerification: React.FC = () => {
 
   return (
     <Page>
-      <PageTitle title="Check a document" sub="See if a paper from the hall is real." />
+      <PageTitle title={t('Check a document')} sub={t('See if a paper from the hall is real.')} />
 
       <Section>
         <form
           noValidate
-          aria-label="Check a document"
+          aria-label={t('Check a document')}
           onSubmit={e => {
             e.preventDefault();
             verify(code);
           }}
         >
-          <Field label="Code on the document" error={error} help="It starts with VER, below the QR code." className="[&>label]:mt-0">
+          <Field label={t('Code on the document')} error={error} help={t('It starts with VER, below the QR code.')} className="[&>label]:mt-0">
             {p => (
               <Input
                 {...p}
@@ -100,9 +102,9 @@ export const DocumentVerification: React.FC = () => {
                 verify(SAMPLE_CODE);
               }}
             >
-              Try a sample
+              {t('Try a sample')}
             </Button>
-            <Button variant="brand" type="submit">Check</Button>
+            <Button variant="brand" type="submit">{t('Check')}</Button>
           </FormActions>
         </form>
       </Section>
@@ -112,28 +114,28 @@ export const DocumentVerification: React.FC = () => {
           <Section>
             {outcome.kind === 'valid' && (
               <>
-                {head('green', <CircleCheck />, 'Real document', 'Make sure these details match the paper.')}
+                {head('green', <CircleCheck />, t('Real document'), t('Make sure these details match the paper.'))}
                 <dl className="mt-3">
-                  <Row label="Document">{outcome.doc.documentTitle}</Row>
-                  <Row label="Name">{outcome.doc.residentName}</Row>
-                  <Row label="Purok">{outcome.doc.purok}</Row>
-                  <Row label="For">{outcome.doc.purpose || 'Not stated'}</Row>
-                  <Row label="Date">{formatShortDateTime(outcome.doc.updatedAt)}</Row>
-                  {captain && <Row label="Signed by">{captain.name}</Row>}
-                  <Row label="Code">{outcome.doc.verificationCode}</Row>
+                  <Row label={t('Document')}>{outcome.doc.documentTitle}</Row>
+                  <Row label={t('Name')}>{outcome.doc.residentName}</Row>
+                  <Row label={t('Purok')}>{outcome.doc.purok}</Row>
+                  <Row label={t('For')}>{outcome.doc.purpose || t('Not stated')}</Row>
+                  <Row label={t('Date')}>{formatShortDateTime(outcome.doc.updatedAt)}</Row>
+                  {captain && <Row label={t('Signed by')}>{captain.name}</Row>}
+                  <Row label={t('Code')}>{outcome.doc.verificationCode}</Row>
                 </dl>
               </>
             )}
             {outcome.kind === 'not_issued' &&
-              head('amber', <CircleAlert />, 'Not ready yet', 'This request is still being worked on. The paper is not valid yet.')}
+              head('amber', <CircleAlert />, t('Not ready yet'), t('This request is still being worked on. The paper is not valid yet.'))}
             {outcome.kind === 'not_found' &&
               head(
                 'red',
                 <CircleX />,
-                'Not found',
+                t('Not found'),
                 outcome.looksLikeReference
-                  ? 'That is a tracking number. Use the code that starts with VER.'
-                  : `We couldn't find ${checked}. Check the code and try again, or ask at the hall.`,
+                  ? t('That is a tracking number. Use the code that starts with VER.')
+                  : t("We couldn't find {code}. Check the code and try again, or ask at the hall.", { code: checked }),
               )}
           </Section>
         )}

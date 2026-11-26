@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
+import { useT } from '../../i18n';
 import type { IncidentCategory, IncidentReport, IncidentStatus } from '../../types';
 import { INCIDENT_CATEGORIES, PUROKS } from '../../data/reference';
 import { buildReportStages } from '../shared/reportStages';
@@ -66,6 +67,7 @@ const NEXT_STEP: Record<IncidentStatus, string> = {
 /** Resident · Report a problem: pick the kind, add the details, send. Your reports are listed below. */
 export const ComplaintsView: React.FC = () => {
   const { incidents, createIncidentReport, currentUser } = useBarangay();
+  const t = useT();
 
   const [category, setCategory] = useState<IncidentCategory>(INCIDENT_CATEGORIES[0]);
   const [date, setDate] = useState(todayISO());
@@ -87,13 +89,13 @@ export const ComplaintsView: React.FC = () => {
 
   const validate = (): Errors => {
     const e: Errors = {};
-    if (!date) e.date = 'Enter the date it happened.';
-    else if (date > todayISO()) e.date = 'The date cannot be in the future.';
-    if (!location.trim()) e.location = 'Enter a street or landmark.';
-    if (description.trim().length < 15) e.description = 'Tell us what happened in a sentence or two.';
-    if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = 'Use a JPG, PNG or PDF file.';
-    else if (files.some(f => f.size > MAX_FILE_BYTES)) e.files = 'Each file must be 5 MB or smaller.';
-    if (!consent) e.consent = 'Tick this box to send your report.';
+    if (!date) e.date = t('Enter the date it happened.');
+    else if (date > todayISO()) e.date = t('The date cannot be in the future.');
+    if (!location.trim()) e.location = t('Enter a street or landmark.');
+    if (description.trim().length < 15) e.description = t('Tell us what happened in a sentence or two.');
+    if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = t('Use a JPG, PNG or PDF file.');
+    else if (files.some(f => f.size > MAX_FILE_BYTES)) e.files = t('Each file must be 5 MB or smaller.');
+    if (!consent) e.consent = t('Tick this box to send your report.');
     return e;
   };
 
@@ -130,21 +132,21 @@ export const ComplaintsView: React.FC = () => {
 
   return (
     <Page>
-      <PageTitle title="Report a problem" sub="Tell the barangay what's wrong." />
+      <PageTitle title={t('Report a problem')} sub={t("Tell the barangay what's wrong.")} />
 
-      <Section title="What's the problem?" id="report-kind-title">
+      <Section title={t("What's the problem?")} id="report-kind-title">
         <div role="radiogroup" aria-labelledby="report-kind-title" className="grid grid-cols-2 gap-2">
           {INCIDENT_CATEGORIES.map(c => {
             const { label, icon: Icon } = categoryInfo(c);
-            return <Choice key={c} selected={category === c} onSelect={() => setCategory(c)} label={label} icon={<Icon />} />;
+            return <Choice key={c} selected={category === c} onSelect={() => setCategory(c)} label={t(label)} icon={<Icon />} />;
           })}
         </div>
       </Section>
 
-      <Section title="Details">
+      <Section title={t('Details')}>
         <form ref={formRef} noValidate onSubmit={submit}>
           <div className="grid sm:grid-cols-2 gap-x-4 -mt-4">
-            <Field label="Purok">
+            <Field label={t('Purok')}>
               {p => (
                 <Select {...p} value={purok} onChange={e => setPurok(e.target.value)}>
                   {PUROKS.map(x => (
@@ -153,35 +155,35 @@ export const ComplaintsView: React.FC = () => {
                 </Select>
               )}
             </Field>
-            <Field label="Street or landmark" error={errors.location}>
-              {p => <Input {...p} placeholder="Example: Near the chapel" value={location} onChange={e => setLocation(e.target.value)} />}
+            <Field label={t('Street or landmark')} error={errors.location}>
+              {p => <Input {...p} placeholder={t('Example: Near the chapel')} value={location} onChange={e => setLocation(e.target.value)} />}
             </Field>
           </div>
 
-          <Field label="When did it happen?" error={errors.date}>
+          <Field label={t('When did it happen?')} error={errors.date}>
             {p => <Input {...p} type="date" max={todayISO()} value={date} onChange={e => setDate(e.target.value)} />}
           </Field>
 
-          <Field label="What happened?" error={errors.description}>
-            {p => <Textarea {...p} placeholder="Tell us in your own words" value={description} onChange={e => setDescription(e.target.value)} />}
+          <Field label={t('What happened?')} error={errors.description}>
+            {p => <Textarea {...p} placeholder={t('Tell us in your own words')} value={description} onChange={e => setDescription(e.target.value)} />}
           </Field>
 
-          <Field label="Add a photo" optional error={errors.files}>
+          <Field label={t('Add a photo')} optional error={errors.files}>
             {p => (
-              <FileUpload {...p} multiple accept=".jpg,.jpeg,.png,.pdf" hint="JPG, PNG or PDF, up to 5 MB" files={files} onChange={setFiles} />
+              <FileUpload {...p} multiple accept=".jpg,.jpeg,.png,.pdf" hint={t('JPG, PNG or PDF, up to 5 MB')} files={files} onChange={setFiles} />
             )}
           </Field>
 
           <div className="mt-4 border-t border-line-soft pt-1">
             <Switch
               icon={<EyeOff />}
-              label="Hide my name"
-              description="Only barangay staff will know it was you."
+              label={t('Hide my name')}
+              description={t('Only barangay staff will know it was you.')}
               checked={anonymous}
               onChange={setAnonymous}
             />
             <Checkbox
-              label="The barangay may use my details for this report."
+              label={t('The barangay may use my details for this report.')}
               checked={consent}
               onChange={e => setConsent(e.target.checked)}
               error={errors.consent}
@@ -190,7 +192,7 @@ export const ComplaintsView: React.FC = () => {
 
           <FormActions>
             <Button type="submit" variant="brand">
-              Send report
+              {t('Send report')}
             </Button>
           </FormActions>
         </form>
@@ -203,16 +205,16 @@ export const ComplaintsView: React.FC = () => {
               <CheckCircle2 />
             </IconCircle>
             <p className="text-ink">
-              <b className="font-semibold">Report sent.</b> Tracking number{' '}
+              <b className="font-semibold">{t('Report sent.')}</b> {t('Tracking number')}{' '}
               <b className="font-semibold whitespace-nowrap">{justFiled.referenceNumber}</b>
             </p>
           </div>
         </Section>
       )}
 
-      <Section title="My reports" flush>
+      <Section title={t('My reports')} flush>
         {myReports.length === 0 ? (
-          <EmptyState icon={<MessageSquareWarning />} title="No reports yet" />
+          <EmptyState icon={<MessageSquareWarning />} title={t('No reports yet')} />
         ) : (
           <List>
             {myReports.map(r => {
@@ -227,17 +229,17 @@ export const ComplaintsView: React.FC = () => {
                         <Icon />
                       </IconCircle>
                     }
-                    title={label}
+                    title={t(label)}
                     sub={formatShortDateTime(r.submittedAt)}
                     chevron={false}
                     trailing={
                       <span className="flex items-center gap-2">
-                        <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                        <StatusPill tone={status.tone}>{t(status.label)}</StatusPill>
                         <ChevronDown
                           aria-hidden="true"
                           className={`w-5 h-5 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                         />
-                        <span className="sr-only">{open ? 'Hide details' : 'Show details'}</span>
+                        <span className="sr-only">{open ? t('Hide details') : t('Show details')}</span>
                       </span>
                     }
                     onClick={() => setOpenId(open ? null : r.id)}
@@ -245,10 +247,10 @@ export const ComplaintsView: React.FC = () => {
                   <Expand show={open}>
                     <div className="pr-4 sm:pr-5 pb-4 pl-[68px] sm:pl-[72px] grid gap-3">
                       <p className="text-meta text-muted">
-                        Tracking number <b className="font-semibold text-ink">{r.referenceNumber}</b>
+                        {t('Tracking number')} <b className="font-semibold text-ink">{r.referenceNumber}</b>
                       </p>
                       <ProgressTimeline stages={buildReportStages(r)} />
-                      <p className="text-meta text-ink">{NEXT_STEP[r.status]}</p>
+                      <p className="text-meta text-ink">{t(NEXT_STEP[r.status])}</p>
                     </div>
                   </Expand>
                 </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useState } from 'react';
 import { CircleAlert, Eye, EyeOff } from 'lucide-react';
+import { useT } from '../../i18n';
 
 /*
  * Form fields. See DESIGN.md section 5.6.
@@ -49,6 +50,7 @@ export const Expand: React.FC<{ show: boolean; children: React.ReactNode; classN
 };
 
 export const Field: React.FC<FieldProps> = ({ label, help, error, optional, required, className = '', children }) => {
+  const t = useT();
   const id = useId();
   const helpId = help ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
@@ -62,7 +64,7 @@ export const Field: React.FC<FieldProps> = ({ label, help, error, optional, requ
             *
           </span>
         )}
-        {optional && <span className="font-normal text-muted"> (optional)</span>}
+        {optional && <span className="font-normal text-muted"> ({t('optional')})</span>}
       </label>
       {children({
         id,

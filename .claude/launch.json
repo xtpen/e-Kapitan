@@ -8,21 +8,15 @@
       "port": 5173
     },
     {
+      "name": "frontend-phone",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "backend", "run", "dev"],
-      "port": 3000
-    },
-    {
-      "name": "frontend-build-preview",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "preview", "--", "--port", "4173"],
-      "port": 4173
-    },
-    {
-      "name": "production",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["start"],
       "port": 3000
     }
   ]
