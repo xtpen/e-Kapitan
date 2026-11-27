@@ -79,6 +79,19 @@ Never show the barangay's name or city. Pick-up: weekdays, 1:00 PM to 4:00 PM, a
 - Give a radiogroup's `Choice`s a shared `group` name so the selection slides between them;
   add `tile` for three-across rows so long words (Filipino, large text) never collide.
 
+## Guest mode
+Guests ("Continue as guest") use the same frame and pages as residents (`ResidentShell guest`),
+with places Home · Services · Ask Kap · Track · Account and Sign in / Sign up instead of the bell.
+- Guest-only pages (`components/guest/`): `GuestHome`, `GuestTrack` (look up any tracking
+  number; this visit's numbers stay in "Recently checked"), `GuestAccount`.
+- Open to guests: report a problem (optional name and mobile), check a document, Ask Kap,
+  announcements, officials, help, Display & language, legal pages.
+- Needs an account: the tabs in `LOCKED_FOR_GUESTS` (`guest/access.ts`). They show a lock in
+  Services and open `LockedView`, a "Sign up to …" page. Add a tab there when a new page needs
+  an account. `useGuest()` gives `isGuest`, `signUp`, `signIn`, `leave`.
+- The old public site (PublicShell, PublicHomepage, ReportConcern, TrackRequest, HowItWorks) is
+  gone; old tab names still work through `GUEST_ALIAS`.
+
 ## Loading skeletons
 Every resident page has its own skeleton in `components/layout/residentSkeletons.tsx`, built
 from the same measurements as the kit (card corners, 64px rows, title sizes), and mapped by tab

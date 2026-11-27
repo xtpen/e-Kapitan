@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowLeft, Bell, BotMessageSquare, CircleUserRound, House, LayoutGrid, ListTodo, LogOut, Moon, RotateCw, Settings } from 'lucide-react';
+import { ArrowLeft, Bell, BotMessageSquare, CircleUserRound, House, LayoutGrid, ListTodo, LogOut, Moon, RotateCw, ScanSearch, Settings } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import { usePreferences } from '../../context/PreferencesContext';
-import { Button, LogoMark, initialsOf } from '../ui';
+import { Button, LogoMark, Tooltip, initialsOf } from '../ui';
 import { useT } from '../../i18n';
+import { useGuest } from '../guest/access';
 import { canHistoryBack, historyMoved, historyPush, historyStart, isPlace, markBack, neighbourPlace, peekBack, placeOf } from './residentNav';
 
 /*
@@ -21,21 +22,37 @@ import { canHistoryBack, historyMoved, historyPush, historyStart, isPlace, markB
  *
  * Back always returns to the page you came from (browser history), so the phone's own back
  * button and back gesture work the same way.
+ *
+ * Guests (guest prop) get the same frame: Home · Services · Ask Kap · Track · Account, with
+ * Sign in / Sign up where residents have the bell and their account menu.
  */
 
 interface Place {
   id: string;
   label: string;
   icon: React.ReactNode;
+  /** One line for the desktop tooltip. */
+  hint?: string;
 }
 
 const PLACES: Place[] = [
-  { id: 'home', label: 'Home', icon: <House /> },
-  { id: 'services', label: 'Services', icon: <LayoutGrid /> },
-  { id: 'ai_assistant', label: 'Ask Kap', icon: <BotMessageSquare /> },
-  { id: 'tracking', label: 'Requests', icon: <ListTodo /> },
-  { id: 'account', label: 'Account', icon: <CircleUserRound /> },
+  { id: 'home', label: 'Home', icon: <House />, hint: 'Your updates and quick actions' },
+  { id: 'services', label: 'Services', icon: <LayoutGrid />, hint: 'Everything you can ask the barangay for' },
+  { id: 'ai_assistant', label: 'Ask Kap', icon: <BotMessageSquare />, hint: 'Questions about papers, fees and hours' },
+  { id: 'tracking', label: 'Requests', icon: <ListTodo />, hint: 'Follow everything you asked for' },
+  { id: 'account', label: 'Account', icon: <CircleUserRound />, hint: 'Your profile and settings' },
 ];
+
+const GUEST_PLACES: Place[] = [
+  { id: 'home', label: 'Home', icon: <House />, hint: 'What you can do without an account' },
+  { id: 'services', label: 'Services', icon: <LayoutGrid />, hint: 'Everything the barangay offers' },
+  { id: 'ai_assistant', label: 'Ask Kap', icon: <BotMessageSquare />, hint: 'Questions about papers, fees and hours' },
+  { id: 'tracking', label: 'Track', icon: <ScanSearch />, hint: 'Check a request with its tracking number' },
+  { id: 'account', label: 'Account', icon: <CircleUserRound />, hint: 'Sign up, settings and help' },
+];
+
+/** Page names that differ for guests. */
+const GUEST_TITLE: Record<string, string> = { tracking: 'Track' };
 
 /** Short page names for the Back button. */
 const TITLE: Record<string, string> = {
@@ -248,12 +265,17 @@ const useGestures = (activeTab: string, onEdgeBack: () => void, onPlace: (id: st
 };
 
 export interface ResidentShellProps {
+  /** Guest mode: guest places, Sign in / Sign up instead of the bell and account menu. */
+  guest?: boolean;
   unreadCount?: number;
   readyCount?: number;
   children: React.ReactNode;
 }
 
-export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, readyCount = 0, children }) => {
+export const ResidentShell: React.FC<ResidentShellProps> = ({ guest = false, unreadCount = 0, readyCount = 0, children }) => {
+  const { signIn, signUp } = useGuest();
+  const places = guest ? GUEST_PLACES : PLACES;
+  const titleOf = (id: string) => (guest && GUEST_TITLE[id]) || TITLE[id];
   const { currentUser, activeTab, setActiveTab, setIsAuthenticated } = useBarangay();
   const { setPref, resolvedTheme } = usePreferences();
   const reduceMotion = useReducedMotion();
@@ -342,12 +364,12 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
               <button
                 type="button"
                 onClick={() => goBack()}
-                aria-label={t('Back to {page}', { page: t(TITLE[backTarget] ?? 'previous page') })}
+                aria-label={t('Back to {page}', { page: t(titleOf(backTarget) ?? 'previous page') })}
                 className="lg:hidden inline-flex items-center gap-1 min-h-11 pl-1.5 pr-3 rounded-full font-semibold text-ink cursor-pointer
                   hover:bg-surface-muted active:scale-[0.97] transition-[background-color,scale] duration-150"
               >
                 <ArrowLeft className="w-6 h-6" strokeWidth={2} aria-hidden="true" />
-                <span className="truncate">{t(TITLE[backTarget] ?? 'Back')}</span>
+                <span className="truncate">{t(titleOf(backTarget) ?? 'Back')}</span>
               </button>
             )}
             <button
@@ -363,11 +385,11 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
 
           {/* Desktop: the places as icons with tooltips (Account is the avatar on the right) */}
           <nav aria-label="Main" className="hidden lg:flex flex-1 justify-center gap-1">
-            {PLACES.filter(p => p.id !== 'account').map(p => {
+            {places.filter(p => guest || p.id !== 'account').map(p => {
               const active = current === p.id;
               return (
+                <Tooltip key={p.id} label={t(p.label)} hint={p.hint && t(p.hint)} side="bottom">
                 <button
-                  key={p.id}
                   type="button"
                   data-tour={`nav-${p.id}`}
                   onClick={() => go(p.id)}
@@ -387,32 +409,46 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
                       transition={reduceMotion ? { duration: 0 } : SLIDE}
                     />
                   )}
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-full -mt-1 px-2 py-1 rounded-md bg-ink text-surface text-caption font-semibold whitespace-nowrap
-                      opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-[opacity,translate] duration-150 delay-300"
-                  >
-                    {t(p.label)}
-                  </span>
                 </button>
+                </Tooltip>
               );
             })}
           </nav>
 
+          {guest ? (
+            <div className="flex items-center gap-2 lg:w-[220px] lg:justify-end">
+              <button
+                type="button"
+                onClick={signIn}
+                className="min-h-10 px-3.5 rounded-full font-semibold text-navy-ink hover:bg-surface-muted cursor-pointer transition-[background-color,scale] duration-150 active:scale-[0.96]"
+              >
+                {t('Sign in')}
+              </button>
+              <button
+                type="button"
+                onClick={signUp}
+                className="min-h-10 px-4 rounded-full bg-navy text-white font-semibold hover:bg-navy-deep cursor-pointer transition-[background-color,scale] duration-150 active:scale-[0.96]"
+              >
+                {t('Sign up')}
+              </button>
+            </div>
+          ) : (
           <div className="flex items-center gap-1 lg:w-[220px] lg:justify-end">
+            <Tooltip label={t('Notifications')} hint={unreadCount ? t('Notifications, {n} new', { n: unreadCount }) : undefined} side="bottom">
             <button
               type="button"
               data-tour="bell"
               onClick={() => go('notifications')}
               aria-label={unreadCount ? t('Notifications, {n} new', { n: unreadCount }) : t('Notifications')}
               aria-current={activeTab === 'notifications' ? 'page' : undefined}
-              title={t('Notifications')}
               className={`w-11 h-11 grid place-items-center rounded-full cursor-pointer transition-[background-color,scale] duration-150 active:scale-[0.92]
                 ${activeTab === 'notifications' ? 'bg-navy-tint text-navy-ink' : 'text-ink hover:bg-surface-muted'}`}
             >
               <IconBox icon={<Bell />} badge={<Badge count={unreadCount} tone="red" />} active={activeTab === 'notifications'} />
             </button>
+            </Tooltip>
             <div className="relative hidden lg:block" ref={menuRef}>
+              <Tooltip label={t('Account')} hint={currentUser.name} side="bottom" disabled={menuOpen}>
               <button
                 type="button"
                 data-tour="nav-account"
@@ -420,12 +456,12 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 aria-label={t('Account menu')}
-                title={t('Account')}
                 className={`ml-1 w-10 h-10 rounded-full bg-navy text-white grid place-items-center font-display font-bold text-sm cursor-pointer
                   transition-[box-shadow] duration-150 hover:ring-4 hover:ring-navy-ink/15 ${current === 'account' ? 'ring-2 ring-navy-ink ring-offset-2 ring-offset-surface' : ''}`}
               >
                 {initialsOf(currentUser.name)}
               </button>
+              </Tooltip>
               <AnimatePresence>
                 {menuOpen && (
                   <motion.div
@@ -475,6 +511,7 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
               </AnimatePresence>
             </div>
           </div>
+          )}
         </div>
       </header>
 
@@ -506,7 +543,7 @@ export const ResidentShell: React.FC<ResidentShellProps> = ({ unreadCount = 0, r
       {/* ---------- Bottom bar (phones and tablets): fixed along the bottom edge ---------- */}
       <nav aria-label="Main" className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-surface/95 border-t border-line pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto max-w-[560px] h-16 grid grid-cols-5">
-          {PLACES.map(p => {
+          {places.map(p => {
             const active = current === p.id;
             return (
               <button

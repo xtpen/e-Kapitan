@@ -46,10 +46,10 @@ import { LEGAL_DOCS, type LegalDocId } from '../legal/legalDocs';
 type IconC = React.ComponentType<{ className?: string; strokeWidth?: number }>;
 
 const GUEST_ACTIONS: { title: string; text: string; icon: IconC; tab: string }[] = [
-  { title: 'Report a concern', text: 'File a report about your street or neighborhood and get a tracking number.', icon: TriangleAlert, tab: 'file_report' },
-  { title: 'Track a request', text: 'Enter any reference number to see where a document, report or booking stands.', icon: ScanSearch, tab: 'report_status' },
+  { title: 'Report a concern', text: 'File a report about your street or neighborhood and get a tracking number.', icon: TriangleAlert, tab: 'complaints' },
+  { title: 'Track a request', text: 'Enter any reference number to see where a document, report or booking stands.', icon: ScanSearch, tab: 'tracking' },
   { title: 'Verify a document', text: 'Check that a printed clearance or certificate is real, using the code at its bottom.', icon: FileCheck2, tab: 'qr_verify' },
-  { title: 'Read announcements', text: 'Advisories, health drives, events and schedule changes from the barangay hall.', icon: Megaphone, tab: 'guest_announcements' },
+  { title: 'Read announcements', text: 'Advisories, health drives, events and schedule changes from the barangay hall.', icon: Megaphone, tab: 'announcements' },
   { title: 'Meet your officials', text: 'Who leads the barangay, their committees and how to reach them.', icon: Landmark, tab: 'officials_directory' },
   { title: 'Ask Kap', text: 'Ka-Barangay AI answers questions about requirements, fees and office hours.', icon: MessageSquareText, tab: 'ai_assistant' },
 ];

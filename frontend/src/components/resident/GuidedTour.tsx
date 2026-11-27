@@ -14,6 +14,9 @@ import { useT } from '../../i18n';
  * Everything but the explanation card and the item being explained is dimmed: a full-screen dark
  * layer with a cut-out shaped exactly like the item (same size, same corner rounding).
  * Targets are elements with data-tour="…". A step whose item isn't there is skipped.
+ *
+ * Guests get their own shorter tour (GUEST_STEPS, seen once as 'guest'): what works without an
+ * account, what the locks mean, Track, and where to sign up.
  */
 
 interface Step {
@@ -45,6 +48,37 @@ const STEPS: Step[] = [
   { page: 'account', title: 'You’re all set', text: 'You can see this tour again from Help on the Account page.', only: 'wide' },
 ];
 
+const GUEST_TOUR_ID = 'guest';
+
+const GUEST_STEPS: Step[] = [
+  { page: 'home', title: 'Welcome to eKapitan', text: 'You are looking around as a guest. Here is what you can do.' },
+  { page: 'home', target: 'home-actions', title: 'No account needed', text: 'Report a problem, track a request or check a document right away.' },
+  { page: 'services', target: 'svc-search', title: 'Services', text: 'Find any service. The ones with a lock need a free account.' },
+  { page: 'ai_assistant', target: 'kap-input', title: 'Ask Kap', text: 'Ask about papers, fees and office hours, any time.' },
+  { page: 'tracking', target: 'track-form', title: 'Track', text: 'Got a tracking number? Type it here to see where your request is.' },
+  { page: 'account', target: 'guest-you', title: 'Account', text: 'Sign up here to use every service. Display and language settings are here too.' },
+  {
+    page: 'account',
+    title: 'You’re all set',
+    text: 'Swipe left or right to change pages, pull down to refresh, and swipe from the left edge to go back.',
+    only: 'phone',
+  },
+  { page: 'account', title: 'You’re all set', text: 'You can see this tour again from Help on the Account page.', only: 'wide' },
+];
+
+const ADMIN_TOUR_ID = 'admin';
+
+/** Admin and super admin: the portal in one pass, starting and ending on Overview. */
+const ADMIN_STEPS: Step[] = [
+  { page: 'admin_overview', title: 'Welcome to the admin portal', text: 'A quick look around. It takes less than a minute.' },
+  { page: 'admin_overview', target: 'admin-nav', title: 'Everything in groups', text: 'Pages are grouped by the kind of work: requests, records, content and insights.' },
+  { page: 'admin_overview', target: 'admin-attention', title: 'Needs attention', text: 'New requests and reports waiting for someone. Click one to open it.' },
+  { page: 'admin_overview', target: 'admin-bell', title: 'Notifications', text: 'New requests, reports and bookings also show up here.' },
+  { page: 'admin_overview', target: 'admin-signout', title: 'Sign out', text: 'Sign out here when you are done, especially on a shared computer.' },
+  { page: 'admin_account', target: 'admin-me', title: 'My account', text: 'Your details, what you can use, and your password.' },
+  { page: 'admin_account', title: 'You’re all set', text: 'You can see this tour again in Settings.' },
+];
+
 const isPhone = () => window.matchMedia('(max-width: 1023px)').matches;
 
 /** The visible element for a data-tour value. */
@@ -57,7 +91,11 @@ const findTarget = (name: string) =>
 type Hole = { x: number; y: number; w: number; h: number; r: number };
 const PAD = 4;
 
-export const GuidedTour: React.FC<{ page: string; ready: boolean }> = ({ page, ready }) => {
+export const GuidedTour: React.FC<{ page: string; ready: boolean; guest?: boolean; admin?: boolean }> = ({ page, ready, guest = false, admin = false }) => {
+  const TOUR_ID = admin ? ADMIN_TOUR_ID : guest ? GUEST_TOUR_ID : 'app';
+  const ALL_STEPS = admin ? ADMIN_STEPS : guest ? GUEST_STEPS : STEPS;
+  /** Where the tour starts and where it leaves you. */
+  const START = admin ? 'admin_overview' : 'home';
   const { setActiveTab } = useBarangay();
   const { prefs, setPref } = usePreferences();
   const reduce = useReducedMotion();
@@ -72,14 +110,15 @@ export const GuidedTour: React.FC<{ page: string; ready: boolean }> = ({ page, r
 
   // Start once, on Home, after the page has settled.
   useEffect(() => {
-    if (steps || !prefs.tour || prefs.toursSeen.includes(TOUR_ID) || page !== 'home' || !ready) return;
+    if (steps || !prefs.tour || prefs.toursSeen.includes(TOUR_ID) || page !== START || !ready) return;
     const t = window.setTimeout(() => {
       const phone = isPhone();
-      setSteps(STEPS.filter(s => !s.only || (s.only === 'phone') === phone));
+      setSteps(ALL_STEPS.filter(s => !s.only || (s.only === 'phone') === phone));
       setI(0);
     }, 800);
     return () => window.clearTimeout(t);
-  }, [page, ready, prefs.tour, prefs.toursSeen, steps]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, ready, prefs.tour, prefs.toursSeen, steps, guest, admin]);
 
   const step = steps?.[i];
 
@@ -153,8 +192,9 @@ export const GuidedTour: React.FC<{ page: string; ready: boolean }> = ({ page, r
     setSteps(null);
     setHole(null);
     if (!prefs.toursSeen.includes(TOUR_ID)) setPref('toursSeen', [...prefs.toursSeen, TOUR_ID]);
-    setActiveTab('home');
-  }, [prefs.toursSeen, setPref, setActiveTab]);
+    setActiveTab(START);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.toursSeen, setPref, setActiveTab, guest, admin]);
 
   // Past the last step (e.g. the last items were skipped): end.
   useEffect(() => {
@@ -172,11 +212,16 @@ export const GuidedTour: React.FC<{ page: string; ready: boolean }> = ({ page, r
     return () => window.removeEventListener('keydown', onKey);
   }, [steps, finish]);
 
-  // The explanation card: below the item if there is room, else above; in the middle without one.
+  // The explanation card: below the item if there is room, else above; beside a tall item (like a
+  // sidebar) when neither fits but the side does; in the middle without an item.
   const card = useMemo(() => {
     const w = Math.min(340, size.w - 24);
     if (!hole) return { left: (size.w - w) / 2, top: size.h / 2 - 90, width: w, above: false };
     const below = hole.y + hole.h + 14 + 170 < size.h;
+    const aboveFits = hole.y - 14 - 160 >= 12;
+    if (!below && !aboveFits && hole.x + hole.w + 16 + w <= size.w - 12) {
+      return { left: hole.x + hole.w + 16, top: Math.max(12, Math.min(hole.y + 24, size.h - 200)), width: w, above: false };
+    }
     const left = Math.max(12, Math.min(hole.x + hole.w / 2 - w / 2, size.w - w - 12));
     return below ? { left, top: hole.y + hole.h + 14, width: w, above: false } : { left, top: Math.max(12, hole.y - 14 - 160), width: w, above: true };
   }, [hole, size]);

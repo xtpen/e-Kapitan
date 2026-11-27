@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, CircleDot, FileCheck2, FileText, Landmark, Megaphone, MessageCircle, Printer, Search, TriangleAlert, X } from 'lucide-react';
+import { CalendarDays, CircleDot, FileCheck2, FileText, Landmark, LockKeyhole, Megaphone, MessageCircle, Printer, Search, TriangleAlert, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import { EmptyState, IconCircle, List, ListRow, Page, PageTitle, Section, type IconTone } from './kit';
 import { useT } from '../../i18n';
 import { fuzzyFilter } from '../../lib/fuzzy';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { LOCKED_FOR_GUESTS, useGuest } from '../guest/access';
 
 /*
  * Services: the four most used as big tiles, everything else in one list with small category
@@ -54,6 +55,9 @@ const HELPER = 'ai_assistant';
 
 export const ServicesHub: React.FC = () => {
   const { setActiveTab } = useBarangay();
+  const { isGuest } = useGuest();
+  /** Guests: this one needs an account (it opens a sign-up page). */
+  const locked = (id: string) => isGuest && LOCKED_FOR_GUESTS.has(id);
   const [q, setQ] = useState('');
   const term = useDebouncedValue(q.trim(), 180);
   const t = useT();
@@ -73,7 +77,14 @@ export const ServicesHub: React.FC = () => {
   );
 
   const row = (s: Service) => (
-    <ListRow key={s.id} icon={<IconCircle tone={s.tone}>{s.icon}</IconCircle>} title={t(s.label)} sub={t(s.hint)} onClick={() => setActiveTab(s.id)} />
+    <ListRow
+      key={s.id}
+      icon={<IconCircle tone={s.tone}>{s.icon}</IconCircle>}
+      title={t(s.label)}
+      sub={locked(s.id) ? t('Needs a free account') : t(s.hint)}
+      trailing={locked(s.id) ? <LockKeyhole className="w-4 h-4 text-muted" aria-label={t('Needs an account')} /> : undefined}
+      onClick={() => setActiveTab(s.id)}
+    />
   );
 
   return (
@@ -143,12 +154,20 @@ export const ServicesHub: React.FC = () => {
                       shadow-[0_1px_2px_rgb(16_24_40/0.05)] transition-[scale,box-shadow,border-color] duration-150 ease-out-strong
                       active:scale-[0.97] hover:shadow-float hover:border-navy-ink/25"
                   >
-                    <IconCircle tone={s.tone} size="lg">
-                      {s.icon}
-                    </IconCircle>
+                    <span className="relative">
+                      <IconCircle tone={s.tone} size="lg">
+                        {s.icon}
+                      </IconCircle>
+                      {locked(s.id) && (
+                        <span aria-hidden="true" className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-surface border border-line grid place-items-center text-muted">
+                          <LockKeyhole className="w-3 h-3" strokeWidth={2.4} />
+                        </span>
+                      )}
+                    </span>
                     <span className="min-w-0">
                       <span className="block font-semibold text-ink leading-tight">{t(s.label)}</span>
                       <span className="mt-1 text-caption text-muted leading-snug line-clamp-2">{t(s.hint)}</span>
+                      {locked(s.id) && <span className="sr-only">, {t('Needs an account')}</span>}
                     </span>
                   </button>
                 </li>

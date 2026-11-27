@@ -22,6 +22,10 @@ const shortDay = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { we
 const longDay = (iso: string) => parseISO(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 const startHour = (slotId: string) => Number(slotId.split('-')[0]);
 
+/** Smooth scroll, unless the person asked for less motion. */
+const scrollBehavior = (): ScrollBehavior =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
 /** Live window width check, so the calendar can drop its event chips on phones. */
 const useIsWide = () => {
   const query = '(min-width: 768px)';
@@ -72,7 +76,7 @@ export const AdminCourtReservations: React.FC = () => {
     setClosing(false);
     setCloseReason('');
     setCloseError(undefined);
-    if (!wide) requestAnimationFrame(() => dayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    if (!wide) requestAnimationFrame(() => dayRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
   };
 
   const decline = (r: CourtReservation) => {
@@ -97,16 +101,16 @@ export const AdminCourtReservations: React.FC = () => {
     setCloseError(undefined);
   };
 
-  /* ---------- Pending requests (mobile mockup: "Court approvals") ---------- */
+  /* ---------- Requests waiting for approval (mobile mockup: "Court approvals") ---------- */
   const pendingCard = (
     <Card>
       <CardHeader
-        title="Pending requests"
+        title="Waiting for approval"
         action={<StatusPill tone={pending.length ? 'warning' : 'neutral'}>{pending.length} waiting</StatusPill>}
       />
-      {pending.length > 1 && <p className="text-meta text-muted -mt-1 mb-1">First come, first served: oldest request first.</p>}
+      {pending.length > 1 && <p className="text-meta text-muted -mt-1 mb-1">First come, first served: the oldest request is on top.</p>}
       {pending.length === 0 ? (
-        <p className="text-meta text-muted">No requests waiting. New ones will appear here.</p>
+        <p className="text-meta text-muted">Nothing to approve right now. New requests show up here.</p>
       ) : (
         <ol>
           {pending.map((r, i) => (
@@ -124,11 +128,11 @@ export const AdminCourtReservations: React.FC = () => {
                 </button>
                 <span className="text-caption text-muted whitespace-nowrap pt-0.5">{r.referenceNumber}</span>
               </div>
-              <p className="text-meta text-muted">
+              <p className="text-meta text-ink">
                 {r.activity}, {r.residentName}
               </p>
               <p className="text-caption text-muted mt-0.5">
-                <span className="font-semibold text-ink">#{i + 1}</span> · Requested {formatShortDateTime(r.submittedAt)}
+                <span className="font-semibold text-ink">#{i + 1} in line</span> · Requested {formatShortDateTime(r.submittedAt)}
               </p>
               {declining === r.id ? (
                 <div className="mt-2">
@@ -189,7 +193,7 @@ export const AdminCourtReservations: React.FC = () => {
               <span>
                 <span className="block font-semibold">{s.label}</span>
                 <span className="block text-meta text-muted">
-                  {b ? `${b.activity}, ${b.residentName}` : closed ? 'Closed' : isPast ? 'No booking' : 'Open'}
+                  {b ? `${b.activity}, ${b.residentName}` : closed ? 'Closed' : isPast ? 'No booking' : 'Available'}
                 </span>
                 {b && <span className="block text-caption text-muted">Requested {formatShortDateTime(b.submittedAt)}</span>}
               </span>
@@ -252,25 +256,31 @@ export const AdminCourtReservations: React.FC = () => {
   const legend = (
     <p className="flex flex-wrap gap-2 mt-4" aria-label="Legend">
       <StatusPill tone="success">Approved</StatusPill>
-      <StatusPill tone="warning">Pending</StatusPill>
+      <StatusPill tone="warning">Pending approval</StatusPill>
       <StatusPill tone="danger">Closed</StatusPill>
     </p>
   );
 
   return (
-    <div className="max-w-[1200px]">
-      <div className="md:hidden mb-4">
-        <h1 className="text-2xl font-bold text-navy-ink">Court approvals</h1>
-        <p className="text-meta text-muted mt-1">
-          {pending.length} {pending.length === 1 ? 'request' : 'requests'} waiting
-        </p>
-      </div>
-      <div className="hidden md:block">
-        <div className="mb-6 flex flex-wrap justify-between items-end gap-4">
-          <div>
-            <h1 className="text-h1 leading-tight font-bold text-navy-ink">Court Reservations</h1>
-            <p className="text-meta text-muted mt-1">Approve requests and manage the court calendar.</p>
-          </div>
+    <div className="max-w-[1280px]">
+      {/* One header for all sizes. Phones lead with the waiting count; the "Close a day" button is desktop only
+          (on phones it sits in the day card). */}
+      <div className="mb-4 flex flex-wrap justify-between items-end gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-[1.75rem] leading-tight font-bold text-navy-ink">Court bookings</h1>
+          <p className="text-meta text-muted mt-1">
+            <span className="md:hidden">
+              {pending.length === 0
+                ? 'Nothing waiting for approval.'
+                : `${pending.length} ${pending.length === 1 ? 'request' : 'requests'} waiting for approval.`}
+            </span>
+            <span className="hidden md:inline">
+              {pending.length > 0 && `${pending.length} waiting for approval. `}
+              Approve or decline bookings, and close the court on days it can't be used.
+            </span>
+          </p>
+        </div>
+        <span className="hidden md:block">
           <Button
             variant="secondary"
             size="sm"
@@ -278,15 +288,15 @@ export const AdminCourtReservations: React.FC = () => {
             onClick={() => {
               if (day < today) setDay(today);
               setClosing(true);
-              dayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              dayRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
             }}
           >
-            Close a date
+            Close a day
           </Button>
-        </div>
+        </span>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)] gap-4 items-start">
         {/* On phones the approvals come first (mobile mockup); on desktop the calendar leads. */}
         <div className="order-2 lg:order-1">
           <Card>
@@ -313,7 +323,7 @@ export const AdminCourtReservations: React.FC = () => {
             />
           </Card>
         </div>
-        <div className="order-1 lg:order-2 grid gap-5">
+        <div className="order-1 lg:order-2 grid gap-4">
           {pendingCard}
           <div ref={dayRef} className="scroll-mt-24">
             {dayCard}

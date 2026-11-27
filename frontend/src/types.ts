@@ -1,4 +1,5 @@
-export type UserRole = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
+/** Seed accounts: resident, admin, super admin. Guest is browsing without an account. */
+export type UserRole = 'citizen' | 'admin' | 'superadmin' | 'guest';
 
 export interface UserProfile {
   id: string;
@@ -268,10 +269,10 @@ export interface CourtClosure {
 }
 
 /** Areas of the admin side a staff account can use. */
-export type AccessArea = 'documents' | 'complaints' | 'printing' | 'court' | 'residents' | 'management' | 'reports';
+export type AccessArea = 'documents' | 'complaints' | 'printing' | 'court' | 'residents' | 'management' | 'reports' | 'users';
 
 /** Preset bundles of access; staff can still be given or denied single areas. */
-export type StaffRole = 'administrator' | 'records' | 'desk' | 'peace_order' | 'health' | 'viewer';
+export type StaffRole = 'super_admin' | 'administrator' | 'records' | 'desk' | 'peace_order' | 'health' | 'viewer';
 
 export interface Personnel {
   id: string;

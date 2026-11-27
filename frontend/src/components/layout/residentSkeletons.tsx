@@ -696,7 +696,43 @@ const Officials = () => (
   </div>
 );
 
+/** Guest · Track: tracking number form, then "Need help?" rows. */
+const GuestTrack = () => (
+  <Page>
+    <Title w="w-44" sub="w-72" />
+    <Card className="p-4 sm:p-5">
+      <Field label="w-28" />
+      <Line w="w-64" h="h-3" className="mt-2" />
+      <div className="mt-5 flex sm:justify-end">
+        <Button className="w-full sm:w-36" />
+      </div>
+    </Card>
+    <ListCard rows={2} title="w-24" widths={['w-1/2', 'w-2/5']} />
+  </Page>
+);
+
+/** Guest · a page that needs an account: centred icon, title, text, two buttons, then "do now" rows. */
+const Locked = () => (
+  <Page>
+    <Card className="p-4 sm:p-5">
+      <div className="grid grid-cols-1 justify-items-center gap-2.5 py-4">
+        <Circle size="w-16 h-16" />
+        <Line w="w-56" h="h-6" className="mt-3 rounded-control" />
+        <Line w="w-64" h="h-3.5" />
+        <Line w="w-52" h="h-3.5" />
+        <div className="mt-4 w-full max-w-[320px] grid grid-cols-1 gap-2.5">
+          <Button />
+          <Button />
+        </div>
+      </div>
+    </Card>
+    <ListCard rows={4} title="w-40" />
+  </Page>
+);
+
 export const RESIDENT_SKELETONS = {
+  rGuestTrack: GuestTrack,
+  rLocked: Locked,
   rHome: Home,
   rDocuments: Documents,
   rRequestForm: RequestForm,

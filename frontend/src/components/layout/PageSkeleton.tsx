@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bone } from '../ui';
 import { RESIDENT_SKELETONS } from './residentSkeletons';
+import { ADMIN_SKELETONS } from './adminSkeletons';
 
 /*
  * Page skeletons (docs/DESIGN.md section 5.17). Each one mirrors a real page layout from section 6,
@@ -21,7 +22,9 @@ export type SkeletonKind =
   | 'chat'
   | 'publicHome'
   // Resident portal: one skeleton per page (residentSkeletons.tsx)
-  | keyof typeof RESIDENT_SKELETONS;
+  | keyof typeof RESIDENT_SKELETONS
+  // Admin portal: one skeleton per page (adminSkeletons.tsx)
+  | keyof typeof ADMIN_SKELETONS;
 
 /** Which skeleton each tab shows while it loads. Unknown tabs get the form layout. */
 const BY_TAB: Record<string, SkeletonKind> = {
@@ -55,37 +58,35 @@ const BY_TAB: Record<string, SkeletonKind> = {
   file_report: 'form',
   report_status: 'form',
   guest_help: 'cards',
-  // Admin
-  admin_overview: 'adminOverview',
-  admin_documents: 'listDetail',
-  admin_complaints: 'listDetail',
-  admin_printing: 'listDetail',
-  admin_court: 'calendar',
-  admin_residents: 'listDetail',
-  admin_personnel: 'listDetail',
-  admin_services: 'cards',
-  admin_chatbot: 'cards',
-  admin_officials: 'cards',
-  admin_reports: 'adminOverview',
-  admin_audit: 'table',
-  // Legacy staff / official
-  dashboard: 'adminOverview',
-  staff_dashboard: 'adminOverview',
-  staff_documents: 'listDetail',
-  staff_queue: 'adminOverview',
-  staff_residents: 'table',
-  staff_incidents: 'listDetail',
-  staff_cashier: 'table',
-  staff_announcements: 'feed',
-  executive_dashboard: 'adminOverview',
-  official_dashboard: 'adminOverview',
-  official_blotter: 'listDetail',
-  official_audit: 'table',
-  official_announcements: 'feed',
-  manage_officials: 'cards',
+  // Admin: every page has its own skeleton
+  admin_overview: 'aOverview',
+  admin_notifications: 'aNotifications',
+  admin_documents: 'aDocuments',
+  admin_complaints: 'aComplaints',
+  admin_printing: 'aPrinting',
+  admin_court: 'aCourt',
+  admin_residents: 'aResidents',
+  admin_officials: 'aOfficials',
+  admin_announcements: 'aAnnouncements',
+  admin_services: 'aServices',
+  admin_chatbot: 'aChatbot',
+  admin_reports: 'aReports',
+  admin_audit: 'aAudit',
+  admin_personnel: 'aPersonnel',
+  admin_account: 'aAccount',
+  admin_settings: 'aSettings',
 };
 
-export const skeletonFor = (tab: string): SkeletonKind => BY_TAB[tab] ?? 'form';
+/** Guests see a few pages of their own (components/guest). */
+const GUEST_LOCKED = new Set(['documents', 'request_wizard', 'printing', 'court', 'appointments', 'notifications', 'profile', 'account_security', 'notify_settings']);
+
+export const skeletonFor = (tab: string, role?: string): SkeletonKind => {
+  if (role === 'guest') {
+    if (tab === 'tracking') return 'rGuestTrack';
+    if (GUEST_LOCKED.has(tab)) return 'rLocked';
+  }
+  return BY_TAB[tab] ?? 'form';
+};
 
 /* ---------- building blocks ---------- */
 
@@ -477,13 +478,14 @@ const LAYOUTS: Record<SkeletonKind, React.FC> = {
   chat: Chat,
   publicHome: PublicHome,
   ...RESIDENT_SKELETONS,
+  ...ADMIN_SKELETONS,
 };
 
 /** Loading placeholder shaped like the page that's coming. */
 export const PageSkeleton: React.FC<{ kind?: SkeletonKind }> = ({ kind = 'form' }) => {
   const Layout = LAYOUTS[kind];
   return (
-    <div className={kind === 'publicHome' ? 'w-full' : kind.startsWith('r') ? 'w-full [&_*]:min-w-0' : 'max-w-[1200px] w-full'} role="status" aria-label="Loading page" aria-busy="true">
+    <div className={kind === 'publicHome' ? 'w-full' : /^[ra][A-Z]/.test(kind) ? 'w-full [&_*]:min-w-0' : 'max-w-[1200px] w-full'} role="status" aria-label="Loading page" aria-busy="true">
       <Layout />
     </div>
   );

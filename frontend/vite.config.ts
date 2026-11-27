@@ -66,16 +66,16 @@ function aistudioMediaPlugin(): Plugin {
 
 /*
  * Code splitting. Screens are lazy-loaded in App.tsx; this groups them into one chunk per area so a
- * guest downloads only the public site, a resident only the resident portal, and so on.
- * Files the app needs at startup (nav configs, publicNav) must stay out of these groups, or their
- * whole group would load at startup too.
+ * guest downloads only the guest pages, a resident only the resident portal, and so on.
+ * Files the app needs at startup (nav configs, publicNav, guest/access, the resident kit that the
+ * welcome page's legal sheet uses) must stay out of these groups, or their whole group would load
+ * at startup too. Guests use the resident app, so guest pages share the resident chunk.
  */
-const STARTUP_FILES = /components\/(resident\/residentNav|resident\/useResidentActivity|admin\/adminNav|public\/publicNav)\./;
+const STARTUP_FILES = /components\/(resident\/residentNav|resident\/useResidentActivity|resident\/kit|resident\/GuidedTour|admin\/adminNav|admin\/adminNotices|public\/publicNav|guest\/access)\./;
 const AREA_CHUNKS: [RegExp, string][] = [
-  [/components\/public\//, 'area-public'],
-  [/components\/resident\//, 'area-resident'],
+  [/components\/(resident|guest)\//, 'area-resident'],
   [/components\/admin\//, 'area-admin'],
-  [/components\/(staff|official)\/|components\/layout\/Header\./, 'area-legacy'],
+  [/components\/official\//, 'area-shared'],
   [/components\/shared\/OfficialDocumentTemplate\./, 'certificate'],
   [/components\/shared\//, 'area-shared'],
 ];

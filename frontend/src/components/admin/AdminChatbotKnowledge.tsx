@@ -2,13 +2,13 @@ import React, { useRef, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { KnowledgeBaseItem } from '../../types';
-import { AttentionPanel, Button, Card, DataTable, Field, FilterChips, Input, PageHeader, StatusPill, Textarea, formatShortDateTime } from '../ui';
+import { AttentionPanel, Button, Card, DataTable, Field, Input, PageHeader, Select, StatusPill, Textarea, formatShortDateTime } from '../ui';
 
 type Panel = 'detail' | 'edit' | 'add';
 const blank = { category: '', question: '', answer: '', keywords: '' };
 
 /**
- * Admin · Chatbot Knowledge. Ka-Barangay AI only answers from these entries (PRODUCT.md),
+ * Admin · Chatbot knowledge. Ask Kap (Ka-Barangay AI) only answers from these entries (PRODUCT.md),
  * so staff control exactly what residents are told. No mockup; Admin list + detail pattern.
  */
 export const AdminChatbotKnowledge: React.FC = () => {
@@ -61,35 +61,42 @@ export const AdminChatbotKnowledge: React.FC = () => {
 
   const detail = (k: KnowledgeBaseItem) => (
     <Card aria-live="polite">
-      <StatusPill tone="info">{k.category}</StatusPill>
-      <h2 className="text-h3 font-semibold text-navy-ink mt-2">{k.question}</h2>
-      <p className="mt-3 whitespace-pre-line">{k.answer}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <StatusPill tone="info">{k.category}</StatusPill>
+        <span className="text-caption text-muted">Updated {formatShortDateTime(k.lastUpdated)}</span>
+      </div>
+      <p className="text-caption font-semibold uppercase tracking-[0.06em] text-muted mt-3">When a resident asks</p>
+      <h2 className="text-h3 font-semibold text-navy-ink mt-0.5">{k.question}</h2>
+      <p className="text-caption font-semibold uppercase tracking-[0.06em] text-muted mt-3">Ask Kap answers</p>
+      <p className="mt-1 rounded-control bg-surface-muted px-3 py-2.5 whitespace-pre-line">{k.answer}</p>
       {k.keywords.length > 0 && (
-        <p className="flex flex-wrap gap-1.5 mt-3" aria-label="Keywords">
-          {k.keywords.map(w => (
-            <span key={w} className="rounded-full bg-surface-muted px-2.5 py-0.5 text-caption font-semibold text-muted">
-              {w}
-            </span>
-          ))}
-        </p>
+        <>
+          <p className="text-meta text-muted mt-3">Also found when people type:</p>
+          <p className="flex flex-wrap gap-1.5 mt-1.5">
+            {k.keywords.map(w => (
+              <span key={w} className="rounded-full border border-line px-2.5 py-0.5 text-caption font-semibold text-ink">
+                {w}
+              </span>
+            ))}
+          </p>
+        </>
       )}
-      <p className="text-caption text-muted mt-3">Last updated {formatShortDateTime(k.lastUpdated)}</p>
       <Button
-        variant="secondary"
         fullWidth
         className="mt-4"
         onClick={() => {
           setForm({ category: k.category, question: k.question, answer: k.answer, keywords: k.keywords.join(', ') });
           setErrors({});
+          setConfirmRemove(false);
           setPanel('edit');
         }}
       >
         Edit answer
       </Button>
       {confirmRemove ? (
-        <div role="alert" className="mt-3 rounded-control bg-danger-bg px-4 py-3">
+        <div role="alert" className="mt-2.5 rounded-control bg-danger-bg px-4 py-3">
           <p className="font-semibold text-danger-fg">Remove this answer?</p>
-          <p className="text-meta mt-0.5">Ka-Barangay AI will stop using it and will say it doesn't know instead.</p>
+          <p className="text-meta mt-0.5">Ask Kap will stop using it and will tell residents to ask at the hall instead.</p>
           <div className="grid grid-cols-2 gap-2.5 mt-3">
             <Button variant="secondary" size="sm" onClick={() => setConfirmRemove(false)}>
               Cancel
@@ -110,7 +117,7 @@ export const AdminChatbotKnowledge: React.FC = () => {
   const formView = (
     <Card>
       <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add answer' : 'Edit answer'}</h2>
-      <p className="text-meta text-muted">Write in plain language. Include fees, hours and what to bring when they apply.</p>
+      <p className="text-meta text-muted">Write it the way you'd say it at the counter. Include fees, hours and what to bring when they apply.</p>
       <Field label="Topic" error={errors.category} help="Pick one already used, or type a new one.">
         {p => (
           <>
@@ -123,16 +130,20 @@ export const AdminChatbotKnowledge: React.FC = () => {
           </>
         )}
       </Field>
-      <Field label="Question" error={errors.question}>
+      <Field label="Question residents ask" error={errors.question} help='For example: "How do I get a barangay clearance?"'>
         {p => <Input {...p} value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} />}
       </Field>
-      <Field label="Answer" error={errors.answer}>
-        {p => <Textarea {...p} className="min-h-[180px]" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />}
+      <Field label="Answer Ask Kap gives" error={errors.answer}>
+        {p => <Textarea {...p} className="min-h-[160px]" value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} />}
       </Field>
-      <Field label="Keywords" optional help="Comma separated, English and Filipino, e.g. clearance, trabaho, cedula.">
+      <Field
+        label="Other words people use"
+        optional
+        help="Separate with commas, in English or Filipino, e.g. clearance, trabaho, cedula. Helps Ask Kap find this answer."
+      >
         {p => <Input {...p} value={form.keywords} onChange={e => setForm(f => ({ ...f, keywords: e.target.value }))} />}
       </Field>
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -141,41 +152,56 @@ export const AdminChatbotKnowledge: React.FC = () => {
     </Card>
   );
 
+  const filtered = words.length > 0 || category !== 'all';
+
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
-        title="Chatbot Knowledge"
-        description="Ka-Barangay AI only answers from these entries. If a question isn't covered, it tells residents to ask the hall."
+        title="Chatbot knowledge"
+        description="The answers Ask Kap gives residents. It only uses what's written here; for anything else, it tells them to ask at the hall."
         action={
           <Button size="sm" icon={<Plus className="w-5 h-5" aria-hidden="true" />} onClick={() => { setForm(blank); setErrors({}); setPanel('add'); show(); }}>
             Add answer
           </Button>
         }
       />
-      <Card className="mb-5">
-        <div className="-mt-4">
+      <Card className="mb-4">
+        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-x-4 -mt-4">
           <Field label="Search">
             {p => (
               <div className="relative">
                 <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
-                <Input {...p} type="search" className="pl-11" placeholder="Words in the question, answer or keywords" value={query} onChange={e => { setQuery(e.target.value); setSelectedId(null); }} />
+                <Input
+                  {...p}
+                  type="search"
+                  className="pl-11"
+                  placeholder="Words in the question or answer"
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setSelectedId(null); }}
+                />
               </div>
             )}
           </Field>
+          <Field label="Topic">
+            {p => (
+              <Select {...p} value={category} onChange={e => { setCategory(e.target.value); setSelectedId(null); setPanel('detail'); }}>
+                <option value="all">All topics ({knowledgeBase.length})</option>
+                {categories.map(c => (
+                  <option key={c} value={c}>
+                    {c} ({knowledgeBase.filter(k => k.category === c).length})
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
         </div>
-        <FilterChips<string>
-          className="mt-3"
-          label="Topic"
-          value={category}
-          onChange={c => { setCategory(c); setSelectedId(null); setPanel('detail'); }}
-          chips={[
-            { id: 'all', label: 'All topics', count: knowledgeBase.length },
-            ...categories.map(c => ({ id: c, label: c, count: knowledgeBase.filter(k => k.category === c).length })),
-          ]}
-        />
       </Card>
-      <div className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-4 items-start">
         <Card>
+          <p className="text-meta text-muted mb-2" aria-live="polite">
+            {shown.length} {shown.length === 1 ? 'answer' : 'answers'}
+            {filtered ? ' match' : ''}
+          </p>
           <DataTable<KnowledgeBaseItem>
             rows={shown}
             rowKey={k => k.id}
@@ -188,11 +214,20 @@ export const AdminChatbotKnowledge: React.FC = () => {
               { header: 'Updated', cell: k => formatShortDateTime(k.lastUpdated), className: 'whitespace-nowrap text-muted', sortValue: k => k.lastUpdated, sortLabels: ['oldest first', 'newest first'] },
             ]}
             mobile={{ title: k => k.question, meta: k => `${k.category} · updated ${formatShortDateTime(k.lastUpdated)}` }}
-            empty={<p className="text-meta text-muted py-4">No answers match. Add one so Ka-Barangay AI can help with it.</p>}
+            empty={<p className="text-meta text-muted py-4">No answers match. Add one so Ask Kap can help with it.</p>}
           />
         </Card>
         <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
-          {panel !== 'detail' ? <AttentionPanel key={panel}>{formView}</AttentionPanel> : selected ? detail(selected) : null}
+          {panel !== 'detail' ? (
+            <AttentionPanel key={panel}>{formView}</AttentionPanel>
+          ) : selected ? (
+            detail(selected)
+          ) : (
+            <Card>
+              <h2 className="text-h3 font-semibold text-navy-ink">Answer details</h2>
+              <p className="text-meta text-muted mt-1">Choose a question from the list to see the answer.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

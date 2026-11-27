@@ -36,11 +36,15 @@ import {
   todayISO,
 } from '../ui';
 import { Choice, EmptyState, FormActions, IconCircle, List, ListRow, Page, PageTitle, Section } from './kit';
+import { useGuest } from '../guest/access';
+import { rememberTracked } from '../guest/GuestTrack';
+import { setPendingReference } from '../public/publicNav';
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
-type Errors = Partial<Record<'date' | 'location' | 'description' | 'files' | 'consent', string>>;
+type Errors = Partial<Record<'date' | 'location' | 'description' | 'files' | 'consent' | 'mobile', string>>;
+const isMobile = (v: string) => /^09d{9}$/.test(v.replace(/[s-]/g, ''));
 
 /** Everyday name and icon for each kind of problem. The stored category stays the same. */
 const CATEGORY: Record<IncidentCategory, { label: string; icon: LucideIcon }> = {
@@ -64,10 +68,17 @@ const NEXT_STEP: Record<IncidentStatus, string> = {
   dismissed: 'This report was closed. Ask at the barangay hall if you have questions.',
 };
 
-/** Resident · Report a problem: pick the kind, add the details, send. Your reports are listed below. */
+/**
+ * Report a problem: pick the kind, add the details, send. Your reports are listed below.
+ * Guests (no account) may add a name and mobile number, or leave them out; they get a tracking
+ * number with a Track button, and see the reports they sent in this visit.
+ */
 export const ComplaintsView: React.FC = () => {
-  const { incidents, createIncidentReport, currentUser } = useBarangay();
+  const { incidents, createIncidentReport, currentUser, setActiveTab } = useBarangay();
+  const { isGuest } = useGuest();
   const t = useT();
+  const [guestName, setGuestName] = useState('');
+  const [guestMobile, setGuestMobile] = useState('');
 
   const [category, setCategory] = useState<IncidentCategory>(INCIDENT_CATEGORIES[0]);
   const [date, setDate] = useState(todayISO());
@@ -84,7 +95,7 @@ export const ComplaintsView: React.FC = () => {
   const formRef = useRef<HTMLFormElement>(null);
 
   const myReports = incidents
-    .filter(i => i.reporterName === currentUser.name || myAnonymousIds.includes(i.id))
+    .filter(i => (!isGuest && i.reporterName === currentUser.name) || myAnonymousIds.includes(i.id))
     .sort((a, b) => dateTimeValue(b.submittedAt) - dateTimeValue(a.submittedAt));
 
   const validate = (): Errors => {
@@ -95,6 +106,7 @@ export const ComplaintsView: React.FC = () => {
     if (description.trim().length < 15) e.description = t('Tell us what happened in a sentence or two.');
     if (files.some(f => !FILE_TYPES.includes(f.type))) e.files = t('Use a JPG, PNG or PDF file.');
     else if (files.some(f => f.size > MAX_FILE_BYTES)) e.files = t('Each file must be 5 MB or smaller.');
+    if (isGuest && guestMobile.trim() && !isMobile(guestMobile)) e.mobile = t('Enter an 11-digit mobile number that starts with 09, or leave it blank.');
     if (!consent) e.consent = t('Tick this box to send your report.');
     return e;
   };
@@ -116,11 +128,12 @@ export const ComplaintsView: React.FC = () => {
       location: location.trim(),
       purok,
       incidentDateTime: date,
-      isAnonymous: anonymous,
-      reporterName: currentUser.name,
-      reporterContact: currentUser.email,
+      ...(isGuest
+        ? { isAnonymous: !guestName.trim(), reporterName: guestName.trim() || 'Anonymous Guest', reporterContact: guestMobile.trim() || 'Not provided' }
+        : { isAnonymous: anonymous, reporterName: currentUser.name, reporterContact: currentUser.email }),
     });
-    if (anonymous) setMyAnonymousIds(ids => [created.id, ...ids]);
+    if (anonymous || isGuest) setMyAnonymousIds(ids => [created.id, ...ids]);
+    if (isGuest) rememberTracked(created.referenceNumber);
     setJustFiled(created);
     setOpenId(created.id);
     setLocation('');
@@ -174,7 +187,21 @@ export const ComplaintsView: React.FC = () => {
             )}
           </Field>
 
+          {isGuest && (
+            <div className="grid sm:grid-cols-2 gap-x-4">
+              <Field label={t('Your name')} optional help={t('Leave blank to report without your name.')}>
+                {p => <Input {...p} autoComplete="name" value={guestName} onChange={e => setGuestName(e.target.value)} />}
+              </Field>
+              <Field label={t('Mobile number')} optional error={errors.mobile} help={t('For text updates about this report.')}>
+                {p => (
+                  <Input {...p} type="tel" inputMode="tel" autoComplete="tel" placeholder="09XX XXX XXXX" value={guestMobile} onChange={e => setGuestMobile(e.target.value)} />
+                )}
+              </Field>
+            </div>
+          )}
+
           <div className="mt-4 border-t border-line-soft pt-1">
+            {!isGuest && (
             <Switch
               icon={<EyeOff />}
               label={t('Hide my name')}
@@ -182,6 +209,7 @@ export const ComplaintsView: React.FC = () => {
               checked={anonymous}
               onChange={setAnonymous}
             />
+            )}
             <Checkbox
               label={t('The barangay may use my details for this report.')}
               checked={consent}
@@ -209,10 +237,26 @@ export const ComplaintsView: React.FC = () => {
               <b className="font-semibold whitespace-nowrap">{justFiled.referenceNumber}</b>
             </p>
           </div>
+          {isGuest && (
+            <div className="mt-3 pl-[52px] flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-meta text-ink w-full">{t('Write it down or take a screenshot. You need it to check on your report.')}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setPendingReference(justFiled.referenceNumber);
+                  setActiveTab('tracking');
+                }}
+              >
+                {t('Track this report')}
+              </Button>
+            </div>
+          )}
         </Section>
       )}
 
-      <Section title={t('My reports')} flush>
+      {(!isGuest || myReports.length > 0) && (
+      <Section title={isGuest ? t('Reports you sent') : t('My reports')} flush>
         {myReports.length === 0 ? (
           <EmptyState icon={<MessageSquareWarning />} title={t('No reports yet')} />
         ) : (
@@ -259,6 +303,7 @@ export const ComplaintsView: React.FC = () => {
           </List>
         )}
       </Section>
+      )}
     </Page>
   );
 };

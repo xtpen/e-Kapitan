@@ -24,31 +24,35 @@ type Filter = 'active' | 'on_leave' | 'deactivated' | 'all';
 type Panel = 'detail' | 'edit' | 'add';
 
 const ROLE_LABEL: Record<StaffRole, string> = {
+  super_admin: 'Super administrator',
   administrator: 'Administrator',
-  records: 'Records staff',
+  records: 'Records',
   desk: 'Front desk',
   peace_order: 'Peace and order',
   health: 'Health worker',
   viewer: 'View only',
 };
 
+/** What each role can see and do, in plain words. */
 const ROLE_HELP: Record<StaffRole, string> = {
-  administrator: 'Everything, including staff accounts and settings.',
-  records: 'Document and print requests, resident records.',
-  desk: 'Document, complaint, print and court requests.',
-  peace_order: 'Complaints only (Tanod, Lupon).',
-  health: 'Resident records only (health workers).',
-  viewer: 'Reports only (officials who review, not process).',
+  super_admin: 'Everything, including adding staff and choosing what each person can use.',
+  administrator: 'Everything except staff accounts.',
+  records: 'Document and print requests, and resident records.',
+  desk: 'Walk-in work: document, complaint, print and court requests.',
+  peace_order: 'Complaints only. For tanods and the Lupon.',
+  health: 'Resident records only. For health workers.',
+  viewer: 'Can look at reports but not change anything. For officials.',
 };
 
 const AREAS: { id: AccessArea; label: string }[] = [
   { id: 'documents', label: 'Document requests' },
   { id: 'complaints', label: 'Complaints' },
   { id: 'printing', label: 'Printing requests' },
-  { id: 'court', label: 'Court reservations' },
+  { id: 'court', label: 'Court bookings' },
   { id: 'residents', label: 'Resident records' },
-  { id: 'management', label: 'Management (personnel, services, officials, chatbot)' },
+  { id: 'management', label: 'Services, officials and chatbot' },
   { id: 'reports', label: 'Reports and audit logs' },
+  { id: 'users', label: 'Staff accounts (super admins only)' },
 ];
 
 const STATUS: Record<Personnel['status'], { label: string; tone: Tone }> = {
@@ -75,7 +79,14 @@ const blank = { name: '', position: '', role: 'desk' as StaffRole, access: ROLE_
 
 const pill = (p: Personnel) => <StatusPill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</StatusPill>;
 
-/** Admin · Personnel (staff accounts and what each person can use). No mockup; Admin list + detail pattern. */
+const smooth = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduce-motion') ? 'auto' : 'smooth';
+
+/**
+ * Super admin · Users & permissions: staff accounts, their role (super admin, admin, records…)
+ * and which areas each person can use. Only super admins open this page (App.tsx). The last
+ * active super admin can't be removed or downgraded, so someone can always manage users.
+ */
 export const AdminPersonnel: React.FC = () => {
   const { personnel, addPersonnel, updatePersonnel } = useBarangay();
 
@@ -95,12 +106,12 @@ export const AdminPersonnel: React.FC = () => {
     .sort((a, b) => a.name.localeCompare(b.name));
   const selected = shown.find(p => p.id === selectedId) ?? shown[0];
 
-  const activeAdmins = personnel.filter(p => p.status === 'active' && p.role === 'administrator');
-  const isLastAdmin = (p: Personnel) => p.role === 'administrator' && p.status === 'active' && activeAdmins.length <= 1;
+  const activeSupers = personnel.filter(p => p.status === 'active' && p.role === 'super_admin');
+  const isLastAdmin = (p: Personnel) => p.role === 'super_admin' && p.status === 'active' && activeSupers.length <= 1;
 
   const show = () => {
     if (window.matchMedia('(max-width: 1023px)').matches) {
-      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: smooth(), block: 'start' }));
     }
   };
 
@@ -132,9 +143,9 @@ export const AdminPersonnel: React.FC = () => {
     else if (personnel.some(p => p.email.toLowerCase() === form.email.trim().toLowerCase() && p.id !== editing?.id))
       e.email = 'Another staff account already uses this email.';
     if (!isMobile(form.mobile)) e.mobile = 'Enter an 11-digit number that starts with 09.';
-    if (form.access.length === 0) e.access = 'Give at least one area, or deactivate the account instead.';
-    if (editing && isLastAdmin(editing) && (form.role !== 'administrator' || !form.access.includes('management')))
-      e.role = 'This is the only active administrator. Make someone else an administrator first.';
+    if (form.access.length === 0) e.access = 'Tick at least one, or deactivate the account instead.';
+    if (editing && isLastAdmin(editing) && (form.role !== 'super_admin' || !form.access.includes('users')))
+      e.role = 'This is the only active super administrator. Make someone else a super administrator first.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -169,32 +180,29 @@ export const AdminPersonnel: React.FC = () => {
   const detailView = (p: Personnel) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy-ink">{p.name}</h2>
+        <div className="min-w-0">
+          <h2 className="text-h3 font-semibold text-navy-ink">{p.name}</h2>
+          <p className="text-meta text-muted">{p.position}</p>
+        </div>
         {pill(p)}
       </div>
-      <p className="text-meta text-muted">{p.position}</p>
 
-      <dl className="mt-3 @container">
-        {[
-          ['Role', ROLE_LABEL[p.role]],
-          ['Email', p.email],
-          ['Mobile', p.mobile],
-          ['Last active', p.lastActive ? formatShortDateTime(p.lastActive) : 'Not yet'],
-          ['Added', new Date(`${p.addedOn}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
-        ].map(([k, v]) => (
-          <div key={k} className="grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 py-2 border-b border-line-soft last:border-b-0">
-            <dt className="text-meta text-muted">{k}</dt>
-            <dd className="text-meta font-semibold [overflow-wrap:anywhere]">{v}</dd>
-          </div>
-        ))}
-      </dl>
+      {/* Role first, in plain words: the main thing a super admin checks here. */}
+      <div className="mt-4 rounded-control bg-surface-muted px-4 py-3">
+        <p className="text-caption font-semibold text-muted">Role</p>
+        <p className="font-semibold text-ink">{ROLE_LABEL[p.role]}</p>
+        <p className="text-meta text-ink mt-0.5">
+          <span className="font-semibold">Can see and do:</span> {ROLE_HELP[p.role]}
+        </p>
+      </div>
 
-      <h3 className="font-semibold mt-4 mb-1.5">Can use</h3>
-      <ul className="space-y-1.5" aria-label="Access">
+      <h3 className="font-semibold mt-4 mb-1.5">What they can use</h3>
+      <div className="@container">
+      <ul className="grid @[22rem]:grid-cols-2 gap-x-4 gap-y-1.5" aria-label="What they can use">
         {AREAS.map(a => {
           const has = p.access.includes(a.id);
           return (
-            <li key={a.id} className={`flex items-start gap-2 text-meta ${has ? '' : 'text-muted'}`}>
+            <li key={a.id} className={`flex items-start gap-2 text-meta ${has ? 'text-ink' : 'text-muted'}`}>
               {has ? (
                 <Check className="w-5 h-5 shrink-0 text-success-fg" strokeWidth={2} aria-hidden="true" />
               ) : (
@@ -208,54 +216,75 @@ export const AdminPersonnel: React.FC = () => {
           );
         })}
       </ul>
+      </div>
 
-      <Button variant="secondary" fullWidth className="mt-5" onClick={() => startEdit(p)}>
-        Edit account
-      </Button>
+      <dl className="mt-4 @container border-t border-line-soft">
+        {[
+          ['Email', p.email],
+          ['Mobile', p.mobile],
+          ['Last active', p.lastActive ? formatShortDateTime(p.lastActive) : 'Not yet'],
+          ['Added', new Date(`${p.addedOn}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })],
+        ].map(([k, v]) => (
+          <div key={k} className="grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 py-2 border-b border-line-soft last:border-b-0">
+            <dt className="text-meta text-muted">{k}</dt>
+            <dd className="text-meta font-semibold [overflow-wrap:anywhere]">{v}</dd>
+          </div>
+        ))}
+      </dl>
 
       {p.status === 'deactivated' ? (
-        <Button fullWidth className="mt-2.5" onClick={() => updatePersonnel(p.id, { status: 'active' })}>
-          Reactivate account
-        </Button>
-      ) : confirmDeactivate ? (
-        <div role="alert" className="mt-3 rounded-control bg-danger-bg px-4 py-3">
-          <p className="font-semibold text-danger-fg">Deactivate {p.name}?</p>
-          <p className="text-meta mt-0.5">
-            They won't be able to sign in or be assigned work. Their past actions stay in the audit log.
-          </p>
-          <div className="grid grid-cols-2 gap-2.5 mt-3">
-            <Button variant="secondary" size="sm" onClick={() => setConfirmDeactivate(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                updatePersonnel(p.id, { status: 'deactivated' });
-                setConfirmDeactivate(false);
-              }}
-            >
-              Deactivate
-            </Button>
-          </div>
+        <div className="grid gap-2.5 mt-4">
+          <Button fullWidth onClick={() => updatePersonnel(p.id, { status: 'active' })}>
+            Reactivate account
+          </Button>
+          <Button variant="secondary" fullWidth onClick={() => startEdit(p)}>
+            Edit account
+          </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 mt-2.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => updatePersonnel(p.id, { status: p.status === 'on_leave' ? 'active' : 'on_leave' })}
-            disabled={p.status === 'active' && isLastAdmin(p)}
-          >
-            {p.status === 'on_leave' ? 'Back from leave' : 'Mark on leave'}
+        <>
+          <Button fullWidth className="mt-4" onClick={() => startEdit(p)}>
+            Edit account
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => setConfirmDeactivate(true)} disabled={isLastAdmin(p)}>
-            Deactivate
-          </Button>
-        </div>
+          {confirmDeactivate ? (
+            <div role="alert" className="mt-3 rounded-control bg-danger-bg px-4 py-3">
+              <p className="font-semibold text-danger-fg">Deactivate {p.name}?</p>
+              <p className="text-meta mt-0.5">They won't be able to sign in or be given work. What they did before stays in the audit log.</p>
+              <div className="grid grid-cols-2 gap-2.5 mt-3">
+                <Button variant="secondary" size="sm" onClick={() => setConfirmDeactivate(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    updatePersonnel(p.id, { status: 'deactivated' });
+                    setConfirmDeactivate(false);
+                  }}
+                >
+                  Deactivate
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => updatePersonnel(p.id, { status: p.status === 'on_leave' ? 'active' : 'on_leave' })}
+                disabled={p.status === 'active' && isLastAdmin(p)}
+              >
+                {p.status === 'on_leave' ? 'Back from leave' : 'Mark on leave'}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDeactivate(true)} disabled={isLastAdmin(p)}>
+                Deactivate
+              </Button>
+            </div>
+          )}
+        </>
       )}
       {isLastAdmin(p) && (
-        <p className="text-meta text-muted mt-2">This is the only active administrator, so it can't be put on leave or deactivated.</p>
+        <p className="text-meta text-muted mt-2">This is the only active super administrator, so it can't be put on leave or deactivated.</p>
       )}
       {p.status === 'on_leave' && <p className="text-meta text-muted mt-2">While on leave they aren't offered in "Assigned to" lists.</p>}
     </Card>
@@ -264,7 +293,7 @@ export const AdminPersonnel: React.FC = () => {
   const formView = (
     <Card>
       <h2 className="text-h3 font-semibold text-navy-ink">{panel === 'add' ? 'Add staff' : `Edit ${selected?.name}`}</h2>
-      <p className="text-meta text-muted">Give each person only the areas their job needs.</p>
+      <p className="text-meta text-muted">Give each person only what their job needs.</p>
       <Field label="Full name" error={errors.name}>
         {p => <Input {...p} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />}
       </Field>
@@ -280,7 +309,7 @@ export const AdminPersonnel: React.FC = () => {
           </>
         )}
       </Field>
-      <Field label="Role" error={errors.role} help={ROLE_HELP[form.role]}>
+      <Field label="Role" error={errors.role} help={`Can see and do: ${ROLE_HELP[form.role]}`}>
         {p => (
           <Select
             {...p}
@@ -299,11 +328,13 @@ export const AdminPersonnel: React.FC = () => {
         )}
       </Field>
       <fieldset className="mt-4">
-        <legend className="font-semibold text-meta">Can use</legend>
-        <p className="text-meta text-muted">Set by the role. Adjust single areas if needed.</p>
-        {AREAS.map(a => (
-          <Checkbox key={a.id} label={a.label} checked={form.access.includes(a.id)} onChange={e => toggleArea(a.id, e.target.checked)} />
-        ))}
+        <legend className="font-semibold text-meta">What they can use</legend>
+        <p className="text-meta text-muted">The role ticks these for you. Change single ones if needed.</p>
+        <div className="grid sm:grid-cols-2 gap-x-4">
+          {AREAS.map(a => (
+            <Checkbox key={a.id} label={a.label} checked={form.access.includes(a.id)} onChange={e => toggleArea(a.id, e.target.checked)} />
+          ))}
+        </div>
         {errors.access && <p className="text-meta text-danger-fg">{errors.access}</p>}
       </fieldset>
       <div className="grid sm:grid-cols-2 gap-x-4">
@@ -314,7 +345,7 @@ export const AdminPersonnel: React.FC = () => {
           {p => <Input {...p} type="tel" inputMode="numeric" value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))} />}
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -324,10 +355,10 @@ export const AdminPersonnel: React.FC = () => {
   );
 
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
-        title="Personnel"
-        description={`${count('active')} active staff accounts. Each person sees only the areas they're given.`}
+        title="Users & permissions"
+        description={`Staff accounts and what each person can use. ${count('active')} active.`}
         action={
           <Button size="sm" onClick={startAdd} icon={<UserPlus className="w-5 h-5" aria-hidden="true" />}>
             Add staff
@@ -335,47 +366,38 @@ export const AdminPersonnel: React.FC = () => {
         }
       />
 
-      <Card className="mb-5">
-        <div className="-mt-4">
-          <Field label="Search">
-            {p => (
-              <div className="relative">
-                <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
-                <Input
-                  {...p}
-                  type="search"
-                  className="pl-11"
-                  placeholder="Name, position, role or email"
-                  value={query}
-                  onChange={e => {
-                    setQuery(e.target.value);
-                    setSelectedId(null);
-                  }}
-                />
-              </div>
-            )}
-          </Field>
-        </div>
-        <FilterChips<Filter>
-          className="mt-3"
-          label="Status"
-          value={filter}
-          onChange={f => {
-            setFilter(f);
-            setSelectedId(null);
-            setPanel('detail');
-          }}
-          chips={[
-            { id: 'active', label: 'Active', count: count('active') },
-            { id: 'on_leave', label: 'On leave', count: count('on_leave') },
-            { id: 'deactivated', label: 'Deactivated', count: count('deactivated') },
-            { id: 'all', label: 'All', count: count('all') },
-          ]}
-        />
-      </Card>
-
-      <div className="grid lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] gap-5 items-start">
-        <Card>
+      <div className="grid lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] gap-4 items-start">
+        <Card className="min-w-0">
+          <div className="relative">
+            <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+            <Input
+              type="search"
+              aria-label="Search staff"
+              className="pl-11"
+              placeholder="Search by name, position, role or email"
+              value={query}
+              onChange={e => {
+                setQuery(e.target.value);
+                setSelectedId(null);
+              }}
+            />
+          </div>
+          <FilterChips<Filter>
+            className="mt-3 mb-4"
+            label="Status"
+            value={filter}
+            onChange={f => {
+              setFilter(f);
+              setSelectedId(null);
+              setPanel('detail');
+            }}
+            chips={[
+              { id: 'active', label: 'Active', count: count('active') },
+              { id: 'on_leave', label: 'On leave', count: count('on_leave') },
+              { id: 'deactivated', label: 'Deactivated', count: count('deactivated') },
+              { id: 'all', label: 'All', count: count('all') },
+            ]}
+          />
           <DataTable<Personnel>
             rows={shown}
             rowKey={p => p.id}
@@ -423,7 +445,7 @@ export const AdminPersonnel: React.FC = () => {
           ) : (
             <Card>
               <h2 className="text-h3 font-semibold text-navy-ink">Staff details</h2>
-              <p className="text-meta text-muted mt-1">Choose a person to see what they can use.</p>
+              <p className="text-meta text-muted mt-1">Choose a person to see their role and what they can use.</p>
             </Card>
           )}
         </div>

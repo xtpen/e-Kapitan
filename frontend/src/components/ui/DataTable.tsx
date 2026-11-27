@@ -108,7 +108,7 @@ export function DataTable<T>({
                   key={c.header}
                   scope="col"
                   aria-sort={active ? (sort?.direction === 'asc' ? 'ascending' : 'descending') : c.sortValue ? 'none' : undefined}
-                  className="text-left text-label uppercase tracking-[0.06em] font-semibold text-muted py-2.5 px-2 border-b-2 border-line"
+                  className="text-left text-label uppercase tracking-[0.06em] font-semibold text-muted py-2 px-2 border-b-2 border-line"
                 >
                   {c.sortValue ? (
                     <button
@@ -162,7 +162,7 @@ export function DataTable<T>({
               className={`border-b border-line-soft last:border-b-0 ${onRowClick ? 'cursor-pointer hover:bg-navy-tint focus-visible:bg-navy-tint' : ''} ${isSelected?.(row) ? 'bg-navy-tint' : ''}`}
             >
               {columns.map(c => (
-                <td key={c.header} className={`${dense ? 'py-2' : 'py-3.5'} px-2 text-meta ${c.className ?? ''}`}>
+                <td key={c.header} className={`${dense ? 'py-2' : 'py-2.5'} px-2 text-meta ${c.className ?? ''}`}>
                   {c.cell(row)}
                 </td>
               ))}

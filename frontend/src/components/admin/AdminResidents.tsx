@@ -52,6 +52,17 @@ const tags = (r: Resident) =>
     r.isHouseholdHead && 'Household head',
   ].filter(Boolean) as string[];
 
+/** Turns the matcher's wording ("Exact Birthdate Match: ...") into plain words for staff. */
+const plainMatch = (m: string) =>
+  m
+    .replace(/^high name similarity/i, 'Names look alike')
+    .replace(/^exact birthdate match/i, 'Same birthdate')
+    .replace(/^identical address/i, 'Same address')
+    .replace(/^identical contact number/i, 'Same mobile number');
+
+/** How sure the duplicate check is, in words instead of a percentage. */
+const likelihood = (score: number) => (score >= 85 ? 'Very likely the same' : score >= 60 ? 'Possibly the same' : 'Probably different');
+
 const statusPill = (r: Resident) => <StatusPill tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusPill>;
 
 const blankForm = {
@@ -72,7 +83,10 @@ const blankForm = {
   isIndigent: false,
 };
 
-/** Admin · Residents. No mockup; follows the Admin list + detail pattern. Resident data is personal data (RA 10173). */
+/**
+ * Admin · Residents. No mockup; follows the Admin list + detail pattern.
+ * Resident data is personal data under the Data Privacy Act (RA 10173), so opening a record is logged.
+ */
 export const AdminResidents: React.FC = () => {
   const {
     residents,
@@ -127,7 +141,7 @@ export const AdminResidents: React.FC = () => {
   const shown = base.filter(inGroup).sort((a, b) => `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`));
   const selected = shown.find(r => r.id === selectedId) ?? shown[0];
 
-  // RA 10173: opening a record is written to the audit log.
+  // Data Privacy Act (RA 10173): opening a record is written to the audit log.
   useEffect(() => {
     if (selected && panel === 'detail') recordResidentAccess(selected.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,9 +269,9 @@ export const AdminResidents: React.FC = () => {
   /* ---------- Right panel views ---------- */
 
   const Row: React.FC<{ k: string; v: React.ReactNode }> = ({ k, v }) => (
-    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-2 border-b border-line-soft last:border-b-0">
+    <div className="grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 py-2 border-b border-line-soft last:border-b-0">
       <dt className="text-meta text-muted">{k}</dt>
-      <dd className="text-meta font-semibold break-words">{v}</dd>
+      <dd className="text-meta font-semibold [overflow-wrap:anywhere]">{v}</dd>
     </div>
   );
 
@@ -268,12 +282,14 @@ export const AdminResidents: React.FC = () => {
     return (
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-h3 font-semibold text-navy-ink">{fullName(r)}</h2>
+          <div className="min-w-0">
+            <h2 className="text-h3 font-semibold text-navy-ink">{fullName(r)}</h2>
+            <p className="text-meta text-muted">Resident no. {r.residentNumber}</p>
+          </div>
           {statusPill(r)}
         </div>
-        <p className="text-meta text-muted">{r.residentNumber}</p>
         {tags(r).length > 0 && (
-          <p className="flex flex-wrap gap-1.5 mt-2.5">
+          <p className="flex flex-wrap gap-1.5 mt-3">
             {tags(r).map(t => (
               <StatusPill key={t} tone="info">
                 {t}
@@ -281,60 +297,67 @@ export const AdminResidents: React.FC = () => {
             ))}
           </p>
         )}
-        <dl className="mt-3">
-          <Row k="Birthdate" v={`${longDate(r.birthDate)} (${age(r.birthDate)})`} />
+        <dl className="mt-3 @container">
+          <Row k="Address" v={/purok/i.test(r.address) ? r.address : `${r.address}, ${r.purok}`} />
+          <Row k="Birthdate" v={`${longDate(r.birthDate)} (${age(r.birthDate)} yrs)`} />
           <Row k="Sex" v={r.gender} />
           <Row k="Civil status" v={r.civilStatus} />
-          <Row k="Address" v={/purok/i.test(r.address) ? r.address : `${r.address}, ${r.purok}`} />
           <Row k="Mobile" v={r.contactNumber || 'None'} />
           <Row k="Email" v={r.email || 'None'} />
           <Row k="Occupation" v={r.occupation} />
           <Row k="Registered" v={longDate(r.registeredDate)} />
         </dl>
 
-        <h3 className="font-semibold mt-4">Household</h3>
-        <p className="text-meta text-muted">
-          {household ? `${household.householdNumber}, ` : ''}
-          {r.isHouseholdHead ? 'Head of household' : household ? `Head: ${household.headName}` : 'Member'}
-        </p>
-        {members.length > 0 && (
-          <ul className="mt-1.5 text-meta space-y-0.5">
-            {members.map(m => (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Make sure the member is visible in the list, then open them.
-                    setQuery('');
-                    setGroup('all');
-                    setPurok('all');
-                    if (m.status !== 'active') setShowInactive(true);
-                    select(m);
-                  }}
-                  className="text-primary-strong font-semibold hover:underline underline-offset-4 cursor-pointer min-h-9">
-                  {fullName(m)}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <section className="mt-4">
+          <h3 className="font-semibold text-ink">Household</h3>
+          <p className="text-meta text-muted">
+            {household ? `${household.householdNumber} · ` : ''}
+            {r.isHouseholdHead ? 'Head of the household' : household ? `Head: ${household.headName}` : 'Member'}
+          </p>
+          {members.length > 0 && (
+            <ul className="mt-0.5 text-meta flex flex-wrap gap-x-4">
+              {members.map(m => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Make sure the member is visible in the list, then open them.
+                      setQuery('');
+                      setGroup('all');
+                      setPurok('all');
+                      if (m.status !== 'active') setShowInactive(true);
+                      select(m);
+                    }}
+                    className="text-primary-strong font-semibold hover:underline underline-offset-4 cursor-pointer min-h-11"
+                  >
+                    {fullName(m)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-        <h3 className="font-semibold mt-4">Document requests</h3>
-        {requests.length === 0 ? (
-          <p className="text-meta text-muted">None yet.</p>
-        ) : (
-          <ul className="mt-1 text-meta space-y-1.5">
-            {requests.slice(0, 4).map(d => (
-              <li key={d.id} className="flex justify-between gap-2">
-                <span>
-                  {d.documentTitle}
-                  <span className="block text-caption text-muted">{d.referenceNumber} · {formatShortDateTime(d.submittedAt)}</span>
-                </span>
-                <StatusPill tone={documentStatus[d.status].tone}>{documentStatus[d.status].label}</StatusPill>
-              </li>
-            ))}
-          </ul>
-        )}
+        <section className="mt-4">
+          <h3 className="font-semibold text-ink">Document requests</h3>
+          {requests.length === 0 ? (
+            <p className="text-meta text-muted">None yet.</p>
+          ) : (
+            <ul className="mt-1.5 text-meta divide-y divide-line-soft">
+              {requests.slice(0, 4).map(d => (
+                <li key={d.id} className="flex items-start justify-between gap-2 py-2 first:pt-0 last:pb-0">
+                  <span className="min-w-0">
+                    {d.documentTitle}
+                    <span className="block text-caption text-muted">
+                      {d.referenceNumber} · {formatShortDateTime(d.submittedAt)}
+                    </span>
+                  </span>
+                  <StatusPill tone={documentStatus[d.status].tone}>{documentStatus[d.status].label}</StatusPill>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         {r.notes && (
           <p className="mt-4 text-meta rounded-control bg-surface-muted px-3 py-2">
@@ -343,10 +366,10 @@ export const AdminResidents: React.FC = () => {
           </p>
         )}
 
-        <Button variant="secondary" fullWidth className="mt-5" onClick={() => startEdit(r)}>
+        <Button fullWidth className="mt-4" onClick={() => startEdit(r)}>
           Edit details
         </Button>
-        {r.status === 'active' && (
+        {r.status === 'active' ? (
           <div className="grid grid-cols-2 gap-2.5 mt-2.5">
             <Button variant="secondary" size="sm" onClick={() => updateResident(r.id, { status: 'transferred' })}>
               Mark moved out
@@ -355,13 +378,14 @@ export const AdminResidents: React.FC = () => {
               Mark deceased
             </Button>
           </div>
-        )}
-        {r.status !== 'active' && (
+        ) : (
           <Button variant="secondary" size="sm" fullWidth className="mt-2.5" onClick={() => updateResident(r.id, { status: 'active' })}>
             Make active again
           </Button>
         )}
-        <p className="text-caption text-muted mt-3">Opening this record is recorded in the audit log (Data Privacy Act).</p>
+        <p className="text-caption text-muted mt-3">
+          Each time a record is opened, it is noted in the activity log, as the Data Privacy Act requires.
+        </p>
       </Card>
     );
   };
@@ -456,9 +480,9 @@ export const AdminResidents: React.FC = () => {
   const addView = (
     <Card>
       <h2 className="text-h3 font-semibold text-navy-ink">Add resident</h2>
-      <p className="text-meta text-muted">The system checks for possible duplicates after saving. It never merges records on its own.</p>
+      <p className="text-meta text-muted">After saving, eKapitan checks if this person might already be listed. Nothing is merged unless you choose to.</p>
       {formFields(true)}
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -471,10 +495,10 @@ export const AdminResidents: React.FC = () => {
     <Card>
       <h2 className="text-h3 font-semibold text-navy-ink">Edit {fullName(r)}</h2>
       <p className="text-meta text-muted">
-        Name, birthdate and sex can't be changed here. Correct those with a supporting document at the hall.
+        Name, birthdate and sex can't be changed here. To correct those, the resident brings a supporting document to the hall.
       </p>
       {formFields(false)}
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -483,44 +507,50 @@ export const AdminResidents: React.FC = () => {
     </Card>
   );
 
-  const summary = (r?: Resident) =>
-    r ? (
-      <div className="rounded-control border border-line p-3 text-meta">
-        <p className="font-semibold">{fullName(r)}</p>
-        <p className="text-muted">{r.residentNumber}</p>
-        <p className="mt-1">{longDate(r.birthDate)}</p>
-        <p>{r.address}</p>
-        <p>{r.contactNumber || 'No mobile'}</p>
-      </div>
-    ) : (
-      <p className="text-meta text-muted">Record not found.</p>
-    );
+  const summary = (label: string, r?: Resident) => (
+    <div className="rounded-control border border-line p-3 text-meta">
+      <p className="text-caption font-semibold uppercase tracking-[0.06em] text-muted">{label}</p>
+      {r ? (
+        <>
+          <p className="font-semibold mt-1">{fullName(r)}</p>
+          <p className="text-muted">{r.residentNumber}</p>
+          <p className="mt-1">{longDate(r.birthDate)}</p>
+          <p>{r.address}</p>
+          <p>{r.contactNumber || 'No mobile'}</p>
+        </>
+      ) : (
+        <p className="text-muted mt-1">Record not found.</p>
+      )}
+    </div>
+  );
 
   const duplicatesView = (
     <Card>
-      <h2 className="text-h3 font-semibold text-navy-ink">Possible duplicates</h2>
+      <h2 className="text-h3 font-semibold text-navy-ink">Same person?</h2>
       <p className="text-meta text-muted">
-        The system only suggests matches. A staff member decides, and the decision is recorded.
+        These records look alike. Check them against an ID or the paper records, then choose. eKapitan never merges records on its own.
       </p>
       {pendingFlags.length === 0 ? (
-        <p className="mt-4">Nothing to review. All suggestions have been checked.</p>
+        <p className="mt-4">Nothing left to check.</p>
       ) : (
         pendingFlags.map(f => (
-          <div key={f.id} className="mt-4 pt-4 border-t border-line-soft first:border-t-0 first:pt-0">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold">Possible match</p>
-              <StatusPill tone="warning">{f.matchScore}% similar</StatusPill>
+          <div key={f.id} className="mt-4 pt-4 border-t border-line-soft">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">Possible duplicate</p>
+              <StatusPill tone="warning">{likelihood(f.matchScore)}</StatusPill>
             </div>
-            <ul className="mt-2 text-meta text-muted list-disc pl-5 space-y-0.5">
-              {f.matchingFields.map(m => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
-            <div className="grid sm:grid-cols-2 gap-2.5 mt-3">
-              {summary(byId(f.matchedResidentId))}
-              {summary(byId(f.sourceResidentId))}
+            {f.matchingFields.length > 0 && (
+              <ul className="mt-2 text-meta text-muted list-disc pl-5 space-y-0.5">
+                {f.matchingFields.map(m => (
+                  <li key={m}>{plainMatch(m)}</li>
+                ))}
+              </ul>
+            )}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2.5 mt-3">
+              {summary('Kept if merged', byId(f.matchedResidentId))}
+              {summary('Archived if merged', byId(f.sourceResidentId))}
             </div>
-            <Field label="How did you check?" error={dupError[f.id]}>
+            <Field label="How did you check?" error={dupError[f.id]} help='For example: "Same PhilSys ID" or "Asked the resident".'>
               {p => (
                 <Textarea
                   {...p}
@@ -532,21 +562,24 @@ export const AdminResidents: React.FC = () => {
                 />
               )}
             </Field>
-            <div className="grid gap-2.5 mt-3">
-              <Button onClick={() => resolve(f, 'merge')}>Same person: keep the first, archive the second</Button>
+            <div className="grid gap-2.5 mt-4">
+              <Button onClick={() => resolve(f, 'merge')}>Merge: same person</Button>
               <div className="grid grid-cols-2 gap-2.5">
                 <Button variant="secondary" size="sm" onClick={() => resolve(f, 'keep_separate')}>
-                  Different people
+                  Keep both
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => resolve(f, 'false_positive')}>
                   Not a match
                 </Button>
               </div>
             </div>
+            <p className="text-caption text-muted mt-2.5">
+              Merge archives the second record; nothing is deleted. Choose Keep both for different people, like relatives.
+            </p>
           </div>
         ))
       )}
-      <Button variant="secondary" fullWidth className="mt-5" onClick={() => setPanel('detail')}>
+      <Button variant="secondary" fullWidth className="mt-4" onClick={() => setPanel('detail')}>
         Back to resident
       </Button>
     </Card>
@@ -556,7 +589,7 @@ export const AdminResidents: React.FC = () => {
   const householdTotal = new Set(activeResidents.map(r => r.householdId)).size;
 
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
         title="Residents"
         description={`${activeResidents.length.toLocaleString()} active residents in ${householdTotal.toLocaleString()} households.`}
@@ -568,13 +601,13 @@ export const AdminResidents: React.FC = () => {
       />
 
       {pendingFlags.length > 0 && (
-        <div role="status" className="mb-5 flex flex-wrap items-center gap-3 rounded-card border border-warning-bg bg-warning-bg/60 px-4 py-3">
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-card border border-warning-bg bg-warning-bg/60 px-4 py-3">
           <AlertTriangle className="w-6 h-6 text-warning-fg shrink-0" strokeWidth={1.8} aria-hidden="true" />
           <p className="flex-1 min-w-[200px]">
             <b className="font-semibold">
-              {pendingFlags.length} possible duplicate {pendingFlags.length === 1 ? 'record needs' : 'records need'} review.
+              {pendingFlags.length === 1 ? '1 resident might be' : `${pendingFlags.length} residents might be`} listed twice.
             </b>{' '}
-            <span className="text-meta">The system never merges records on its own.</span>
+            <span className="text-meta">Check if it's the same person. Nothing is merged until you decide.</span>
           </p>
           <Button
             variant="secondary"
@@ -584,13 +617,13 @@ export const AdminResidents: React.FC = () => {
               scrollToPanel();
             }}
           >
-            Review
+            Check now
           </Button>
         </div>
       )}
 
-      <Card className="mb-5">
-        <div className="grid md:grid-cols-[2fr_1fr] gap-x-4 -mt-4">
+      <Card className="mb-4">
+        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-x-4 -mt-4">
           <Field label="Search">
             {p => (
               <div className="relative">
@@ -627,37 +660,39 @@ export const AdminResidents: React.FC = () => {
             )}
           </Field>
         </div>
-        <FilterChips<Group>
-          className="mt-3"
-          label="Group"
-          value={group}
-          onChange={g => {
-            setGroup(g);
-            setSelectedId(null);
-          }}
-          chips={(
-            [
-              ['all', 'Everyone'],
-              ['senior', 'Senior citizens'],
-              ['pwd', 'PWD'],
-              ['indigent', 'Indigent'],
-              ['voter', 'Voters'],
-              ['head', 'Household heads'],
-            ] as [Group, string][]
-          ).map(([id, label]) => ({ id, label, count: groupCount(id) }))}
-        />
-        <Checkbox
-          className="mt-2"
-          label="Include moved out, archived and deceased"
-          checked={showInactive}
-          onChange={e => {
-            setShowInactive(e.target.checked);
-            setSelectedId(null);
-          }}
-        />
+        <div className="mt-3 flex flex-col gap-y-1 xl:flex-row xl:items-center xl:justify-between xl:gap-x-4">
+          <FilterChips<Group>
+            className="min-w-0"
+            label="Group"
+            value={group}
+            onChange={g => {
+              setGroup(g);
+              setSelectedId(null);
+            }}
+            chips={(
+              [
+                ['all', 'Everyone'],
+                ['senior', 'Senior citizens'],
+                ['pwd', 'PWD'],
+                ['indigent', 'Indigent'],
+                ['voter', 'Voters'],
+                ['head', 'Household heads'],
+              ] as [Group, string][]
+            ).map(([id, label]) => ({ id, label, count: groupCount(id) }))}
+          />
+          <Checkbox
+            className="shrink-0"
+            label="Also show moved out, archived and deceased"
+            checked={showInactive}
+            onChange={e => {
+              setShowInactive(e.target.checked);
+              setSelectedId(null);
+            }}
+          />
+        </div>
       </Card>
 
-      <div className="grid lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-4 items-start">
         <Card>
           <p className="text-meta text-muted mb-2" aria-live="polite">
             {shown.length.toLocaleString()} {shown.length === 1 ? 'resident' : 'residents'}
@@ -716,7 +751,7 @@ export const AdminResidents: React.FC = () => {
                 : (
                   <Card>
                     <h2 className="text-h3 font-semibold text-navy-ink">Resident details</h2>
-                    <p className="text-meta text-muted mt-1">Choose a resident to see their record.</p>
+                    <p className="text-meta text-muted mt-1">Choose a resident from the list to see their record.</p>
                   </Card>
                 )}
         </div>

@@ -144,6 +144,8 @@ interface BarangayContextType {
 
   // Resident account
   readNotificationIds: string[];
+  /** Write an entry to the audit log (e.g. a report was exported). */
+  logAudit: (action: string, category: 'Records' | 'Documents' | 'Queue' | 'Security' | 'Configuration', details: string) => void;
   markNotificationsRead: (ids: string[]) => void;
   smsUpdates: boolean;
   setSmsUpdates: (val: boolean) => void;
@@ -175,22 +177,6 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
     residentId: 'res-001',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
   },
-  staff: {
-    id: 'user-elena',
-    name: 'Elena Ramos',
-    role: 'staff',
-    roleTitle: 'Barangay Desk Officer & Records Custodian',
-    email: 'elena.records@brgy4a.gov.ph',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-  },
-  official: {
-    id: 'user-roberto',
-    name: 'Hon. Roberto V. Gomez',
-    role: 'official',
-    roleTitle: 'Punong Barangay / Chief Administrator',
-    email: 'captain.gomez@brgy4a.gov.ph',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
-  },
   guest: {
     id: 'user-guest',
     name: 'Public Guest',
@@ -198,13 +184,21 @@ const ROLE_PROFILES: Record<UserRole, UserProfile> = {
     roleTitle: 'Unregistered Guest / Non-Resident',
     email: 'guest@public.web'
   },
-  // Demo administrator (no real login yet). Opens the redesigned Admin shell.
+  // Seed admin: runs the barangay's work (requests, records, reports) but not user accounts.
   admin: {
     id: 'user-admin',
-    name: 'Administrator',
+    name: 'Juan Carlos T. Ramos',
     role: 'admin',
-    roleTitle: 'System Administrator',
+    roleTitle: 'Administrator · Barangay Secretary',
     email: 'admin@ekapitan.local'
+  },
+  // Seed super admin: everything an admin does, plus user accounts and permissions.
+  superadmin: {
+    id: 'user-superadmin',
+    name: 'Roberto V. Gomez',
+    role: 'superadmin',
+    roleTitle: 'Super administrator · Punong Barangay',
+    email: 'superadmin@ekapitan.local'
   }
 };
 
@@ -327,15 +321,11 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (role === 'citizen') {
       setActiveTab('home');
     } else if (role === 'guest') {
-      // Guests browse the public website; nobody "signs in", so no welcome toast.
-      setActiveTab('guest_home');
+      // Guests use the same app as residents with fewer features; nobody signs in, so no toast.
+      setActiveTab('home');
       return;
-    } else if (role === 'staff') {
-      setActiveTab('dashboard');
-    } else if (role === 'admin') {
-      setActiveTab('admin_overview');
     } else {
-      setActiveTab('executive_dashboard');
+      setActiveTab('admin_overview'); // admin and super admin
     }
     addToast(
       `Welcome, ${ROLE_PROFILES[role].name.split(' ')[0]}`,
@@ -1010,6 +1000,7 @@ export const BarangayProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         closeCourtDate,
         reopenCourtDate,
         readNotificationIds,
+        logAudit,
         markNotificationsRead,
         smsUpdates,
         setSmsUpdates,
