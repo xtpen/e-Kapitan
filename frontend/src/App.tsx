@@ -16,23 +16,11 @@ function LeavingInert({ children }: { children: ReactNode }) {
     </div>
   );
 }
-import {
-  ArrowLeft,
-  ClipboardList,
-  DollarSign,
-  FileText,
-  LayoutDashboard,
-  Megaphone,
-  PieChart,
-  ShieldCheck,
-  Users,
-  Users2,
-} from 'lucide-react';
 import { BarangayProvider, useBarangay } from './context/BarangayContext';
 import { PreferencesProvider } from './context/PreferencesContext';
 // Loaded at startup: data, login, the two shells and app chrome.
 import { AppShell } from './components/layout/AppShell';
-import { PublicShell } from './components/layout/PublicShell';
+import { GUEST_ALIAS, LOCKED_FOR_GUESTS } from './components/guest/access';
 import { ToastContainer } from './components/layout/ToastContainer';
 import { PageSkeleton, skeletonFor } from './components/layout/PageSkeleton';
 import { LandingPage } from './components/auth/LandingPage';
@@ -45,7 +33,8 @@ const EASE_OUT: Bezier = [0.23, 1, 0.32, 1];
 const EASE_IN: Bezier = [0.4, 0, 1, 1];
 const EASE_DRAWER: Bezier = [0.32, 0.72, 0, 1];
 import { useResidentActivity } from './components/resident/useResidentActivity';
-import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
+import { adminBottomNav, adminNavFor } from './components/admin/adminNav';
+import { useAdminNotifications } from './components/admin/adminNotices';
 
 /*
  * Screens load on demand, one chunk per area (see manualChunks in vite.config.ts), so a guest
@@ -54,7 +43,6 @@ import { adminBottomNav, adminNavGroups } from './components/admin/adminNav';
 const lazyNamed = <M extends Record<K, React.ComponentType<any>>, K extends keyof M>(load: () => Promise<M>, name: K) =>
   lazy(() => load().then(m => ({ default: m[name] })));
 
-const Header = lazyNamed(() => import('./components/layout/Header'), 'Header');
 
 // Shared by several roles
 const OfficialDocumentTemplate = lazyNamed(() => import('./components/shared/OfficialDocumentTemplate'), 'OfficialDocumentTemplate');
@@ -62,12 +50,11 @@ const OfficialsDirectory = lazyNamed(() => import('./components/shared/Officials
 const KaBarangayAI = lazyNamed(() => import('./components/shared/KaBarangayAI'), 'KaBarangayAI');
 const DocumentVerification = lazyNamed(() => import('./components/shared/DocumentVerification'), 'DocumentVerification');
 
-// Public site (guests)
-const PublicHomepage = lazyNamed(() => import('./components/public/PublicHomepage'), 'PublicHomepage');
-const PublicAnnouncements = lazyNamed(() => import('./components/public/PublicAnnouncements'), 'PublicAnnouncements');
-const ReportConcern = lazyNamed(() => import('./components/public/ReportConcern'), 'ReportConcern');
-const TrackRequest = lazyNamed(() => import('./components/public/TrackRequest'), 'TrackRequest');
-const HowItWorks = lazyNamed(() => import('./components/public/HowItWorks'), 'HowItWorks');
+// Guests: the resident app with fewer features (components/guest/access.ts)
+const GuestHome = lazyNamed(() => import('./components/guest/GuestHome'), 'GuestHome');
+const GuestTrack = lazyNamed(() => import('./components/guest/GuestTrack'), 'GuestTrack');
+const GuestAccount = lazyNamed(() => import('./components/guest/GuestAccount'), 'GuestAccount');
+const LockedView = lazyNamed(() => import('./components/guest/LockedView'), 'LockedView');
 
 // Resident portal
 const ResidentDashboard = lazyNamed(() => import('./components/resident/ResidentDashboard'), 'ResidentDashboard');
@@ -101,18 +88,14 @@ const AdminOfficials = lazyNamed(() => import('./components/admin/AdminOfficials
 const AdminChatbotKnowledge = lazyNamed(() => import('./components/admin/AdminChatbotKnowledge'), 'AdminChatbotKnowledge');
 const AdminReports = lazyNamed(() => import('./components/admin/AdminReports'), 'AdminReports');
 const AdminAuditLogs = lazyNamed(() => import('./components/admin/AdminAuditLogs'), 'AdminAuditLogs');
+const AdminAnnouncements = lazyNamed(() => import('./components/admin/AdminAnnouncements'), 'AdminAnnouncements');
+const AdminNotifications = lazyNamed(() => import('./components/admin/AdminNotifications'), 'AdminNotifications');
+const AdminAccount = lazyNamed(() => import('./components/admin/AdminAccount'), 'AdminAccount');
+const AdminSettings = lazyNamed(() => import('./components/admin/AdminSettings'), 'AdminSettings');
 
-// Legacy Staff and Official roles (old design)
-const StaffDashboard = lazyNamed(() => import('./components/staff/StaffDashboard'), 'StaffDashboard');
-const DocumentProcessingQueue = lazyNamed(() => import('./components/staff/DocumentProcessingQueue'), 'DocumentProcessingQueue');
-const SmartQueueManagement = lazyNamed(() => import('./components/staff/SmartQueueManagement'), 'SmartQueueManagement');
-const ResidentRecordsDirectory = lazyNamed(() => import('./components/staff/ResidentRecordsDirectory'), 'ResidentRecordsDirectory');
-const IncidentBlotterDesk = lazyNamed(() => import('./components/staff/IncidentBlotterDesk'), 'IncidentBlotterDesk');
-const CashierRevenueDesk = lazyNamed(() => import('./components/staff/CashierRevenueDesk'), 'CashierRevenueDesk');
-const ExecutiveDashboard = lazyNamed(() => import('./components/official/ExecutiveDashboard'), 'ExecutiveDashboard');
-const AuditTrailViewer = lazyNamed(() => import('./components/official/AuditTrailViewer'), 'AuditTrailViewer');
+// Announcements page (residents and guests)
 const OfficialAnnouncementsManager = lazyNamed(() => import('./components/official/OfficialAnnouncementsManager'), 'OfficialAnnouncementsManager');
-const ManageOfficials = lazyNamed(() => import('./components/official/ManageOfficials'), 'ManageOfficials');
+const SuperAdminOnly = lazyNamed(() => import('./components/admin/SuperAdminOnly'), 'SuperAdminOnly');
 
 
 const MainAppContent: React.FC = () => {
@@ -137,6 +120,12 @@ const MainAppContent: React.FC = () => {
   const isPageLoading = refreshing || !visited.has(pageKey);
   const reduceMotion = useReducedMotion();
   const { unreadCount: residentUnread, readyCount: residentReady } = useResidentActivity();
+  const { unreadCount: adminUnread } = useAdminNotifications();
+
+  // Old guest page names (bookmarks, older links) open the page that replaced them.
+  useEffect(() => {
+    if (currentRole === 'guest' && GUEST_ALIAS[activeTab]) setActiveTab(GUEST_ALIAS[activeTab]);
+  }, [currentRole, activeTab, setActiveTab]);
 
   // Large text mode scales the root font size, so every rem-based size grows with it.
   useEffect(() => {
@@ -171,30 +160,16 @@ const MainAppContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Old header + tab bar, used only by the legacy Staff and Official roles.
-  const staffTabs = [
-    { id: 'dashboard', label: 'Operations Desk', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'staff_documents', label: 'Document Queue', icon: <FileText className="w-5 h-5" /> },
-    { id: 'staff_queue', label: 'Smart Queue', icon: <Users className="w-5 h-5" /> },
-    { id: 'staff_residents', label: 'Masterlist', icon: <Users2 className="w-5 h-5" /> },
-    { id: 'staff_incidents', label: 'Blotter & Lupon', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'staff_cashier', label: 'Treasury', icon: <DollarSign className="w-5 h-5" /> },
-    { id: 'staff_announcements', label: 'Advisories', icon: <Megaphone className="w-5 h-5" /> },
-  ];
-
-  const officialTabs = [
-    { id: 'executive_dashboard', label: 'Intelligence', icon: <PieChart className="w-5 h-5" /> },
-    { id: 'official_blotter', label: 'Blotter', icon: <ShieldCheck className="w-5 h-5" /> },
-    { id: 'official_audit', label: 'Audit Trail', icon: <ClipboardList className="w-5 h-5" /> },
-    { id: 'official_announcements', label: 'Advisories', icon: <Megaphone className="w-5 h-5" /> },
-    { id: 'manage_officials', label: 'Manage Officials', icon: <Users2 className="w-5 h-5" /> },
-  ];
-
-  const currentTabs = currentRole === 'staff' ? staffTabs : currentRole === 'official' ? officialTabs : [];
-
-  const renderCurrentView = () => (isPageLoading ? <PageSkeleton kind={skeletonFor(activeTab)} /> : renderView(activeTab));
+  const renderCurrentView = () => (isPageLoading ? <PageSkeleton kind={skeletonFor(activeTab, currentRole)} /> : renderView(activeTab));
 
   const renderView = (tab: string) => {
+    // Guests: their own Home, Track and Account; resident-only pages ask them to sign up.
+    if (currentRole === 'guest') {
+      if (tab === 'home') return <GuestHome />;
+      if (tab === 'tracking') return <GuestTrack />;
+      if (tab === 'account') return <GuestAccount />;
+      if (LOCKED_FOR_GUESTS.has(tab)) return <LockedView tab={tab} />;
+    }
     switch (tab) {
       // Citizen Views
       case 'home':
@@ -249,37 +224,6 @@ const MainAppContent: React.FC = () => {
       case 'privacy_notice':
         return <LegalView id={tab} />;
 
-      // Staff Views
-      case 'dashboard':
-      case 'staff_dashboard':
-        return <StaffDashboard />;
-      case 'staff_documents':
-        return <DocumentProcessingQueue />;
-      case 'staff_queue':
-        return <SmartQueueManagement />;
-      case 'staff_residents':
-        return <ResidentRecordsDirectory />;
-      case 'staff_incidents':
-        return <IncidentBlotterDesk />;
-      case 'staff_cashier':
-        return <CashierRevenueDesk />;
-      case 'staff_announcements':
-        return <OfficialAnnouncementsManager />;
-
-      // Official Views
-      case 'executive_dashboard':
-      case 'official_dashboard':
-      case 'official_analytics':
-        return <ExecutiveDashboard />;
-      case 'official_blotter':
-        return <IncidentBlotterDesk />;
-      case 'official_audit':
-        return <AuditTrailViewer />;
-      case 'official_announcements':
-        return <OfficialAnnouncementsManager />;
-      case 'manage_officials':
-        return <ManageOfficials />;
-
       // Admin Views (demo admin, redesigned shell). Old screens show until the Admin team redesigns them.
       case 'admin_overview':
         return <AdminOverview />;
@@ -294,7 +238,8 @@ const MainAppContent: React.FC = () => {
       case 'admin_residents':
         return <AdminResidents />;
       case 'admin_personnel':
-        return <AdminPersonnel />;
+        // User accounts and permissions: super admins only.
+        return currentRole === 'superadmin' ? <AdminPersonnel /> : <SuperAdminOnly />;
       case 'admin_services':
         return <AdminServices />;
       case 'admin_officials':
@@ -305,27 +250,17 @@ const MainAppContent: React.FC = () => {
         return <AdminReports />;
       case 'admin_audit':
         return <AdminAuditLogs />;
-
-      // Guest Views (added explicitly here for clarity, though qr_verify/ai_assistant fall through to Citizen if no exact match, we should handle them explicitly here if we want to ensure separation)
-      case 'guest_home':
-        return <PublicHomepage />;
-      case 'guest_announcements':
-        return <PublicAnnouncements />;
-      case 'file_report':
-        return <ReportConcern />;
-      case 'report_status':
-        return <TrackRequest />;
-      case 'guest_help':
-        return <HowItWorks />;
+      case 'admin_notifications':
+        return <AdminNotifications />;
+      case 'admin_announcements':
+        return <AdminAnnouncements />;
+      case 'admin_account':
+        return <AdminAccount />;
+      case 'admin_settings':
+        return <AdminSettings />;
 
       default:
-        return currentRole === 'citizen' 
-          ? <ResidentDashboard /> 
-          : currentRole === 'staff' 
-          ? <StaffDashboard /> 
-          : currentRole === 'guest'
-          ? <PublicHomepage />
-          : <ExecutiveDashboard />;
+        return currentRole === 'guest' ? <GuestHome /> : currentRole === 'citizen' ? <ResidentDashboard /> : <AdminOverview />;
     }
   };
 
@@ -336,21 +271,12 @@ const MainAppContent: React.FC = () => {
    * view leaves quickly (100ms) and the next one (skeleton or page) fades in. The wrapper only fades;
    * the page's own sections rise in with a short stagger (.page-enter), one entrance, not two.
    */
+  // Admin portal: a work tool opened many times a day, so a page change is one quick fade (no waiting
+  // for the old page to leave, no slide, no staggered rise). The skeleton shows only on a first visit.
   const pageTransition = (
-    <div className="relative">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`${activeTab}-${currentRole}`}
-          initial={{ opacity: 0, transform: 'translateY(8px)' }}
-          animate={{ opacity: 1, transform: 'translateY(0px)', transition: { duration: 0.28, ease: EASE_OUT } }}
-          exit={{ opacity: 0, transform: 'translateY(-4px)', transition: { duration: 0.12, ease: EASE_IN } }}
-        >
-          <div key={isPageLoading ? 'skeleton' : 'loaded'} className={isPageLoading ? 'animate-fade' : 'page-enter'}>
-            {/* The skeleton also covers the moment a screen's code is still downloading. */}
-            <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+    <div key={`${activeTab}-${currentRole}-${isPageLoading ? 's' : 'p'}`} className="animate-fade-quick">
+      {/* The skeleton also covers the moment a screen's code is still downloading. */}
+      <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab, currentRole)} />}>{renderCurrentView()}</Suspense>
     </div>
   );
 
@@ -484,13 +410,15 @@ const MainAppContent: React.FC = () => {
         >
           <LeavingInert>
             <div key={isPageLoading ? 'skeleton' : 'loaded'} className={isPageLoading ? 'animate-fade' : 'page-enter'}>
-              <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab)} />}>{renderCurrentView()}</Suspense>
+              <Suspense fallback={<PageSkeleton kind={skeletonFor(activeTab, currentRole)} />}>{renderCurrentView()}</Suspense>
             </div>
           </LeavingInert>
         </motion.div>
       </AnimatePresence>
       </div>
-      <GuidedTour page={activeTab} ready={!isPageLoading && edgeX === 0} />
+      {(currentRole === 'citizen' || currentRole === 'guest') && (
+        <GuidedTour page={activeTab} ready={!isPageLoading && edgeX === 0} guest={currentRole === 'guest'} />
+      )}
     </div>
   );
 
@@ -500,34 +428,40 @@ const MainAppContent: React.FC = () => {
     </Suspense>
   );
 
-  // Public website for guests. Mockups: "Public homepage" (desktop + mobile).
+  // Guests: the resident app frame and page stack, with guest places and fewer features.
   if (currentRole === 'guest') {
     return (
       <>
         <ToastContainer />
-        <PublicShell>{pageTransition}</PublicShell>
+        <ResidentShell guest>{residentStack}</ResidentShell>
       </>
     );
   }
 
-  // Redesigned shell (DESIGN.md). Residents first; other roles move over as they are redesigned.
-  if (currentRole === 'admin') {
+  // Admin and super admin: the admin portal. Super admins also get Users & permissions.
+  if (currentRole === 'admin' || currentRole === 'superadmin') {
     return (
       <>
         <ToastContainer />
         <AppShell
-          groups={adminNavGroups}
+          groups={adminNavFor(currentRole, adminUnread)}
           bottomNav={adminBottomNav}
-          mobileBrand={{ title: 'eKapitan Admin', subtitle: 'Administrator portal' }}
+          notificationsTab="admin_notifications"
+          unreadCount={adminUnread}
+          accountTab="admin_account"
+          settingsTab="admin_settings"
+          mobileBrand={{ title: 'eKapitan Admin', subtitle: currentRole === 'superadmin' ? 'Super administrator' : 'Administrator portal' }}
         >
           {pageTransition}
         </AppShell>
+        <GuidedTour page={activeTab} ready={!isPageLoading} admin />
         {printModal}
       </>
     );
   }
 
-  if (currentRole === 'citizen') {
+  // Residents.
+  {
     return (
       <>
         <ToastContainer />
@@ -538,112 +472,8 @@ const MainAppContent: React.FC = () => {
       </>
     );
   }
-
-  return (
-    <div className={`min-h-screen flex flex-col font-sans bg-surface-muted text-ink ${
- largeTextMode ?'text-lg':'text-base'
- }`}>
-      {/* Toast Notifications */}
-      <ToastContainer />
-
-      {/* Global Civic Header (legacy roles only, so it loads with their screens) */}
-      <Suspense fallback={<div className="h-16 sm:h-20 bg-surface border-b border-line" />}>
-        <Header />
-      </Suspense>
-
-      {/* Bottom Navigation Bar */}
-      {currentTabs.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 border-t border-line z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] md:hidden">
-          <div className="flex items-center justify-around w-full overflow-x-auto scrollbar-none px-2 py-2 gap-2">
-            {currentTabs.map((tab) => {
-              const isActive = activeTab === tab.id || (tab.id === 'dashboard' && activeTab === 'staff_dashboard') || (tab.id === 'executive_dashboard' && activeTab === 'official_dashboard') || (tab.id === 'guest_home' && activeTab === 'guest_home');
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  title={tab.label}
-                  className={`flex flex-col items-center justify-center p-3 min-w-[64px] transition-colors rounded-control ${
- isActive
- ? currentRole ==='staff'
- ?'text-info-fg bg-info-bg'
- : currentRole ==='official'
- ?'text-navy-ink bg-info-bg'
- :'text-ink bg-surface-muted'// Guest active state
- :'text-muted hover:text-ink hover:bg-surface-muted'
- }`}
-                  id={`bottomnav-${tab.id}`}
-                >
-                  <div className={`transition-transform duration-200 ${isActive ?'scale-110':''}`}>
-                    {tab.icon}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Sidebar / Sub-Navbar Navigation */}
-      {currentTabs.length > 0 && (
-        <div className="hidden md:block bg-surface border-b border-line sticky top-16 sm:top-20 z-30 overflow-x-auto scrollbar-none">
-          <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-1 sm:gap-2 py-2.5">
-              <span className="text-label font-bold uppercase tracking-wider text-muted mr-2 hidden md:inline">
-                Navigation:
-              </span>
-              {currentTabs.map((tab) => {
-                const isActive = activeTab === tab.id || (tab.id === 'dashboard' && activeTab === 'staff_dashboard') || (tab.id === 'executive_dashboard' && activeTab === 'official_dashboard') || (tab.id === 'guest_home' && activeTab === 'guest_home');
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-control text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
- isActive
- ? currentRole ==='staff'
- ?'bg-navy text-white'
- : currentRole ==='official'
- ?'bg-navy-deep text-white'
- :'bg-navy text-white'// Guest active state
- :'text-muted hover:text-ink hover:bg-surface-muted'
- }`}
-                    id={`subnav-${tab.id}`}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main App Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-x-hidden pb-24 md:pb-8 relative">
-        {!currentTabs.some(tab => tab.id === activeTab) && (
-          <button 
-            onClick={() => setActiveTab(currentRole === 'staff' ? 'staff_dashboard' : currentRole === 'official' ? 'official_dashboard' : 'home')}
-            className="flex items-center gap-2 text-muted hover:text-primary-strong mb-6 font-bold text-sm transition-colors w-fit cursor-pointer group"
-          >
-            <div className="w-8 h-8 rounded-full bg-surface-muted flex items-center justify-center group-hover:bg-primary-tint transition-colors">
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            </div>
-            Back
-          </button>
-        )}
-        {pageTransition}
-      </main>
-
-      {/* Printable Official Certificate Modal Overlay */}
-      {printModal}
-
-      {/* Clean Civic Footer */}
-      <footer className="no-print bg-surface border-t border-line mt-auto py-6 text-center text-muted text-xs">
-        © 2026 eKapitan Civic Platform. All rights reserved.
-      </footer>
-    </div>
-  );
 };
+
 
 const MainAppWrapper: React.FC = () => {
   const { isAuthenticated } = useBarangay();

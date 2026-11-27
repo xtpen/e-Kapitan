@@ -13,10 +13,10 @@ It is a thesis project (Laguna College, San Pablo City) built for a single-baran
 | Who | What they can do |
 |---|---|
 | **Everyone** (landing page) | Learn what eKapitan does, sign in, sign up, or continue as a guest. |
-| **Guests** (public website) | Report a concern and track it, track any request by reference number, read announcements, see the barangay officials, verify that a printed barangay document is genuine, ask Ka-Barangay AI. |
+| **Guests** (no account) | The resident app with fewer features: report a concern and track it, track any request by its number, read announcements, see the barangay officials, verify a printed barangay document, ask Ka-Barangay AI. Resident-only services ask them to sign up. |
 | **Residents** | Request documents (clearance, residency, indigency, …), file complaints and reports, send print jobs (free), reserve the court, follow every request in one list, get notifications, manage their profile. |
-| **Administrators** | Overview dashboard, process document requests, complaints, printing and court reservations, manage residents and personnel. |
-| **Staff / Officials** (legacy) | The original operations, queue, blotter, treasury and executive screens. These still use the old design and are being folded into the Admin portal. |
+| **Admins** | Overview dashboard and notifications, process document requests, complaints, printing and court bookings, manage residents and officials, publish announcements, edit services and the chatbot, see reports and audit logs. Each admin has My account, Settings (display, accessibility, guided tour) and Sign out in the sidebar. |
+| **Super admins** | Everything admins do, plus **Users & permissions**: add staff accounts, set each person's role (super admin, admin, records, front desk, …) and which areas they can use. |
 
 Built for senior citizens on budget Android phones: 16px body text, a **Large text** switch that scales the whole app, touch targets of at least 44px, and colors chosen for WCAG 2.1 AA contrast.
 
@@ -55,15 +55,16 @@ Restart the backend after changing `.env`. Never commit `.env`; it is already in
 
 ## Demo sign-in
 
-Passwords are not checked in the prototype. Type anything with 1+ characters.
+Three seed accounts. Passwords are not checked in the prototype: type anything with 1+ characters.
 
-| In "Email or mobile number", enter… | You get |
-|---|---|
-| any email, or an 11-digit mobile number starting with `09` | **Resident** portal (signed in as Maria) |
-| an email containing `admin` (e.g. `admin@demo.test`) | **Admin** portal |
-| an email containing `staff` | Legacy **Staff** screens |
-| an email containing `captain` or `official` | Legacy **Official** screens |
-| **Continue as guest** | Public website, no sign-in |
+| Account | Email | You get |
+|---|---|---|
+| **Resident** | `maria@email.ph` (or any other email, or an 11-digit mobile number starting with `09`) | Resident portal, signed in as Maria |
+| **Admin** | `admin@ekapitan.local` | Admin portal, signed in as Juan Carlos T. Ramos (Barangay Secretary) |
+| **Super admin** | `superadmin@ekapitan.local` | Admin portal plus Users & permissions, signed in as Roberto V. Gomez (Punong Barangay) |
+| no account | **Continue as guest** | Guest mode: the resident app with fewer features |
+
+Any email containing `superadmin` opens the super admin portal, and any other email containing `admin` opens the admin portal.
 
 "Forgot password?" accepts any 6-digit code. Signing up shows the "waiting for verification" message; it does not sign you in.
 
@@ -101,10 +102,10 @@ One server serves everything: the app, its files (cached for a year, since their
 
 ## How it's put together
 
-- **One app, five roles.** `App.tsx` picks a layout for the signed-in role: the public website for guests, `AppShell` for residents and admins, and the old header layout for the legacy roles. Navigation is by tab state, not URLs, so the address bar doesn't change between screens.
+- **One app, three accounts plus guests.** `App.tsx` picks a layout for the signed-in role: `ResidentShell` for residents and guests (guests get fewer features), `AppShell` for admins and super admins (super admins also see Users & permissions). Navigation is by tab state, not URLs, so the address bar doesn't change between screens.
 - **State lives in the browser.** `context/BarangayContext.tsx` holds all records and actions, seeded from `data/mockData.ts`. There is no database yet.
 - **The backend is small.** `backend/server.ts` serves `/api/health` and `/api/ai-assistant` (Gemini with a built-in fallback). Once built, the same server also serves the app.
-- **Screens load on demand.** Each area (public, resident, admin, legacy) is its own download, so a guest on a phone never downloads admin code.
+- **Screens load on demand.** Each area (resident and guest, admin, shared) is its own download, so a guest on a phone never downloads admin code.
 
 ## Project structure
 
@@ -122,13 +123,14 @@ e-Kapitan/
 │   │   ├── index.css         Design tokens, motion curves, mobile base styles
 │   │   └── components/
 │   │       ├── ui/           Design-system primitives: Button, Card, Field, DataTable, Calendar, …
-│   │       ├── layout/       AppShell, PublicShell, toasts, page skeleton, legacy header
+│   │       ├── layout/       AppShell, ResidentShell, toasts, page skeletons
 │   │       ├── auth/         Landing page and the Sign in / Sign up dialog
-│   │       ├── public/       Guest website pages
+│   │       ├── guest/        Guest mode: Home, Track, Account, "Sign up to …" pages, access rules
+│   │       ├── legal/        Privacy Policy, Terms and Conditions, Data Privacy Notice
 │   │       ├── resident/     Resident portal screens
 │   │       ├── admin/        Admin portal screens
 │   │       ├── shared/       Used by several roles: Officials, Ka-Barangay AI, Verify, certificate
-│   │       └── staff/, official/   Legacy screens (old design)
+│   │       └── official/     Announcements page (residents and guests)
 │   └── vite.config.ts        Dev proxy to the backend, code-splitting groups
 ├── backend/
 │   ├── server.ts             Express API and AI knowledge base

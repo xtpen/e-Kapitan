@@ -2,9 +2,10 @@ import React, { useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { ServiceItem } from '../../types';
-import { AttentionPanel, Button, Card, Checkbox, DataTable, Field, Input, PageHeader, Select, StatusPill, Textarea, formatPeso } from '../ui';
+import { AttentionPanel, Button, Card, Checkbox, DataTable, Field, FilterChips, Input, PageHeader, Select, StatusPill, Textarea, formatPeso } from '../ui';
 
 type Panel = 'detail' | 'edit' | 'add';
+type Filter = 'all' | 'open' | 'hidden';
 const CATEGORIES: ServiceItem['category'][] = ['Clearance', 'Certification', 'Permit', 'Social Service'];
 
 const blank = {
@@ -23,17 +24,23 @@ const blank = {
 const pill = (s: ServiceItem) =>
   s.availableOnline ? <StatusPill tone="success">Open to residents</StatusPill> : <StatusPill tone="neutral">Hidden</StatusPill>;
 
+const feeText = (s: ServiceItem) => (s.fee === 0 ? 'Free' : formatPeso(s.fee));
+
 /** Admin · Services: the documents residents can request, with fees and requirements. No mockup. */
 export const AdminServices: React.FC = () => {
   const { services, documentRequests, addService, updateService } = useBarangay();
+  const [filter, setFilter] = useState<Filter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>('detail');
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const selected = services.find(s => s.id === selectedId) ?? services[0];
+  const inFilter = (f: Filter, s: ServiceItem) => f === 'all' || (f === 'open' ? s.availableOnline : !s.availableOnline);
+  const shown = services.filter(s => inFilter(filter, s));
+  const selected = shown.find(s => s.id === selectedId) ?? shown[0];
   const requestCount = (s: ServiceItem) => documentRequests.filter(d => d.documentType === s.id).length;
+  const openCount = services.filter(s => s.availableOnline).length;
 
   const show = () => {
     if (window.matchMedia('(max-width: 1023px)').matches) {
@@ -69,7 +76,7 @@ export const AdminServices: React.FC = () => {
     if (!form.processingTime.trim()) e.processingTime = 'Say how long it takes, e.g. "Same day".';
     if (!Number.isInteger(validity) || validity < 1 || validity > 60) e.validityMonths = 'Enter 1 to 60 months.';
     if (reqs.length === 0) e.requirements = 'List at least one requirement, one per line.';
-    if (form.isFreeForEligible && fee > 0 && !form.eligibleCriteria.trim()) e.eligibleCriteria = 'Say who qualifies for the waiver.';
+    if (form.isFreeForEligible && fee > 0 && !form.eligibleCriteria.trim()) e.eligibleCriteria = 'Say who gets it for free.';
     setErrors(e);
     if (Object.keys(e).length) return;
 
@@ -85,8 +92,10 @@ export const AdminServices: React.FC = () => {
       requirements: reqs,
       availableOnline: form.availableOnline,
     };
-    if (panel === 'add') setSelectedId(addService(data).id);
-    else if (selected) updateService(selected.id, data);
+    if (panel === 'add') {
+      setSelectedId(addService(data).id);
+      setFilter('all');
+    } else if (selected) updateService(selected.id, data);
     setPanel('detail');
   };
 
@@ -95,16 +104,18 @@ export const AdminServices: React.FC = () => {
   const detail = (s: ServiceItem) => (
     <Card aria-live="polite">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy-ink">{s.title}</h2>
+        <div className="min-w-0">
+          <h2 className="text-h3 font-semibold text-navy-ink">{s.title}</h2>
+          <p className="text-meta text-muted">{s.category}</p>
+        </div>
         {pill(s)}
       </div>
-      <p className="text-meta text-muted">{s.category}</p>
       <p className="mt-3 text-meta">{s.description}</p>
       <dl className="mt-3 @container">
         {[
           ['Fee', s.fee === 0 ? 'Free' : `${formatPeso(s.fee)}, paid at the hall`],
-          ['Fee waiver', s.isFreeForEligible && s.fee > 0 ? s.eligibleCriteria || 'Yes' : 'None'],
-          ['Processing time', s.processingTime],
+          ['Free for', s.isFreeForEligible && s.fee > 0 ? s.eligibleCriteria || 'Some residents' : 'No one (everyone pays)'],
+          ['Ready in', s.processingTime],
           ['Valid for', `${s.validityMonths} months`],
           ['Requests so far', String(requestCount(s))],
         ].map(([k, v]) => (
@@ -114,21 +125,19 @@ export const AdminServices: React.FC = () => {
           </div>
         ))}
       </dl>
-      <h3 className="font-semibold mt-4 mb-1">Requirements residents see</h3>
+      <h3 className="font-semibold text-ink mt-4 mb-1">What residents need to bring</h3>
       <ul className="list-disc pl-5 text-meta space-y-0.5">
         {s.requirements.map(r => (
           <li key={r}>{r}</li>
         ))}
       </ul>
-      <Button variant="secondary" fullWidth className="mt-5" onClick={() => startEdit(s)}>
+      <Button fullWidth className="mt-4" onClick={() => startEdit(s)}>
         Edit service
       </Button>
       <Button variant="secondary" size="sm" fullWidth className="mt-2.5" onClick={() => updateService(s.id, { availableOnline: !s.availableOnline })}>
         {s.availableOnline ? 'Hide from residents' : 'Open to residents'}
       </Button>
-      <p className="text-meta text-muted mt-2">
-        Hiding stops new online requests. Requests already made are not affected.
-      </p>
+      <p className="text-caption text-muted mt-2">Hiding stops new online requests. Requests already made are not affected.</p>
     </Card>
   );
 
@@ -151,7 +160,7 @@ export const AdminServices: React.FC = () => {
       <Field label="Short description" error={errors.description}>
         {p => <Textarea {...p} value={form.description} onChange={e => set('description', e.target.value)} />}
       </Field>
-      <div className="grid sm:grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-2 gap-x-4">
         <Field label="Fee (₱)" error={errors.fee} help="0 means free.">
           {p => <Input {...p} type="number" min={0} inputMode="decimal" value={form.fee} onChange={e => set('fee', e.target.value)} />}
         </Field>
@@ -159,24 +168,32 @@ export const AdminServices: React.FC = () => {
           {p => <Input {...p} type="number" min={1} max={60} value={form.validityMonths} onChange={e => set('validityMonths', e.target.value)} />}
         </Field>
       </div>
-      <Field label="Processing time" error={errors.processingTime} help='For example: "Same day" or "1 to 2 working days".'>
+      <Field label="How long it takes" error={errors.processingTime} help='For example: "Same day" or "1 to 2 working days".'>
         {p => <Input {...p} value={form.processingTime} onChange={e => set('processingTime', e.target.value)} />}
       </Field>
-      <div className="mt-3">
-        <Checkbox label="Fee can be waived for some residents" checked={form.isFreeForEligible} onChange={e => set('isFreeForEligible', e.target.checked)} />
-      </div>
+      <Checkbox
+        className="mt-3"
+        label="Free for some residents"
+        description="For example, senior citizens or first-time job seekers."
+        checked={form.isFreeForEligible}
+        onChange={e => set('isFreeForEligible', e.target.checked)}
+      />
       {form.isFreeForEligible && (
-        <Field label="Who qualifies for the waiver?" error={errors.eligibleCriteria}>
+        <Field label="Who gets it for free?" error={errors.eligibleCriteria}>
           {p => <Input {...p} value={form.eligibleCriteria} onChange={e => set('eligibleCriteria', e.target.value)} />}
         </Field>
       )}
-      <Field label="Requirements" error={errors.requirements} help="One per line.">
+      <Field label="What residents need to bring" error={errors.requirements} help="One item per line.">
         {p => <Textarea {...p} value={form.requirements} onChange={e => set('requirements', e.target.value)} />}
       </Field>
-      <div className="mt-3">
-        <Checkbox label="Open to residents (can be requested online)" checked={form.availableOnline} onChange={e => set('availableOnline', e.target.checked)} />
-      </div>
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <Checkbox
+        className="mt-3"
+        label="Open to residents"
+        description="Residents can request it online."
+        checked={form.availableOnline}
+        onChange={e => set('availableOnline', e.target.checked)}
+      />
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -186,10 +203,10 @@ export const AdminServices: React.FC = () => {
   );
 
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
         title="Services"
-        description={`${services.filter(s => s.availableOnline).length} of ${services.length} documents can be requested online. Changes show to residents right away.`}
+        description={`The documents residents can request, with fees and requirements. ${openCount} of ${services.length} are open to residents. Changes show right away.`}
         action={
           <Button
             size="sm"
@@ -205,10 +222,25 @@ export const AdminServices: React.FC = () => {
           </Button>
         }
       />
-      <div className="grid lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] gap-5 items-start">
+      <FilterChips<Filter>
+        className="mb-4"
+        label="Show"
+        value={filter}
+        onChange={f => {
+          setFilter(f);
+          setSelectedId(null);
+          setPanel('detail');
+        }}
+        chips={[
+          { id: 'all', label: 'All', count: services.length },
+          { id: 'open', label: 'Open to residents', count: openCount },
+          { id: 'hidden', label: 'Hidden', count: services.length - openCount },
+        ]}
+      />
+      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-4 items-start">
         <Card>
           <DataTable<ServiceItem>
-            rows={services}
+            rows={shown}
             rowKey={s => s.id}
             onRowClick={s => {
               setSelectedId(s.id);
@@ -220,14 +252,25 @@ export const AdminServices: React.FC = () => {
             columns={[
               { header: 'Document', cell: s => <span className="font-semibold">{s.title}</span>, sortValue: s => s.title },
               { header: 'Category', cell: s => s.category, sortValue: s => s.category },
-              { header: 'Fee', cell: s => (s.fee === 0 ? 'Free' : formatPeso(s.fee)), sortValue: s => s.fee, className: 'whitespace-nowrap' },
+              { header: 'Fee', cell: feeText, sortValue: s => s.fee, className: 'whitespace-nowrap' },
+              { header: 'Ready in', cell: s => s.processingTime, sortValue: s => s.processingTime, className: 'text-muted' },
               { header: 'Status', cell: pill, sortValue: s => (s.availableOnline ? 0 : 1), sortLabels: ['open first', 'hidden first'] },
             ]}
-            mobile={{ title: s => s.title, status: pill, meta: s => `${s.category} · ${s.fee === 0 ? 'Free' : formatPeso(s.fee)}` }}
+            mobile={{ title: s => s.title, status: pill, meta: s => `${s.category} · ${feeText(s)} · ${s.processingTime}` }}
+            empty={<p className="text-meta text-muted py-4">No services here.</p>}
           />
         </Card>
         <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
-          {panel !== 'detail' ? <AttentionPanel key={panel}>{formView}</AttentionPanel> : selected ? detail(selected) : null}
+          {panel !== 'detail' ? (
+            <AttentionPanel key={panel}>{formView}</AttentionPanel>
+          ) : selected ? (
+            detail(selected)
+          ) : (
+            <Card>
+              <h2 className="text-h3 font-semibold text-navy-ink">Service details</h2>
+              <p className="text-meta text-muted mt-1">Choose a service from the list to see its details.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

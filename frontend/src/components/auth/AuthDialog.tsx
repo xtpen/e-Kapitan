@@ -8,7 +8,7 @@ import type { AuthScreen } from '../public/publicNav';
 import { LegalSheet } from '../legal/LegalSheet';
 import type { LegalDocId } from '../legal/legalDocs';
 
-export type Role = 'citizen' | 'staff' | 'official' | 'guest' | 'admin';
+export type Role = 'citizen' | 'admin' | 'superadmin' | 'guest';
 
 const MAX_ID_BYTES = 5 * 1024 * 1024;
 const ID_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -142,8 +142,10 @@ export interface AuthDialogProps {
  * Sign in / Sign up (docs/DESIGN.md). Tablets and desktop: a two-part dialog, navy brand side on
  * the left (what you get, or the sign-up steps with your progress), form on the right. Phones: a
  * bottom sheet with the form only. Sign up is two short steps, so the form never becomes a long
- * scroll. Prototype auth: any sign-in works; an email containing "admin", "staff" or
- * "captain"/"official" opens that role for the demo.
+ * scroll. Prototype auth (no backend yet), any password works with the seed accounts:
+ *   resident     maria@email.ph (or any other email / mobile number)
+ *   admin        admin@ekapitan.local
+ *   super admin  superadmin@ekapitan.local
  */
 /** A link inside the consent checkbox's label: opens the document without ticking the box. */
 const LegalLink: React.FC<{ onOpen: () => void; children: React.ReactNode }> = ({ onOpen, children }) => (
@@ -238,10 +240,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({ screen, onScreenChange, 
     if (Object.keys(errs).length) return;
 
     const id = identifier.toLowerCase();
-    let role: Role = 'citizen';
-    if (id.includes('staff')) role = 'staff';
-    if (id.includes('captain') || id.includes('official')) role = 'official';
-    if (id.includes('admin')) role = 'admin';
+    const role: Role = /super.?admin/.test(id) ? 'superadmin' : id.includes('admin') ? 'admin' : 'citizen';
     onEnter(role);
   };
 

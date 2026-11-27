@@ -3,7 +3,7 @@ import { Card, PageHeader } from '../ui';
 
 /** Placeholder for Admin screens that a teammate hasn't redesigned yet. */
 export const AdminPlaceholder: React.FC<{ title: string; description: string }> = ({ title, description }) => (
-  <div className="max-w-[1200px]">
+  <div className="max-w-[1280px]">
     <PageHeader title={title} description={description} />
     <Card tone="callout">
       <h2 className="text-h3 font-semibold text-navy-ink">Not built yet</h2>

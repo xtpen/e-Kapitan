@@ -37,38 +37,54 @@ const isOpen = (s: IncidentStatus) => s !== 'resolved' && s !== 'dismissed';
 
 const ACTION_COPY: Record<Exclude<Action, null>, { label: string; field: string; button: string; help: string }> = {
   assign: {
-    label: 'Assign',
+    label: 'Assign someone',
     field: 'Message to the resident',
-    button: 'Assign report',
-    help: 'For example: "Assigned to the Tanod for inspection."',
+    button: 'Assign',
+    help: 'For example: "The Tanod will check it today."',
   },
   update: {
-    label: 'Record action taken',
+    label: 'Add an update',
     field: 'What was done?',
     button: 'Save update',
-    help: 'For example: "Notice served to the household. Will follow up on Friday."',
+    help: 'For example: "We talked to the household. We will check again on Friday."',
   },
   hearing: {
-    label: 'Schedule hearing',
+    label: 'Set a hearing',
     field: 'Hearing date, time and place',
-    button: 'Schedule hearing',
-    help: 'For example: "Sept 15, 2:00 PM at the Barangay Hall, with both parties."',
+    button: 'Set hearing',
+    help: 'For example: "Sept 15, 2:00 PM at the Barangay Hall, with both sides."',
   },
   resolve: {
     label: 'Mark as resolved',
-    field: 'How was it resolved?',
+    field: 'How was it settled?',
     button: 'Mark as resolved',
-    help: 'This summary is shown to the resident.',
+    help: 'The resident sees this.',
   },
   dismiss: {
     label: 'Close without action',
     field: 'Reason for closing',
     button: 'Close report',
-    help: 'For example: "Duplicate of INC-2026-0312" or "Outside the barangay\'s jurisdiction."',
+    help: 'For example: "Same as report INC-2026-0312" or "Outside our barangay."',
   },
 };
 
+/** Smooth scroll, unless the person asked for less motion. */
+const scrollBehavior = (): ScrollBehavior =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
 const pill = (r: IncidentReport) => <StatusPill tone={incidentStatus[r.status].tone}>{incidentStatus[r.status].label}</StatusPill>;
+
+/** Key-value rows. Label above value when the panel is narrow (DESIGN.md 5.14). */
+const Details: React.FC<{ rows: [string, React.ReactNode][] }> = ({ rows }) => (
+  <dl className="@container mt-3">
+    {rows.map(([k, v]) => (
+      <div key={k} className="grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-0.5 py-2 border-b border-line-soft last:border-b-0">
+        <dt className="text-meta text-muted">{k}</dt>
+        <dd className="text-meta font-semibold break-words">{v}</dd>
+      </div>
+    ))}
+  </dl>
+);
 
 /** Admin · Complaints. No dedicated mockup; follows the Admin list + detail pattern (Document Requests). */
 export const AdminComplaints: React.FC = () => {
@@ -106,9 +122,12 @@ export const AdminComplaints: React.FC = () => {
           r.location.toLowerCase().includes(q) ||
           r.title.toLowerCase().includes(q)),
     )
-    // New and unassigned first, then most recently updated.
+    // New and not yet assigned first, then most recently updated.
     .sort((a, b) => Number(b.status === 'received') - Number(a.status === 'received'));
   const selected = shown.find(r => r.id === selectedId) ?? shown[0];
+
+  const newCount = incidents.filter(r => r.status === 'received').length;
+  const openCount = incidents.filter(r => isOpen(r.status)).length;
 
   const resetAction = () => {
     setAction(null);
@@ -122,7 +141,7 @@ export const AdminComplaints: React.FC = () => {
     resetAction();
     setInternal(null);
     if (window.matchMedia('(max-width: 1023px)').matches) {
-      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }));
     }
   };
 
@@ -152,7 +171,7 @@ export const AdminComplaints: React.FC = () => {
   const exportList = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = [
-      ['Reference', 'Category', 'Location', 'Purok', 'Reported by', 'Reported', 'Status', 'Assigned to'],
+      ['Reference', 'Concern', 'Location', 'Purok', 'Reported by', 'Reported', 'Status', 'Handled by'],
       ...shown.map(r => [
         r.referenceNumber,
         r.category,
@@ -183,92 +202,44 @@ export const AdminComplaints: React.FC = () => {
 
     return (
       <Card aria-live="polite">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h2 className="text-h3 font-semibold text-navy-ink">{r.referenceNumber}</h2>
+        {/* What and where first, then the status */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-h3 font-semibold text-navy-ink">{r.category}</h2>
+            <p className="text-meta text-muted">
+              {r.referenceNumber} · reported {formatShortDateTime(r.submittedAt)}
+            </p>
+          </div>
           {pill(r)}
         </div>
-        <p className="text-meta text-muted">{r.category}</p>
 
-        <dl className="mt-3">
-          {[
-            ['Location', `${r.location} (${r.purok})`],
-            ['Happened', formatShortDateTime(r.incidentDateTime)],
-            ['Reported by', r.isAnonymous ? `${r.reporterName} (asked to hide their name)` : `${r.reporterName}${r.reporterContact ? `, ${r.reporterContact}` : ''}`],
-            ['Reported', formatShortDateTime(r.submittedAt)],
-            ['Assigned to', r.assignedTo ?? 'Not assigned yet'],
-          ].map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-2 border-b border-line-soft last:border-b-0">
-              <dt className="text-meta text-muted">{k}</dt>
-              <dd className="text-meta font-semibold break-words">{v}</dd>
-            </div>
-          ))}
-        </dl>
+        <Details
+          rows={[
+            ['Where', `${r.location} (${r.purok})`],
+            ['When it happened', formatShortDateTime(r.incidentDateTime)],
+            [
+              'Reported by',
+              r.isAnonymous
+                ? `${r.reporterName} (asked to hide their name)`
+                : `${r.reporterName}${r.reporterContact ? `, ${r.reporterContact}` : ''}`,
+            ],
+            ['Handled by', r.assignedTo ?? 'Not assigned yet'],
+          ]}
+        />
 
-        <h3 className="font-semibold mt-4 mb-1">What happened</h3>
+        <h3 className="font-semibold text-meta mt-4 mb-1">What happened</h3>
         <p className="text-meta">{r.description}</p>
 
-        <h3 className="font-semibold mt-5 mb-2">History</h3>
-        <ProgressTimeline
-          stages={r.statusHistory.map((h, i) => ({
-            // Repeated statuses (several updates while "Action taken") get "(update)" so each row has a unique label.
-            label: incidentStatus[h.status].label + (i > 0 && r.statusHistory[i - 1].status === h.status ? ` (update ${i})` : ''),
-            tone: h.status === 'received' ? 'success' : incidentStatus[h.status].tone,
-            reached: true,
-            detail: `${formatShortDateTime(h.updatedAt)} · ${h.updatedBy}`,
-            note: i === 0 ? undefined : h.note,
-          }))}
-        />
-        <p className="text-caption text-muted mt-2">The resident sees these updates in their report progress.</p>
-
-        {/* Staff-only note */}
-        <div className="mt-5 rounded-control border border-line bg-surface-muted px-4 py-3">
-          <p className="flex items-center gap-2 font-semibold text-meta">
-            <Lock className="w-4 h-4" aria-hidden="true" /> Staff-only note
-          </p>
-          {internal === null ? (
-            <>
-              <p className="text-meta mt-1">{r.internalNotes || <span className="text-muted">No note yet.</span>}</p>
-              <button
-                type="button"
-                onClick={() => setInternal(r.internalNotes ?? '')}
-                className="mt-1 text-meta font-semibold text-primary-strong hover:underline underline-offset-4 cursor-pointer min-h-11"
-              >
-                {r.internalNotes ? 'Edit note' : 'Add note'}
-              </button>
-            </>
-          ) : (
-            <>
-              <Field label="Note (never shown to the resident)">
-                {p => <Textarea {...p} autoFocus value={internal} onChange={e => setInternal(e.target.value)} />}
-              </Field>
-              <div className="flex gap-2.5 mt-3">
-                <Button variant="secondary" size="sm" onClick={() => setInternal(null)}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setIncidentInternalNote(r.id, internal.trim());
-                    setInternal(null);
-                  }}
-                >
-                  Save note
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Actions */}
         {r.resolutionSummary && r.status === 'resolved' && (
-          <p className="mt-4 text-meta rounded-control bg-success-bg text-success-fg px-3 py-2">
-            <b className="font-semibold">Resolution: </b>
+          <p className="mt-3 text-meta rounded-control bg-success-bg text-success-fg px-3 py-2">
+            <b className="font-semibold">How it was settled: </b>
             {r.resolutionSummary}
           </p>
         )}
 
+        {/* Actions, kept near the top so they are easy to reach */}
         {action ? (
-          <div className="mt-4">
+          <div className="mt-4 pt-4 border-t border-line-soft">
             <h3 className="font-semibold">{ACTION_COPY[action].label}</h3>
             {action === 'assign' && (
               <Field label="Handled by" error={errors.assignee}>
@@ -317,134 +288,201 @@ export const AdminComplaints: React.FC = () => {
             </div>
           )
         )}
+
+        <h3 className="font-semibold text-meta mt-5 mb-2">Updates</h3>
+        <ProgressTimeline
+          stages={r.statusHistory.map((h, i) => ({
+            // Repeated statuses (several updates while "Action taken") get "(update n)" so each row has a unique label.
+            label: incidentStatus[h.status].label + (i > 0 && r.statusHistory[i - 1].status === h.status ? ` (update ${i})` : ''),
+            tone: h.status === 'received' ? 'success' : incidentStatus[h.status].tone,
+            reached: true,
+            detail: `${formatShortDateTime(h.updatedAt)} · ${h.updatedBy}`,
+            note: i === 0 ? undefined : h.note,
+          }))}
+        />
+        <p className="text-caption text-muted mt-2">The resident sees these updates.</p>
+
+        {/* Staff-only note */}
+        <div className="mt-4 rounded-control border border-line bg-surface-muted px-3 py-2.5">
+          <p className="flex items-center gap-2 font-semibold text-meta">
+            <Lock className="w-4 h-4" aria-hidden="true" /> Staff-only note
+          </p>
+          {internal === null ? (
+            <div className="flex flex-wrap items-center justify-between gap-x-3">
+              <p className="text-meta mt-1">{r.internalNotes || <span className="text-muted">No note yet.</span>}</p>
+              <button
+                type="button"
+                onClick={() => setInternal(r.internalNotes ?? '')}
+                className="text-meta font-semibold text-primary-strong hover:underline underline-offset-4 cursor-pointer min-h-11"
+              >
+                {r.internalNotes ? 'Edit note' : 'Add note'}
+              </button>
+            </div>
+          ) : (
+            <>
+              <Field label="Note (residents never see this)">
+                {p => <Textarea {...p} autoFocus value={internal} onChange={e => setInternal(e.target.value)} />}
+              </Field>
+              <div className="flex gap-2.5 mt-3">
+                <Button variant="secondary" size="sm" onClick={() => setInternal(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setIncidentInternalNote(r.id, internal.trim());
+                    setInternal(null);
+                  }}
+                >
+                  Save note
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Card>
     );
   };
 
+  const summary = [newCount > 0 && `${newCount} new`, openCount > 0 && `${openCount} still open`].filter(Boolean).join(', ');
+
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
         title="Complaints"
-        description="Assign, act on and resolve concerns reported by residents and guests."
+        description={
+          summary
+            ? `${summary}. Assign each one, add updates, then mark it resolved.`
+            : 'Concerns from residents and guests. Assign each one, add updates, then mark it resolved.'
+        }
         action={
           <span className="hidden md:block">
             <Button variant="secondary" size="sm" onClick={exportList} icon={<Download className="w-5 h-5" aria-hidden="true" />}>
-              Export list
+              Download list
             </Button>
           </span>
         }
       />
 
-      <Card className="mb-5">
-        <div className="grid md:grid-cols-[2fr_1fr_1fr] gap-x-4 -mt-4">
-          <Field label="Search">
-            {p => (
-              <div className="relative">
-                <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
-                <Input
+      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-4 items-start">
+        {/* List card: filters on top (one row on tablet/desktop; search + chips on phones), then the table. */}
+        <Card>
+          <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-3 gap-y-3 [&_label]:mt-0">
+            <Field label="Search">
+              {p => (
+                <div className="relative">
+                  <Search className="w-5 h-5 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+                  <Input
+                    {...p}
+                    type="search"
+                    className="pl-11"
+                    placeholder="Name, place or reference"
+                    value={query}
+                    onChange={e => {
+                      setQuery(e.target.value);
+                      setSelectedId(null);
+                    }}
+                  />
+                </div>
+              )}
+            </Field>
+            <Field label="Status" className="hidden md:block">
+              {p => (
+                <Select {...p} value={status} onChange={e => setFilter(e.target.value as StatusFilter)}>
+                  <option value="open">Still open</option>
+                  <option value="all">All</option>
+                  {STATUS_ORDER.map(s => (
+                    <option key={s} value={s}>
+                      {incidentStatus[s].label}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Concern" className="hidden md:block">
+              {p => (
+                <Select
                   {...p}
-                  type="search"
-                  className="pl-11"
-                  placeholder="Reference, name or location"
-                  value={query}
+                  value={category}
                   onChange={e => {
-                    setQuery(e.target.value);
+                    setCategory(e.target.value);
                     setSelectedId(null);
                   }}
-                />
-              </div>
-            )}
-          </Field>
-          <Field label="Status" className="hidden md:block">
-            {p => (
-              <Select {...p} value={status} onChange={e => setFilter(e.target.value as StatusFilter)}>
-                <option value="open">Open (not resolved)</option>
-                <option value="all">All statuses</option>
-                {STATUS_ORDER.map(s => (
-                  <option key={s} value={s}>
-                    {incidentStatus[s].label}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-          <Field label="Concern" className="hidden md:block">
-            {p => (
-              <Select
-                {...p}
-                value={category}
-                onChange={e => {
-                  setCategory(e.target.value);
-                  setSelectedId(null);
-                }}
-              >
-                <option value="all">All concerns</option>
-                {CATEGORIES.map(c => (
-                  <option key={c}>{c}</option>
-                ))}
-              </Select>
-            )}
-          </Field>
-        </div>
-        <FilterChips<StatusFilter>
-          className="md:hidden mt-3"
-          label="Status"
-          value={status}
-          onChange={setFilter}
-          chips={[
-            { id: 'open', label: 'Open' },
-            { id: 'received', label: 'New' },
-            { id: 'resolved', label: 'Resolved' },
-            { id: 'all', label: 'All' },
-          ]}
-        />
-      </Card>
-
-      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-5 items-start">
-        <Card>
-          <DataTable<IncidentReport>
-            rows={shown}
-            rowKey={r => r.id}
-            onRowClick={select}
-            isSelected={r => r.id === selected?.id}
-            rowLabel={r => `Open ${r.referenceNumber}, ${r.category}`}
-            columns={[
-              { header: 'Reference', cell: r => r.referenceNumber, className: 'whitespace-nowrap', sortValue: r => r.referenceNumber },
-              {
-                header: 'Concern',
-                sortValue: r => r.category,
-                cell: r => (
-                  <>
-                    {r.category}
-                    <span className="block text-muted">{r.location}</span>
-                  </>
-                ),
-              },
-              {
-                header: 'Reported',
-                cell: r => formatShortDateTime(r.submittedAt),
-                className: 'whitespace-nowrap text-muted',
-                sortValue: r => dateTimeValue(r.submittedAt),
-                sortLabels: ['oldest first', 'newest first'],
-              },
-              { header: 'Status', cell: pill, sortValue: r => STATUS_ORDER.indexOf(r.status), sortLabels: ['by stage', 'by stage, reversed'] },
+                >
+                  <option value="all">All concerns</option>
+                  {CATEGORIES.map(c => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </div>
+          <FilterChips<StatusFilter>
+            className="md:hidden mt-3"
+            label="Status"
+            value={status}
+            onChange={setFilter}
+            chips={[
+              { id: 'open', label: 'Still open' },
+              { id: 'received', label: 'New' },
+              { id: 'resolved', label: 'Resolved' },
+              { id: 'all', label: 'All' },
             ]}
-            mobile={{ title: r => r.category, status: pill, meta: r => `${r.location} · ${r.referenceNumber}` }}
-            empty={
-              <div className="py-6 text-center">
-                <p className="font-semibold">No reports match.</p>
-                <p className="text-meta text-muted mt-1">Try another status or clear the search.</p>
-              </div>
-            }
           />
+
+          <div className="mt-4">
+            <DataTable<IncidentReport>
+              rows={shown}
+              rowKey={r => r.id}
+              onRowClick={select}
+              isSelected={r => r.id === selected?.id}
+              rowLabel={r => `Open ${r.referenceNumber}, ${r.category}`}
+              columns={[
+                {
+                  header: 'Concern',
+                  sortValue: r => r.category,
+                  cell: r => (
+                    <>
+                      <span className="block font-semibold text-ink">{r.category}</span>
+                      <span className="block text-caption text-muted">
+                        {r.location} · {r.referenceNumber}
+                      </span>
+                    </>
+                  ),
+                },
+                {
+                  header: 'Handled by',
+                  sortValue: r => r.assignedTo ?? '',
+                  cell: r => r.assignedTo ?? <span className="text-muted">Not assigned yet</span>,
+                },
+                {
+                  header: 'Reported',
+                  cell: r => formatShortDateTime(r.submittedAt),
+                  className: 'whitespace-nowrap text-muted',
+                  sortValue: r => dateTimeValue(r.submittedAt),
+                  sortLabels: ['oldest first', 'newest first'],
+                },
+                { header: 'Status', cell: pill, sortValue: r => STATUS_ORDER.indexOf(r.status), sortLabels: ['by step', 'by step, reversed'] },
+              ]}
+              mobile={{ title: r => r.category, status: pill, meta: r => `${r.location} · ${r.referenceNumber}` }}
+              empty={
+                <div className="py-6 text-center">
+                  <p className="font-semibold">No reports found.</p>
+                  <p className="text-meta text-muted mt-1">Try another status or clear the search.</p>
+                </div>
+              }
+            />
+          </div>
         </Card>
-        <div ref={detailRef} className="scroll-mt-24">
+
+        {/* Detail panel: sticks beside the list on desktop, scrolls on its own if it is taller than the screen. */}
+        <div ref={detailRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
           {selected ? (
             renderDetail(selected)
           ) : (
             <Card>
               <h2 className="text-h3 font-semibold text-navy-ink">Report details</h2>
-              <p className="text-meta text-muted mt-1">Choose a report to review it.</p>
+              <p className="text-meta text-muted mt-1">Choose a report from the list to see it here.</p>
             </Card>
           )}
         </div>

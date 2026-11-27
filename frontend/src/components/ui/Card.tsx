@@ -17,7 +17,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 /** Shared card. See DESIGN.md section 5.2. */
 export const Card: React.FC<CardProps> = ({ tone = 'default', padded = 'md', className = '', children, ...rest }) => (
   <div
-    className={`border rounded-card ${padded === 'lg' ? 'p-5 sm:p-8' : 'p-4 sm:p-6'} ${tones[tone]} ${className}`}
+    className={`border rounded-card ${padded === 'lg' ? 'p-5 sm:p-6' : 'p-4 sm:p-5'} ${tones[tone]} ${className}`}
     {...rest}
   >
     {children}

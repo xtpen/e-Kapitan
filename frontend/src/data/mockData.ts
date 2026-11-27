@@ -1020,6 +1020,8 @@ export const INITIAL_COURT_CLOSURES: import('../types').CourtClosure[] = [
 
 /** What each role can use by default. Staff can be given or denied single areas. */
 export const ROLE_ACCESS: Record<import('../types').StaffRole, import('../types').AccessArea[]> = {
+  // Super admin = admin + user accounts and permissions.
+  super_admin: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports', 'users'],
   administrator: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'],
   records: ['documents', 'printing', 'residents'],
   desk: ['documents', 'complaints', 'printing', 'court'],
@@ -1029,13 +1031,14 @@ export const ROLE_ACCESS: Record<import('../types').StaffRole, import('../types'
 };
 
 export const INITIAL_PERSONNEL: import('../types').Personnel[] = [
+  { id: 'stf-0', name: 'Roberto V. Gomez', position: 'Punong Barangay', role: 'super_admin', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports', 'users'], email: 'superadmin@ekapitan.local', mobile: '09175550100', status: 'active', lastActive: '2026-09-09 08:30 AM', addedOn: '2020-11-02' },
   { id: 'stf-1', name: 'Elena Ramos', position: 'Desk Officer and Records Custodian', role: 'records', access: ['documents', 'printing', 'residents', 'complaints'], email: 'elena.ramos@ekapitan.local', mobile: '09175550101', status: 'active', lastActive: '2026-09-09 10:15 AM', addedOn: '2021-06-01' },
   { id: 'stf-2', name: 'Lourdes P. Bautista', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'lourdes.bautista@ekapitan.local', mobile: '09175550102', status: 'active', lastActive: '2026-09-09 09:40 AM', addedOn: '2022-01-10' },
   { id: 'stf-3', name: 'Ramon D. Villanueva', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'ramon.villanueva@ekapitan.local', mobile: '09175550103', status: 'active', lastActive: '2026-09-08 04:55 PM', addedOn: '2023-03-15' },
   { id: 'stf-4', name: 'Grace M. Lim', position: 'Front Desk Officer', role: 'desk', access: ['documents', 'complaints', 'printing', 'court'], email: 'grace.lim@ekapitan.local', mobile: '09175550104', status: 'on_leave', lastActive: '2026-08-29 03:10 PM', addedOn: '2023-03-15' },
   { id: 'stf-5', name: 'Danilo Castro', position: 'Tanod Commander', role: 'peace_order', access: ['complaints'], email: 'danilo.castro@ekapitan.local', mobile: '09175550105', status: 'active', lastActive: '2026-09-09 09:15 AM', addedOn: '2020-11-02' },
   { id: 'stf-6', name: 'Rhea S. Manalo', position: 'Barangay Health Worker', role: 'health', access: ['residents'], email: 'rhea.manalo@ekapitan.local', mobile: '09175550106', status: 'active', lastActive: '2026-09-07 11:20 AM', addedOn: '2024-02-05' },
-  { id: 'stf-7', name: 'Juan Carlos T. Ramos', position: 'Barangay Secretary', role: 'administrator', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'], email: 'secretary.ramos@ekapitan.local', mobile: '09175550107', status: 'active', lastActive: '2026-09-09 08:05 AM', addedOn: '2022-07-01' },
+  { id: 'stf-7', name: 'Juan Carlos T. Ramos', position: 'Barangay Secretary', role: 'administrator', access: ['documents', 'complaints', 'printing', 'court', 'residents', 'management', 'reports'], email: 'admin@ekapitan.local', mobile: '09175550107', status: 'active', lastActive: '2026-09-09 08:05 AM', addedOn: '2022-07-01' },
   { id: 'stf-8', name: 'Noel B. Aguilar', position: 'Records Clerk', role: 'records', access: ['documents', 'printing', 'residents'], email: 'noel.aguilar@ekapitan.local', mobile: '09175550108', status: 'deactivated', lastActive: '2025-12-19 05:00 PM', addedOn: '2021-06-01' },
 ];
 

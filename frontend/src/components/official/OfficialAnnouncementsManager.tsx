@@ -56,10 +56,10 @@ export const OfficialAnnouncementsManager: React.FC = () => {
           </p>
         </div>
 
-        {(currentRole === 'official' || currentRole === 'staff') && (
+        {(currentRole === 'admin' || currentRole === 'superadmin') && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2.5 bg-primary-strong hover:bg-primary-strong text-white font-bold rounded-control text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer shrink-0"
+            className="px-4 py-2.5 bg-primary-strong hover:bg-primary-strong text-white font-bold rounded-control text-xs sm:text-sm transition-[box-shadow,border-color,background-color] flex items-center gap-2 cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Publish advisory</span>
@@ -72,7 +72,7 @@ export const OfficialAnnouncementsManager: React.FC = () => {
         {announcements.map((anc) => (
           <div
             key={anc.id}
-            className={`p-6 rounded-card border transition-all bg-surface flex flex-col justify-between ${
+            className={`p-6 rounded-card border transition-[box-shadow,border-color,background-color] bg-surface flex flex-col justify-between ${
  anc.isUrgent ?'border-danger-bg ring-1 ring-danger-bg':'border-line'
  }`}
           >

@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { UserPlus } from 'lucide-react';
+import { AlertTriangle, Check, UserPlus, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import type { Official } from '../../types';
-import { AttentionPanel, Button, Card, DataTable, Field, FilterChips, Input, PageHeader, Select, StatusPill, type Tone } from '../ui';
+import { AttentionPanel, Button, Card, DataTable, Field, FilterChips, Input, PageHeader, Select, StatusPill, initialsOf, type Tone } from '../ui';
 
 type Filter = 'current' | 'former' | 'all';
 type Panel = 'detail' | 'edit' | 'add';
@@ -21,6 +21,8 @@ const STATUS: Record<Official['status'], { label: string; tone: Tone }> = {
 };
 
 const isCurrent = (o: Official) => o.status !== 'Inactive (Former)';
+/** Same rule the certificate uses for its council list (shared/OfficialDocumentTemplate). */
+const onCertificates = (o: Official) => isCurrent(o) && o.status !== 'Suspended';
 const blank = { name: '', position: 'Barangay Kagawad', committee: '', contactDetails: '', status: 'Active (Incumbent)' as Official['status'] };
 const pill = (o: Official) => <StatusPill tone={STATUS[o.status].tone}>{STATUS[o.status].label}</StatusPill>;
 
@@ -44,13 +46,20 @@ export const AdminOfficials: React.FC = () => {
   };
   const set = <K extends keyof typeof blank>(k: K, v: (typeof blank)[K]) => setForm(f => ({ ...f, [k]: v }));
 
+  const startAdd = () => {
+    setForm(blank);
+    setErrors({});
+    setPanel('add');
+    show();
+  };
+
   const save = () => {
     const e: Record<string, string> = {};
     if (form.name.trim().split(/\s+/).length < 2) e.name = 'Enter the full name, e.g. "Hon. Maria T. Santos".';
     if (!form.committee.trim()) e.committee = 'Enter the committee or office, e.g. "Committee on Health".';
     const otherCaptain = captains.find(c => c.id !== (panel === 'edit' ? selected?.id : undefined));
     if (form.position === 'Barangay Captain' && form.status === 'Active (Incumbent)' && otherCaptain)
-      e.position = `${otherCaptain.name} is the Barangay Captain in office. Mark them as former first.`;
+      e.position = `${otherCaptain.name} is the barangay captain in office. Mark them as former first.`;
     setErrors(e);
     if (Object.keys(e).length) return;
     const data = { ...form, name: form.name.trim(), committee: form.committee.trim(), contactDetails: form.contactDetails.trim() };
@@ -62,17 +71,41 @@ export const AdminOfficials: React.FC = () => {
     setPanel('detail');
   };
 
+  const shownOn = (label: string, yes: boolean) => (
+    <li className="flex items-center gap-2 py-1">
+      {yes ? (
+        <Check className="w-5 h-5 text-success-fg shrink-0" strokeWidth={2} aria-hidden="true" />
+      ) : (
+        <X className="w-5 h-5 text-muted shrink-0" strokeWidth={2} aria-hidden="true" />
+      )}
+      <span className={yes ? '' : 'text-muted'}>
+        {label}
+        <span className="sr-only">{yes ? ': shown' : ': not shown'}</span>
+      </span>
+    </li>
+  );
+
   const detail = (o: Official) => (
     <Card aria-live="polite">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-h3 font-semibold text-navy-ink">{o.name}</h2>
-        {pill(o)}
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="w-12 h-12 shrink-0 rounded-full grid place-items-center bg-navy-tint text-navy-ink font-semibold"
+        >
+          {initialsOf(o.name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h2 className="text-h3 font-semibold text-navy-ink">{o.name}</h2>
+            {pill(o)}
+          </div>
+          <p className="text-meta text-muted">{o.position}</p>
+        </div>
       </div>
-      <p className="text-meta text-muted">{o.position}</p>
       <dl className="mt-3 @container">
         {[
           ['Committee or office', o.committee],
-          ['Contact', o.contactDetails || 'None'],
+          ['Public contact', o.contactDetails || 'None'],
         ].map(([k, v]) => (
           <div key={k} className="grid @[18rem]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 py-2 border-b border-line-soft last:border-b-0">
             <dt className="text-meta text-muted">{k}</dt>
@@ -80,13 +113,15 @@ export const AdminOfficials: React.FC = () => {
           </div>
         ))}
       </dl>
-      <p className="text-meta text-muted mt-3">
-        {isCurrent(o) && o.status !== 'Suspended'
-          ? 'Shown on every certificate (council list) and in the public Officials directory.'
-          : 'Not shown on certificates while ' + STATUS[o.status].label.toLowerCase() + '.'}
-      </p>
+      <h3 className="font-semibold text-ink mt-4">Where the name appears</h3>
+      <ul className="text-meta mt-1">
+        {shownOn('Certificates (list of council members)', onCertificates(o))}
+        {shownOn('Public list of officials', onCertificates(o))}
+      </ul>
+      {!onCertificates(o) && (
+        <p className="text-meta text-muted mt-1">Hidden while {STATUS[o.status].label.toLowerCase()}.</p>
+      )}
       <Button
-        variant="secondary"
         fullWidth
         className="mt-4"
         onClick={() => {
@@ -111,33 +146,35 @@ export const AdminOfficials: React.FC = () => {
       <Field label="Full name" error={errors.name}>
         {p => <Input {...p} value={form.name} onChange={e => set('name', e.target.value)} />}
       </Field>
-      <Field label="Position" error={errors.position}>
-        {p => (
-          <Select {...p} value={form.position} onChange={e => set('position', e.target.value)}>
-            {POSITIONS.map(x => (
-              <option key={x}>{x}</option>
-            ))}
-          </Select>
-        )}
-      </Field>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-x-4">
+        <Field label="Position" error={errors.position}>
+          {p => (
+            <Select {...p} value={form.position} onChange={e => set('position', e.target.value)}>
+              {POSITIONS.map(x => (
+                <option key={x}>{x}</option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <Field label="Status">
+          {p => (
+            <Select {...p} value={form.status} onChange={e => set('status', e.target.value as Official['status'])}>
+              {(Object.keys(STATUS) as Official['status'][]).map(s => (
+                <option key={s} value={s}>
+                  {STATUS[s].label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+      </div>
       <Field label="Committee or office" error={errors.committee}>
         {p => <Input {...p} value={form.committee} onChange={e => set('committee', e.target.value)} />}
       </Field>
-      <Field label="Public contact" optional help="Shown in the public directory. Use an office email or number, not a personal one.">
+      <Field label="Public contact" optional help="Shown on the public list. Use an office email or number, not a personal one.">
         {p => <Input {...p} value={form.contactDetails} onChange={e => set('contactDetails', e.target.value)} />}
       </Field>
-      <Field label="Status">
-        {p => (
-          <Select {...p} value={form.status} onChange={e => set('status', e.target.value as Official['status'])}>
-            {(Object.keys(STATUS) as Official['status'][]).map(s => (
-              <option key={s} value={s}>
-                {STATUS[s].label}
-              </option>
-            ))}
-          </Select>
-        )}
-      </Field>
-      <div className="grid grid-cols-2 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 gap-2.5 mt-4">
         <Button variant="secondary" onClick={() => setPanel('detail')}>
           Cancel
         </Button>
@@ -147,18 +184,27 @@ export const AdminOfficials: React.FC = () => {
   );
 
   return (
-    <div className="max-w-[1200px]">
+    <div className="max-w-[1280px]">
       <PageHeader
         title="Officials"
-        description="The Punong Barangay, Sangguniang Barangay and office holders. Used on certificates and the public directory."
+        description="The barangay captain, kagawads and office staff. Their names appear on certificates and on the public list of officials."
         action={
-          <Button size="sm" icon={<UserPlus className="w-5 h-5" aria-hidden="true" />} onClick={() => { setForm(blank); setErrors({}); setPanel('add'); show(); }}>
+          <Button size="sm" icon={<UserPlus className="w-5 h-5" aria-hidden="true" />} onClick={startAdd}>
             Add official
           </Button>
         }
       />
+      {captains.length === 0 && (
+        <div role="status" className="mb-4 flex items-center gap-3 rounded-card border border-warning-bg bg-warning-bg/60 px-4 py-3">
+          <AlertTriangle className="w-6 h-6 text-warning-fg shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          <p className="text-meta">
+            <b className="font-semibold">No barangay captain is marked in office.</b> Certificates need one to be signed.
+          </p>
+        </div>
+      )}
       <FilterChips<Filter>
         className="mb-4"
+        label="Show"
         value={filter}
         onChange={f => { setFilter(f); setSelectedId(null); setPanel('detail'); }}
         chips={[
@@ -167,7 +213,7 @@ export const AdminOfficials: React.FC = () => {
           { id: 'all', label: 'All', count: count('all') },
         ]}
       />
-      <div className="grid lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] gap-5 items-start">
+      <div className="grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] gap-4 items-start">
         <Card>
           <DataTable<Official>
             rows={shown}
@@ -186,8 +232,17 @@ export const AdminOfficials: React.FC = () => {
             empty={<p className="text-meta text-muted py-4">No officials here.</p>}
           />
         </Card>
-        <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px]">
-          {panel !== 'detail' ? <AttentionPanel key={panel}>{formView}</AttentionPanel> : selected ? detail(selected) : null}
+        <div ref={panelRef} className="scroll-mt-24 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto lg:rounded-card">
+          {panel !== 'detail' ? (
+            <AttentionPanel key={panel}>{formView}</AttentionPanel>
+          ) : selected ? (
+            detail(selected)
+          ) : (
+            <Card>
+              <h2 className="text-h3 font-semibold text-navy-ink">Official details</h2>
+              <p className="text-meta text-muted mt-1">Choose someone from the list to see their details.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

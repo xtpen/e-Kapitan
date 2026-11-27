@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Bell, LogOut, Menu, Moon, PanelLeftClose, Settings, Type, X } from 'lucide-react';
+import { Bell, CircleUserRound, LogOut, Menu, Moon, PanelLeftClose, Settings, Type, X } from 'lucide-react';
 import { useBarangay } from '../../context/BarangayContext';
 import { usePreferences } from '../../context/PreferencesContext';
-import { Button, LogoMark, initialsOf } from '../ui';
+import { Button, LogoMark, Tooltip, initialsOf } from '../ui';
 
 /*
  * Shared app shell for the redesign (DESIGN.md section 4).
@@ -20,6 +20,10 @@ export interface NavItem {
   icon: React.ReactNode;
   /** Other tab ids that should also highlight this item (e.g. a wizard inside Documents). */
   alsoActiveFor?: string[];
+  /** A count shown beside the label (e.g. new notifications). */
+  badge?: number;
+  /** One short line about the page, shown in the hover tooltip. */
+  hint?: string;
 }
 
 export interface NavGroup {
@@ -34,6 +38,9 @@ export interface AppShellProps {
   /** Tab opened by the notification bell. */
   notificationsTab?: string;
   unreadCount?: number;
+  /** Tabs for the account menu: your account page and settings. */
+  accountTab?: string;
+  settingsTab?: string;
   /** Phone header text, e.g. { title: 'eKapitan Admin', subtitle: 'Administrator portal' }. */
   mobileBrand?: { title: string; subtitle: string };
   children: React.ReactNode;
@@ -93,12 +100,12 @@ const SidebarNav: React.FC<{
               const active = isActive(item, activeTab);
               return (
                 <li key={item.id}>
+                  <Tooltip label={item.label} hint={item.hint} side="right">
                   <button
                     type="button"
                     onClick={() => onSelect(item.id)}
                     aria-current={active ? 'page' : undefined}
                     aria-label={collapsed ? item.label : undefined}
-                    title={collapsed ? item.label : undefined}
                     className={`group relative w-full flex items-center gap-3 px-4 min-h-11 py-2.5 rounded-control text-left font-semibold cursor-pointer
                       transition-colors duration-200 [&_svg]:w-5 [&_svg]:h-5 [&_svg]:shrink-0
                       ${active ? 'text-white' : 'text-ink hover:bg-surface-muted'}`}
@@ -111,11 +118,25 @@ const SidebarNav: React.FC<{
                         transition={reduceMotion ? { duration: 0 } : { duration: 0.32, ease: EASE_OUT }}
                       />
                     )}
-                    <span className="relative flex">{item.icon}</span>
-                    <RailLabel collapsed={collapsed} className="relative">
+                    <span className="relative flex">
+                      {item.icon}
+                      {!!item.badge && collapsed && (
+                        <span aria-hidden="true" className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-danger-fg ring-2 ring-surface" />
+                      )}
+                    </span>
+                    <RailLabel collapsed={collapsed} className="relative flex-1">
                       {item.label}
                     </RailLabel>
+                    {!!item.badge && !collapsed && (
+                      <span
+                        aria-label={`${item.badge} new`}
+                        className={`relative min-w-6 h-6 px-1.5 rounded-full grid place-items-center text-caption font-bold tabular-nums ${active ? 'bg-white/20 text-white' : 'bg-danger-bg text-danger-fg'}`}
+                      >
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </button>
+                  </Tooltip>
                 </li>
               );
             })}
@@ -126,7 +147,7 @@ const SidebarNav: React.FC<{
   );
 };
 
-export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificationsTab, unreadCount = 0, mobileBrand, children }) => {
+export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificationsTab, unreadCount = 0, accountTab, settingsTab, mobileBrand, children }) => {
   const { currentUser, activeTab, setActiveTab, largeTextMode, setLargeTextMode, setIsAuthenticated } = useBarangay();
   const { prefs, setPref, resolvedTheme } = usePreferences();
   const reduceMotion = useReducedMotion();
@@ -135,7 +156,6 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
   const [accountOpen, setAccountOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
-  const hasSettings = groups.some(g => g.items.some(i => i.id === 'settings'));
 
   const go = (id: string) => {
     setActiveTab(id);
@@ -163,8 +183,10 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
   }, []);
 
   const bell = notificationsTab && (
+    <Tooltip label="Notifications" hint={unreadCount ? `${unreadCount} new` : 'Nothing new'} side="bottom">
     <button
       type="button"
+      data-tour="admin-bell"
       onClick={() => go(notificationsTab)}
       aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
       className="relative w-11 h-11 rounded-control border-[1.5px] border-line bg-surface grid place-items-center text-navy-ink hover:bg-surface-muted cursor-pointer
@@ -175,6 +197,7 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
         <span aria-hidden="true" className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-surface" />
       )}
     </button>
+    </Tooltip>
   );
 
   const menuItem = 'w-full flex items-center gap-3 px-3 min-h-11 rounded-control font-semibold cursor-pointer transition-colors';
@@ -204,17 +227,20 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
         <span className="text-meta text-muted hidden lg:inline">{currentUser.name}</span>
         {bell}
         <div className="relative" ref={accountRef}>
+          <Tooltip label="Your account" hint={currentUser.name} side="bottom" disabled={accountOpen}>
           <button
             type="button"
             onClick={() => setAccountOpen(o => !o)}
             aria-haspopup="menu"
             aria-expanded={accountOpen}
             aria-label="Account menu"
+            data-tour="admin-account"
             className="w-11 h-11 rounded-full bg-navy text-gold grid place-items-center font-display font-bold text-sm cursor-pointer
               transition-[scale,box-shadow] duration-150 ease-out-strong active:scale-[0.95] hover:ring-4 hover:ring-navy-ink/15"
           >
             {initialsOf(currentUser.name)}
           </button>
+          </Tooltip>
           <AnimatePresence>
             {accountOpen && (
               <motion.div
@@ -252,8 +278,13 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
                   </span>
                   <span className="text-caption text-muted">{largeTextMode ? 'On' : 'Off'}</span>
                 </button>
-                {hasSettings && (
-                  <button role="menuitem" type="button" onClick={() => go('settings')} className={`${menuItem} text-ink hover:bg-surface-muted`}>
+                {accountTab && (
+                  <button role="menuitem" type="button" onClick={() => go(accountTab)} className={`${menuItem} text-ink hover:bg-surface-muted`}>
+                    <CircleUserRound className="w-5 h-5 text-muted" aria-hidden="true" /> My account
+                  </button>
+                )}
+                {settingsTab && (
+                  <button role="menuitem" type="button" onClick={() => go(settingsTab)} className={`${menuItem} text-ink hover:bg-surface-muted`}>
                     <Settings className="w-5 h-5 text-muted" aria-hidden="true" /> All settings
                   </button>
                 )}
@@ -310,19 +341,33 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
         {/* Desktop sidebar: collapses to an icon rail */}
         <aside
           aria-label="Sidebar"
+          data-tour="admin-nav"
           className={`hidden lg:flex flex-col sticky top-[72px] h-[calc(100dvh-72px)] shrink-0 bg-surface border-r border-line overflow-hidden
             transition-[width] duration-300 ease-drawer motion-reduce:transition-none ${collapsed ? 'w-[76px]' : 'w-[264px]'}`}
         >
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 [scrollbar-width:thin]">
             <SidebarNav groups={groups} activeTab={activeTab} onSelect={go} collapsed={collapsed} highlightId="sidebar-active" />
           </div>
-          <div className="border-t border-line px-3 py-3">
+          <div className="border-t border-line px-3 py-3 grid gap-1">
+            <Tooltip label="Sign out" hint="Leave the admin portal on this computer" side="right">
+            <button
+              type="button"
+              data-tour="admin-signout"
+              onClick={() => setConfirmSignOut(true)}
+              aria-label={collapsed ? 'Sign out' : undefined}
+              className="w-full flex items-center gap-3 px-4 min-h-11 rounded-control font-semibold text-danger-fg hover:bg-danger-bg cursor-pointer
+                transition-[background-color,scale] duration-150 ease-out-strong active:scale-[0.97]"
+            >
+              <LogOut className="w-5 h-5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <RailLabel collapsed={collapsed}>Sign out</RailLabel>
+            </button>
+            </Tooltip>
+            <Tooltip label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} hint={collapsed ? 'Show page names' : 'Show icons only'} side="right">
             <button
               type="button"
               onClick={() => setPref('sidebarCollapsed', !collapsed)}
               aria-expanded={!collapsed}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : undefined}
               className="w-full flex items-center gap-3 px-4 min-h-11 rounded-control font-semibold text-muted hover:text-navy-ink hover:bg-surface-muted cursor-pointer
                 transition-[color,background-color,scale] duration-150 ease-out-strong active:scale-[0.97]"
             >
@@ -333,10 +378,11 @@ export const AppShell: React.FC<AppShellProps> = ({ groups, bottomNav, notificat
               />
               <RailLabel collapsed={collapsed}>Collapse sidebar</RailLabel>
             </button>
+            </Tooltip>
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 px-4 py-5 sm:px-6 lg:px-8 xl:px-10 lg:py-8 pb-[92px] md:pb-10">{children}</main>
+        <main className="flex-1 min-w-0 px-4 py-4 sm:px-6 lg:px-8 lg:py-6 pb-[92px] md:pb-8">{children}</main>
       </div>
 
       {/* Mobile bottom nav */}

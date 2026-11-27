@@ -89,6 +89,8 @@
      --rise (distance), animation-duration and animation-delay; the lead travels furthest. */
   --animate-rise: rise 480ms cubic-bezier(0.23, 1, 0.32, 1) both;
   --animate-fade: fade 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  /* Admin page changes: one quick fade, nothing else. */
+  --animate-fade-quick: fade 150ms cubic-bezier(0.23, 1, 0.32, 1) both;
   /* A status becoming current: a small settle, never from scale(0). */
   --animate-pop: pop 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
   /* A connector drawing from its start (cause → effect). */
@@ -192,6 +194,14 @@ html.dark.high-contrast {
 /* Small text (Settings → Text size). Large text (112.5%) is html.large-text below. */
 html.small-text {
   font-size: 87.5%;
+}
+
+/* Navigation tooltips (ui/Tooltip): a quick fade, no movement worth noticing. */
+.tooltip-pop {
+  animation: tooltip-in 120ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes tooltip-in {
+  from { opacity: 0; }
 }
 
 /* Bold text (Settings → Display). One step heavier everywhere. */
